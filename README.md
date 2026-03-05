@@ -2,7 +2,7 @@
 
 **Portfolio Case Study — Emre, March 2026**
 
-**Live:** [idea-validator.vercel.app](https://idea-validator.vercel.app)
+**Live:** https://idea-validator-git-main-emrestr154-1648s-projects.vercel.app/
 
 ---
 
