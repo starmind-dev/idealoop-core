@@ -5,7 +5,237 @@ const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const SYSTEM_PROMPT = `You are an AI product idea evaluator and analyst. The user will give you their AI product idea and their profile (coding level, AI experience, professional background).
+// ============================================
+// LAYER 1: KEYWORD EXTRACTION (Claude Haiku)
+// ============================================
+// Uses a fast, cheap Claude Haiku call to extract searchable keywords.
+// Handles any input length — 50 words or 5000 words.
+// Returns two search queries: one for GitHub, one for Google.
+// Cost: ~$0.001 per call. Latency: ~1 second.
+
+async function extractKeywords(ideaText) {
+  try {
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 150,
+      temperature: 0,
+      system: `You are a keyword extraction tool for product/startup idea search. 
+Extract exactly 5 searchable keywords or short phrases from the user's idea description.
+
+Rules:
+- Keep compound concepts together: "machine learning" not "machine" and "learning"
+- Keep compound concepts together: "real estate" not "real" and "estate"
+- Focus on NOUNS and DOMAIN TERMS: what the product does, who it serves, what technology it uses
+- Remove generic words: app, platform, tool, system, build, create, help, users
+- Return ONLY a comma-separated list, nothing else
+- Example input: "An AI app that analyzes food photos and gives personalized nutrition advice"
+- Example output: food photo analysis, nutrition advice, personalized diet, meal tracking, calorie estimation`,
+      messages: [
+        {
+          role: "user",
+          content: ideaText,
+        },
+      ],
+    });
+
+    const rawKeywords = response.content[0].text.trim();
+    const keywords = rawKeywords
+      .split(",")
+      .map((k) => k.trim().toLowerCase())
+      .filter((k) => k.length > 0)
+      .slice(0, 5);
+
+    // Build multiple query variations for broader coverage:
+    // Each API gets 2 searches with different keyword combos.
+    // All 4 run simultaneously — no extra time cost.
+    const githubQuery1 = keywords.slice(0, 3).join(" ");
+    const githubQuery2 = keywords.slice(2, 5).join(" ");
+    const serperQuery1 = keywords.slice(0, 3).join(" ") + " app OR startup";
+    const serperQuery2 = keywords.slice(1, 4).join(" ") + " software OR product";
+
+    return {
+      keywords,
+      githubQuery1,
+      githubQuery2,
+      serperQuery1,
+      serperQuery2,
+    };
+  } catch (error) {
+    console.error("Keyword extraction failed:", error);
+    // Fallback: grab first 100 chars, split on spaces, take longest words
+    const fallbackWords = ideaText
+      .substring(0, 200)
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(" ")
+      .filter((w) => w.length > 4)
+      .slice(0, 5);
+
+    const searchQuery = fallbackWords.slice(0, 3).join(" ");
+    return {
+      keywords: fallbackWords,
+      githubQuery1: searchQuery,
+      githubQuery2: fallbackWords.slice(2, 5).join(" ") || searchQuery,
+      serperQuery1: searchQuery,
+      serperQuery2: searchQuery,
+    };
+  }
+}
+
+// ============================================
+// LAYER 2: GITHUB API
+// ============================================
+// Searches GitHub repositories for real projects matching the idea.
+// Returns: repo name, description, stars, URL, language, last updated.
+
+async function searchGitHub(query) {
+  try {
+    const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(query)}&sort=stars&order=desc&per_page=5`;
+
+    const headers = {
+      Accept: "application/vnd.github.v3+json",
+      "User-Agent": "IdeaValidator-App",
+    };
+
+    // Use token if available for higher rate limits
+    if (process.env.GITHUB_TOKEN) {
+      headers.Authorization = `token ${process.env.GITHUB_TOKEN}`;
+    }
+
+    const response = await fetch(url, { headers });
+
+    if (!response.ok) {
+      console.error("GitHub API error:", response.status);
+      return [];
+    }
+
+    const data = await response.json();
+
+    return (data.items || []).slice(0, 5).map((repo) => ({
+      name: repo.full_name,
+      description: repo.description || "No description",
+      stars: repo.stargazers_count,
+      url: repo.html_url,
+      language: repo.language || "Unknown",
+      updated: repo.updated_at,
+      source: "github",
+    }));
+  } catch (error) {
+    console.error("GitHub search failed:", error);
+    return [];
+  }
+}
+
+// ============================================
+// LAYER 3: SERPER API
+// ============================================
+// Searches Google via Serper.dev for real products and companies.
+// Returns: title, URL, snippet.
+
+async function searchSerper(query) {
+  try {
+    if (!process.env.SERPER_API_KEY) {
+      console.error("No Serper API key configured");
+      return [];
+    }
+
+    const response = await fetch("https://google.serper.dev/search", {
+      method: "POST",
+      headers: {
+        "X-API-KEY": process.env.SERPER_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        q: query,
+        num: 5,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Serper API error:", response.status);
+      return [];
+    }
+
+    const data = await response.json();
+
+    return (data.organic || []).slice(0, 5).map((result) => ({
+      title: result.title,
+      url: result.link,
+      snippet: result.snippet || "",
+      source: "google",
+    }));
+  } catch (error) {
+    console.error("Serper search failed:", error);
+    return [];
+  }
+}
+
+// ============================================
+// LAYER 4: BUILD PROMPT WITH REAL DATA
+// ============================================
+// Injects real competitor data into the system prompt so Claude
+// analyzes against verified products, not imagined ones.
+
+function buildCompetitorContext(githubResults, serperResults) {
+  let context = "";
+  let hasRealData = false;
+
+  if (githubResults.length > 0) {
+    hasRealData = true;
+    context += "\n=== REAL COMPETITOR DATA FROM GITHUB ===\n";
+    context += "These are real, verified GitHub repositories related to this idea:\n\n";
+    for (const repo of githubResults) {
+      context += `- ${repo.name} (${repo.stars} stars, ${repo.language})\n`;
+      context += `  Description: ${repo.description}\n`;
+      context += `  URL: ${repo.url}\n`;
+      context += `  Last updated: ${repo.updated}\n\n`;
+    }
+  }
+
+  if (serperResults.length > 0) {
+    hasRealData = true;
+    context += "\n=== REAL COMPETITOR DATA FROM GOOGLE SEARCH ===\n";
+    context += "These are real products and companies found via Google:\n\n";
+    for (const result of serperResults) {
+      context += `- ${result.title}\n`;
+      context += `  URL: ${result.url}\n`;
+      context += `  Description: ${result.snippet}\n\n`;
+    }
+  }
+
+  return { context, hasRealData };
+}
+
+function buildCompetitorInstructions(hasRealData) {
+  if (hasRealData) {
+    return `
+=== COMPETITOR DATA INSTRUCTIONS ===
+REAL competitor data from GitHub and Google has been provided above. You MUST:
+1. Use this real data as the PRIMARY basis for your competition analysis.
+2. Include the real competitors in your competitors list with their actual names and descriptions.
+3. Add "source": "github" or "source": "google" to each competitor entry.
+4. Add "url": "<actual URL>" to each competitor entry.
+5. You MAY add 1-2 additional competitors from your knowledge if highly relevant, marked with "source": "llm".
+6. Your differentiation analysis must reference the REAL competitors specifically.
+7. Do NOT invent competitors when real ones are provided.
+`;
+  } else {
+    return `
+=== COMPETITOR DATA INSTRUCTIONS ===
+No real competitor data was found from external searches. This could mean the idea is very niche or novel.
+1. Use your best knowledge to identify potential competitors.
+2. Mark all competitors with "source": "llm".
+3. Set "url" to null for competitors you cannot verify.
+4. Add a note in the competition summary that competitor data is AI-generated and should be verified.
+`;
+  }
+}
+
+// ============================================
+// SYSTEM PROMPT (same rubric, modified competitor section)
+// ============================================
+
+const SYSTEM_PROMPT_BASE = `You are an AI product idea evaluator and analyst. The user will give you their AI product idea and their profile (coding level, AI experience, professional background).
 
 Your job is to:
 1. Run pre-screening checks on the idea
@@ -53,6 +283,8 @@ If the idea targets a regional or non-English-speaking market, add a geographic_
 
 METRIC 2: MONETIZATION POTENTIAL (Weight: 25%)
 Evaluate the IDEA ONLY. Consider ALL revenue models: subscriptions, commissions, advertising, API licensing, enterprise contracts, affiliate revenue, data licensing, transaction fees, freemium, white-labeling. Score the REALISTIC path, not theoretical. If dominant competitors make revenue models unviable for new entrants, score accordingly.
+
+This score evaluates the idea's revenue potential in isolation. Actual outcomes depend on distribution, timing, and market conditions.
 
 For COMMERCIAL ideas:
 1-2: No viable revenue path. Market expects free.
@@ -125,11 +357,14 @@ If the idea is a marketplace/platform depending on network effects, set marketpl
         "name": "Competitor Name",
         "description": "What they do in 1-2 sentences",
         "status": "growing | active | acquired | failed | shutdown",
-        "outcome": "Key metric or result"
+        "outcome": "Key metric or result",
+        "source": "github | google | llm",
+        "url": "https://... or null"
       }
     ],
     "differentiation": "2-3 sentences on how user's idea differs from or overlaps with competitors listed above.",
-    "summary": "One paragraph overview of the competitive landscape"
+    "summary": "One paragraph overview of the competitive landscape",
+    "data_source": "verified | llm_generated"
   },
   "phases": [
     {
@@ -187,6 +422,10 @@ Additional rules:
 - Tool recommendations must explain WHY this tool for THIS idea.
 - For social impact ideas, set monetization label to "Sustainability Potential".`;
 
+// ============================================
+// MAIN API HANDLER
+// ============================================
+
 export async function POST(request) {
   try {
     const { idea, profile } = await request.json();
@@ -197,6 +436,47 @@ export async function POST(request) {
         { status: 400 }
       );
     }
+
+    // LAYER 1: Extract keywords from the idea (Claude Haiku call)
+    const { keywords, githubQuery1, githubQuery2, serperQuery1, serperQuery2 } =
+      await extractKeywords(idea);
+
+    // LAYER 2 & 3: Call GitHub and Serper simultaneously (4 searches, 0 extra time)
+    const [githubResults1, githubResults2, serperResults1, serperResults2] =
+      await Promise.all([
+        searchGitHub(githubQuery1),
+        searchGitHub(githubQuery2),
+        searchSerper(serperQuery1),
+        searchSerper(serperQuery2),
+      ]);
+
+    // Deduplicate results by URL
+    const seenUrls = new Set();
+
+    function dedup(results) {
+      const unique = [];
+      for (const item of results) {
+        if (!seenUrls.has(item.url)) {
+          seenUrls.add(item.url);
+          unique.push(item);
+        }
+      }
+      return unique;
+    }
+
+    const githubResults = dedup([...githubResults1, ...githubResults2]).slice(0, 7);
+    const serperResults = dedup([...serperResults1, ...serperResults2]).slice(0, 7);
+
+    // LAYER 4: Build the prompt with real competitor data
+    const { context: competitorContext, hasRealData } = buildCompetitorContext(
+      githubResults,
+      serperResults
+    );
+    const competitorInstructions = buildCompetitorInstructions(hasRealData);
+
+    // Combine: base prompt + real data + instructions
+    const fullSystemPrompt =
+      SYSTEM_PROMPT_BASE + competitorContext + competitorInstructions;
 
     const userMessage = `
 USER PROFILE:
@@ -212,7 +492,7 @@ ${idea}
       model: "claude-sonnet-4-20250514",
       max_tokens: 4096,
       temperature: 0,
-      system: SYSTEM_PROMPT,
+      system: fullSystemPrompt,
       messages: [
         {
           role: "user",
@@ -248,6 +528,15 @@ ${idea}
       (10 - ev.technical_complexity.score) * 0.2;
 
     ev.overall_score = Math.round(overall * 10) / 10;
+
+    // Attach metadata about data sources
+    analysis._meta = {
+      github_results: githubResults.length,
+      serper_results: serperResults.length,
+      data_source: hasRealData ? "verified" : "llm_generated",
+      keywords_used: keywords,
+      queries: { githubQuery1, githubQuery2, serperQuery1, serperQuery2 },
+    };
 
     return NextResponse.json(analysis);
   } catch (error) {
