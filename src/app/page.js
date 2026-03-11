@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
 
 // ============================================
 // STEP PROGRESS BAR
@@ -240,6 +241,211 @@ function PageContainer({ children, wide = false }) {
 }
 
 // ============================================
+// AUTH MODAL
+// ============================================
+function AuthModal({ onClose, onAuth }) {
+  const [mode, setMode] = useState("login"); // "login" or "signup"
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const handleSubmit = async () => {
+    if (!email.trim() || !password.trim()) return;
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      if (mode === "signup") {
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+        });
+        if (signUpError) throw signUpError;
+        if (data.user && !data.session) {
+          setSuccess("Check your email to confirm your account, then log in.");
+          return;
+        }
+        if (data.session) {
+          onAuth(data.session.user);
+          onClose();
+        }
+      } else {
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+        if (signInError) throw signInError;
+        onAuth(data.user);
+        onClose();
+      }
+    } catch (err) {
+      setError(err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.7)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: 16,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#171717",
+          border: "1px solid rgba(38,38,38,0.8)",
+          borderRadius: 16,
+          padding: 32,
+          width: "100%",
+          maxWidth: 400,
+        }}
+      >
+        <h2 style={{ fontSize: 20, fontWeight: 600, color: "#f5f5f5", margin: "0 0 8px 0" }}>
+          {mode === "login" ? "Log in" : "Create account"}
+        </h2>
+        <p style={{ fontSize: 14, color: "#737373", margin: "0 0 24px 0" }}>
+          {mode === "login"
+            ? "Log in to save and track your ideas."
+            : "Create an account to save your evaluations."}
+        </p>
+
+        {error && (
+          <div style={{
+            background: "rgba(239,68,68,0.1)",
+            border: "1px solid rgba(239,68,68,0.2)",
+            borderRadius: 12,
+            padding: "10px 16px",
+            marginBottom: 16,
+          }}>
+            <p style={{ fontSize: 13, color: "#f87171", margin: 0 }}>{error}</p>
+          </div>
+        )}
+
+        {success && (
+          <div style={{
+            background: "rgba(16,185,129,0.1)",
+            border: "1px solid rgba(16,185,129,0.2)",
+            borderRadius: 12,
+            padding: "10px 16px",
+            marginBottom: 16,
+          }}>
+            <p style={{ fontSize: 13, color: "#34d399", margin: 0 }}>{success}</p>
+          </div>
+        )}
+
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ fontSize: 13, fontWeight: 500, color: "#a3a3a3", display: "block", marginBottom: 6 }}>
+            Email
+          </label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+            style={{
+              width: "100%",
+              background: "rgba(23,23,23,0.8)",
+              border: "1px solid rgba(64,64,64,0.6)",
+              borderRadius: 12,
+              padding: "12px 16px",
+              fontSize: 14,
+              color: "#f5f5f5",
+              outline: "none",
+              boxSizing: "border-box",
+            }}
+          />
+        </div>
+
+        <div style={{ marginBottom: 24 }}>
+          <label style={{ fontSize: 13, fontWeight: 500, color: "#a3a3a3", display: "block", marginBottom: 6 }}>
+            Password
+          </label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder={mode === "signup" ? "Min 6 characters" : "Your password"}
+            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+            style={{
+              width: "100%",
+              background: "rgba(23,23,23,0.8)",
+              border: "1px solid rgba(64,64,64,0.6)",
+              borderRadius: 12,
+              padding: "12px 16px",
+              fontSize: 14,
+              color: "#f5f5f5",
+              outline: "none",
+              boxSizing: "border-box",
+            }}
+          />
+        </div>
+
+        <button
+          onClick={handleSubmit}
+          disabled={loading || !email.trim() || !password.trim()}
+          style={{
+            width: "100%",
+            padding: "12px 0",
+            borderRadius: 12,
+            fontSize: 14,
+            fontWeight: 600,
+            border: "none",
+            cursor: loading ? "not-allowed" : "pointer",
+            background: loading ? "rgba(38,38,38,0.6)" : "#fff",
+            color: loading ? "#525252" : "#0a0a0a",
+            marginBottom: 16,
+          }}
+        >
+          {loading
+            ? "Please wait..."
+            : mode === "login"
+            ? "Log in"
+            : "Create account"}
+        </button>
+
+        <p style={{ fontSize: 13, color: "#525252", textAlign: "center", margin: 0 }}>
+          {mode === "login" ? (
+            <>
+              No account?{" "}
+              <button
+                onClick={() => { setMode("signup"); setError(""); setSuccess(""); }}
+                style={{ color: "#60a5fa", background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500 }}
+              >
+                Sign up
+              </button>
+            </>
+          ) : (
+            <>
+              Already have an account?{" "}
+              <button
+                onClick={() => { setMode("login"); setError(""); setSuccess(""); }}
+                style={{ color: "#60a5fa", background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500 }}
+              >
+                Log in
+              </button>
+            </>
+          )}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
 // MAIN APP
 // ============================================
 // ============================================
@@ -291,6 +497,72 @@ export default function Home() {
   const [currentScreen, setCurrentScreen] = useState("profile");
   const [profile, setProfile] = useState({ coding: "", ai: "", education: "" });
   const [evalsRemaining, setEvalsRemaining] = useState(EVAL_LIMIT);
+  const [user, setUser] = useState(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [saveStatus, setSaveStatus] = useState("idle"); // idle | saving | saved | error
+  const [saveError, setSaveError] = useState("");
+  const [savedIdeasCount, setSavedIdeasCount] = useState(0);
+  const [savedIdeaId, setSavedIdeaId] = useState(null);
+  const SAVED_IDEA_LIMIT = 5;
+
+  // Listen for auth state changes (login, logout, session restore)
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user || null);
+      setAuthLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Migrate localStorage profile to database when user logs in
+  useEffect(() => {
+    if (!user) return;
+    const saved = localStorage.getItem("iv_profile");
+    if (!saved) return;
+
+    const localProfile = JSON.parse(saved);
+    // Only migrate if the local profile has data
+    if (localProfile.coding || localProfile.ai || localProfile.education) {
+      supabase
+        .from("profiles")
+        .upsert({
+          id: user.id,
+          coding_level: localProfile.coding,
+          ai_experience: localProfile.ai,
+          education: localProfile.education,
+          updated_at: new Date().toISOString(),
+        })
+        .then(({ error }) => {
+          if (error) console.error("Profile migration failed:", error);
+        });
+    }
+  }, [user]);
+
+  // Fetch saved ideas count when user logs in
+  useEffect(() => {
+    if (!user) {
+      setSavedIdeasCount(0);
+      return;
+    }
+    supabase
+      .from("ideas")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .then(({ count, error }) => {
+        if (!error && count !== null) setSavedIdeasCount(count);
+      });
+  }, [user]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+  };
 
   // Load saved profile + eval count after mount (avoids hydration mismatch)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -342,6 +614,10 @@ export default function Home() {
 
     setIsAnalyzing(true);
     setError("");
+    // Reset save state for new evaluation
+    setSaveStatus("idle");
+    setSaveError("");
+    setSavedIdeaId(null);
     try {
       const res = await fetch("/api/analyze", {
         method: "POST",
@@ -369,6 +645,55 @@ export default function Home() {
     }
   };
 
+  // Save evaluation to database
+  const handleSaveIdea = async () => {
+    if (!user || !analysis || saveStatus === "saving" || saveStatus === "saved") return;
+
+    setSaveStatus("saving");
+    setSaveError("");
+
+    try {
+      // Get the current session token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setSaveStatus("error");
+        setSaveError("Session expired. Please log in again.");
+        return;
+      }
+
+      const res = await fetch("/api/ideas/save", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          idea_text: idea,
+          profile,
+          analysis,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setSaveStatus("error");
+        setSaveError(data.error || "Failed to save. Please try again.");
+        if (data.limit_reached) {
+          setSavedIdeasCount(data.saved_count);
+        }
+        return;
+      }
+
+      setSaveStatus("saved");
+      setSavedIdeaId(data.idea_id);
+      setSavedIdeasCount(data.saved_count);
+    } catch (err) {
+      setSaveStatus("error");
+      setSaveError("Something went wrong. Please try again.");
+    }
+  };
+
   // Shared header style
   const headerStyle = {
     width: "100%",
@@ -391,13 +716,37 @@ export default function Home() {
       <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#f5f5f5", display: "flex", flexDirection: "column" }}>
         <header style={headerStyle}>
           <PageContainer>
-            <div style={{ padding: "16px 0" }}>
+            <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <h1 style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "#525252", margin: 0 }}>
                 Idea Validator
               </h1>
+              {!authLoading && (
+                user ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{ fontSize: 12, color: "#525252" }}>{user.email}</span>
+                    <button onClick={handleLogout} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                      Log out
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowAuthModal(true)}
+                    style={{ fontSize: 12, color: "#60a5fa", background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}
+                  >
+                    Log in
+                  </button>
+                )
+              )}
             </div>
           </PageContainer>
         </header>
+
+        {showAuthModal && (
+          <AuthModal
+            onClose={() => setShowAuthModal(false)}
+            onAuth={(u) => setUser(u)}
+          />
+        )}
 
         <StepProgress currentStep={getStepNumber()} />
 
@@ -502,6 +851,21 @@ export default function Home() {
             <button
               onClick={() => {
                 localStorage.setItem("iv_profile", JSON.stringify(profile));
+                // Also save to database if logged in
+                if (user) {
+                  supabase
+                    .from("profiles")
+                    .upsert({
+                      id: user.id,
+                      coding_level: profile.coding,
+                      ai_experience: profile.ai,
+                      education: profile.education,
+                      updated_at: new Date().toISOString(),
+                    })
+                    .then(({ error }) => {
+                      if (error) console.error("Profile save to DB failed:", error);
+                    });
+                }
                 setCurrentScreen("input");
               }}
               disabled={!canContinue}
@@ -547,12 +911,42 @@ export default function Home() {
               <h1 style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "#525252", margin: 0 }}>
                 Idea Validator
               </h1>
-              <button onClick={() => setCurrentScreen("profile")} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
-                {profile.coding} · {profile.ai} AI · Edit ✎
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <button onClick={() => setCurrentScreen("profile")} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                  {profile.coding} · {profile.ai} AI · Edit ✎
+                </button>
+                {!authLoading && (
+                  user ? (
+                    <>
+                      <span style={{ color: "#262626" }}>|</span>
+                      <span style={{ fontSize: 12, color: "#525252" }}>{user.email}</span>
+                      <button onClick={handleLogout} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                        Log out
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ color: "#262626" }}>|</span>
+                      <button
+                        onClick={() => setShowAuthModal(true)}
+                        style={{ fontSize: 12, color: "#60a5fa", background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}
+                      >
+                        Log in
+                      </button>
+                    </>
+                  )
+                )}
+              </div>
             </div>
           </PageContainer>
         </header>
+
+        {showAuthModal && (
+          <AuthModal
+            onClose={() => setShowAuthModal(false)}
+            onAuth={(u) => setUser(u)}
+          />
+        )}
 
         <StepProgress currentStep={getStepNumber()} />
 
@@ -684,12 +1078,39 @@ export default function Home() {
               <h1 style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "#525252", margin: 0 }}>
                 Idea Validator
               </h1>
-              <button onClick={() => setCurrentScreen("input")} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
-                ← Back to idea
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <button onClick={() => setCurrentScreen("input")} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                  ← Back to idea
+                </button>
+                {!authLoading && (
+                  user ? (
+                    <>
+                      <span style={{ color: "#262626" }}>|</span>
+                      <span style={{ fontSize: 12, color: "#525252" }}>{user.email}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ color: "#262626" }}>|</span>
+                      <button
+                        onClick={() => setShowAuthModal(true)}
+                        style={{ fontSize: 12, color: "#60a5fa", background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}
+                      >
+                        Log in to save
+                      </button>
+                    </>
+                  )
+                )}
+              </div>
             </div>
           </PageContainer>
         </header>
+
+        {showAuthModal && (
+          <AuthModal
+            onClose={() => setShowAuthModal(false)}
+            onAuth={(u) => setUser(u)}
+          />
+        )}
 
         <StepProgress currentStep={getStepNumber()} />
 
@@ -944,6 +1365,87 @@ export default function Home() {
               </Card>
             </section>
 
+            {/* Save to My Ideas */}
+            <div style={{ marginBottom: 16 }}>
+              {user ? (
+                // Logged in — show save button
+                saveStatus === "saved" ? (
+                  <div style={{
+                    width: "100%",
+                    padding: "14px 0",
+                    borderRadius: 12,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    textAlign: "center",
+                    background: "rgba(16,185,129,0.1)",
+                    border: "1px solid rgba(16,185,129,0.3)",
+                    color: "#34d399",
+                  }}>
+                    ✓ Saved to My Ideas ({savedIdeasCount}/{SAVED_IDEA_LIMIT})
+                  </div>
+                ) : savedIdeasCount >= SAVED_IDEA_LIMIT ? (
+                  <div style={{
+                    width: "100%",
+                    padding: "14px 0",
+                    borderRadius: 12,
+                    fontSize: 14,
+                    fontWeight: 500,
+                    textAlign: "center",
+                    background: "rgba(245,158,11,0.08)",
+                    border: "1px solid rgba(245,158,11,0.2)",
+                    color: "#fbbf24",
+                  }}>
+                    Free tier limit reached ({SAVED_IDEA_LIMIT}/{SAVED_IDEA_LIMIT} ideas saved)
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={handleSaveIdea}
+                      disabled={saveStatus === "saving"}
+                      style={{
+                        width: "100%",
+                        padding: "14px 0",
+                        borderRadius: 12,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        border: "1px solid rgba(59,130,246,0.4)",
+                        cursor: saveStatus === "saving" ? "not-allowed" : "pointer",
+                        background: saveStatus === "saving" ? "rgba(38,38,38,0.6)" : "rgba(59,130,246,0.12)",
+                        color: saveStatus === "saving" ? "#525252" : "#60a5fa",
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      {saveStatus === "saving" ? "Saving..." : `Save to My Ideas (${savedIdeasCount}/${SAVED_IDEA_LIMIT})`}
+                    </button>
+                    {saveStatus === "error" && saveError && (
+                      <p style={{ fontSize: 12, color: "#f87171", textAlign: "center", marginTop: 8 }}>
+                        {saveError}
+                      </p>
+                    )}
+                  </>
+                )
+              ) : (
+                // Not logged in — show signup prompt
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  style={{
+                    width: "100%",
+                    padding: "14px 0",
+                    borderRadius: 12,
+                    fontSize: 14,
+                    fontWeight: 500,
+                    border: "1px solid rgba(64,64,64,0.6)",
+                    background: "transparent",
+                    color: "#737373",
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                  }}
+                >
+                  Sign up to save your evaluations
+                </button>
+              )}
+            </div>
+
 
             <button
               onClick={() => setCurrentScreen("results2")}
@@ -987,12 +1489,27 @@ export default function Home() {
               <h1 style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "#525252", margin: 0 }}>
                 Idea Validator
               </h1>
-              <button onClick={() => setCurrentScreen("results1")} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
-                ← Back to analysis
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <button onClick={() => setCurrentScreen("results1")} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                  ← Back to analysis
+                </button>
+                {!authLoading && user && (
+                  <>
+                    <span style={{ color: "#262626" }}>|</span>
+                    <span style={{ fontSize: 12, color: "#525252" }}>{user.email}</span>
+                  </>
+                )}
+              </div>
             </div>
           </PageContainer>
         </header>
+
+        {showAuthModal && (
+          <AuthModal
+            onClose={() => setShowAuthModal(false)}
+            onAuth={(u) => setUser(u)}
+          />
+        )}
 
         <StepProgress currentStep={getStepNumber()} />
 
@@ -1199,6 +1716,9 @@ export default function Home() {
                 setEditedPhases(null);
                 setExpandedPhases({});
                 setEvalsRemaining(getEvalsRemaining());
+                setSaveStatus("idle");
+                setSaveError("");
+                setSavedIdeaId(null);
               }}
               style={{
                 width: "100%",
