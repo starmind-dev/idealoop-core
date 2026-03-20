@@ -1895,9 +1895,9 @@ export default function Home() {
                   const tc = typeColors[comp.competitor_type] || null;
                   return (
                     <Card key={i} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                        <h3 style={{ fontSize: 14, fontWeight: 700, color: "#f5f5f5", margin: 0, flex: 1, minWidth: 0 }}>{comp.name}</h3>
-                        <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+                      <div>
+                        <h3 style={{ fontSize: 14, fontWeight: 700, color: "#f5f5f5", margin: "0 0 8px 0", wordBreak: "break-word" }}>{comp.name}</h3>
+                        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                           {tc && (
                             <span style={{
                               fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 9999,
