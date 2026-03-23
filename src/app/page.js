@@ -1965,7 +1965,7 @@ export default function Home() {
               <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#737373", marginBottom: 8 }}>
                 Original idea
               </label>
-              <Card style={{ padding: "16px 20px" }}>
+              <Card style={{ padding: "16px 20px", maxHeight: 150, overflowY: "auto" }}>
                 <p style={{ fontSize: 14, color: "#a3a3a3", lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>
                   {reEvalOriginalIdea}
                 </p>
