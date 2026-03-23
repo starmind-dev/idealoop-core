@@ -21,6 +21,7 @@ function StepProgress({ currentStep, savedMode }) {
     { number: 2, label: "Idea" },
     { number: 3, label: "Analysis" },
     { number: 4, label: savedMode ? "Roadmap" : "Build Plan" },
+    ...(savedMode ? [{ number: 5, label: "Re-evaluate" }] : []),
   ];
 
   const circleSize = isMobile ? 28 : 40;
@@ -659,7 +660,7 @@ export default function Home() {
   const currentPhases = editedPhases || (analysis ? analysis.phases : []);
 
   const getStepNumber = () => {
-    const map = { profile: 1, input: 2, myideas: 2, reeval: 2, results1: 3, results2: 4 };
+    const map = { profile: 1, input: 2, myideas: 2, reeval: 5, results1: 3, results2: 4 };
     return map[currentScreen] || 1;
   };
 
@@ -1667,6 +1668,17 @@ export default function Home() {
               </Card>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{
+                  padding: "14px 18px",
+                  borderRadius: 12,
+                  background: "rgba(108,99,255,0.06)",
+                  border: "1px solid rgba(108,99,255,0.15)",
+                  marginBottom: 4,
+                }}>
+                  <p style={{ fontSize: 13, color: "#a3a3a3", lineHeight: 1.6, margin: 0 }}>
+                    Open any idea to review your evaluation, track your roadmap progress, check recommended tools — and re-evaluate with fresh market data or changed variables.
+                  </p>
+                </div>
                 {myIdeas.map((savedIdea) => {
                   const eval_ = savedIdea.evaluations?.[0];
                   const score = eval_?.weighted_overall_score || 0;
