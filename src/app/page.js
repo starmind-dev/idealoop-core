@@ -1319,9 +1319,8 @@ export default function Home() {
                 Describe your AI product idea
               </h2>
               <p style={{ fontSize: 16, color: "#737373", lineHeight: 1.6, margin: 0 }}>
-                Be as specific as you can. What does it do? Who is it for?
-                What problem does it solve? The more detail you provide,
-                the better the analysis.
+                Include what it does, who would use it, and what problem it solves.
+                Specific ideas get sharper evaluations.
               </p>
             </div>
 
@@ -1329,7 +1328,7 @@ export default function Home() {
               <textarea
                 value={idea}
                 onChange={(e) => setIdea(e.target.value)}
-                placeholder="Example: An AI-powered app that analyzes food photos and gives personalized nutrition advice..."
+                placeholder="Example: An AI tool that evaluates startup ideas by scoring them against real competitor data from GitHub and Google. It's for solo founders and indie builders who waste weeks on ideas without knowing if there's real demand. The problem is that most people either ask friends who say 'great idea!' or use ChatGPT which gives generic encouragement instead of honest analysis..."
                 rows={8}
                 style={{
                   width: "100%",
