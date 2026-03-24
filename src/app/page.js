@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 
 // ============================================
@@ -545,6 +545,10 @@ export default function Home() {
   const [showAlternativesPopup, setShowAlternativesPopup] = useState(false);
   const [alternativesData, setAlternativesData] = useState(null); // { ideaId, title, evaluations: [...] }
 
+  // SSE streaming state
+  const [streamSteps, setStreamSteps] = useState([]); // array of { step, message, done }
+  const streamRef = useRef(null); // ref to track if stream should be aborted
+
   // Listen for auth state changes (login, logout, session restore)
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -671,6 +675,97 @@ export default function Home() {
     return map[currentScreen] || 1;
   };
 
+  // SSE streaming helper — reads events from /api/analyze and returns the final analysis
+  const analyzeWithStream = async (ideaText, profileData) => {
+    setStreamSteps([]);
+
+    const res = await fetch("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idea: ideaText, profile: profileData }),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || "Analysis failed");
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let finalAnalysis = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // Parse SSE events from buffer
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || ""; // keep incomplete line in buffer
+
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          try {
+            const event = JSON.parse(line.slice(6));
+
+            if (event.step === "error") {
+              throw new Error(event.message);
+            }
+
+            if (event.step === "complete") {
+              finalAnalysis = event.data;
+              // Add final step to display
+              setStreamSteps((prev) => [...prev, { step: "complete", message: "Evaluation complete ✓", done: true }]);
+            } else if (event.step.endsWith("_start")) {
+              // In-progress step (no checkmark yet)
+              setStreamSteps((prev) => [...prev, { step: event.step, message: event.message, done: false }]);
+            } else if (event.step.endsWith("_done") || event.step === "evidence_ready" || event.step === "scoring") {
+              // Mark previous related _start step as done, add this as completed
+              setStreamSteps((prev) => {
+                const updated = prev.map((s) => {
+                  // Mark keywords_start done when keywords_done arrives
+                  if (event.step === "keywords_done" && s.step === "keywords_start") return { ...s, done: true };
+                  // Mark search_start done when first search result arrives
+                  if ((event.step === "github_done" || event.step === "serper_done") && s.step === "search_start") return { ...s, done: true };
+                  return s;
+                });
+                return [...updated, { step: event.step, message: event.message, done: true }];
+              });
+            } else if (event.step === "evaluating") {
+              // Evaluating is in-progress (longest step)
+              setStreamSteps((prev) => [...prev, { step: event.step, message: event.message, done: false }]);
+            }
+          } catch (e) {
+            // Skip malformed SSE events
+            if (e.message !== "Analysis failed" && !e.message.startsWith("Failed to parse")) {
+              console.error("SSE parse error:", e);
+            } else {
+              throw e;
+            }
+          }
+        }
+      }
+    }
+
+    if (!finalAnalysis) {
+      throw new Error("Analysis failed — no result received.");
+    }
+
+    // Mark evaluating step as done
+    setStreamSteps((prev) =>
+      prev.map((s) => (s.step === "evaluating" ? { ...s, done: true } : s))
+    );
+
+    // Check for ethics block
+    if (finalAnalysis.ethics_blocked) {
+      return { ethicsBlocked: true, message: finalAnalysis.ethics_message };
+    }
+
+    return { ethicsBlocked: false, analysis: finalAnalysis };
+  };
+
   const handleAnalyze = async () => {
     if (!idea.trim()) return;
 
@@ -717,15 +812,10 @@ export default function Home() {
     setIsReEvalResult(false);
     setReEvalRevisionNotes(null);
     try {
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea, profile }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Analysis failed");
-      if (data.ethics_blocked) {
-        setError(data.ethics_message);
+      const result = await analyzeWithStream(idea, profile);
+
+      if (result.ethicsBlocked) {
+        setError(result.message);
         return;
       }
 
@@ -754,7 +844,7 @@ export default function Home() {
         setEvalsRemaining(getEvalsRemaining());
       }
 
-      setAnalysis(data);
+      setAnalysis(result.analysis);
       setEditedPhases(null);
       setExpandedPhases({});
       setCurrentScreen("results1");
@@ -817,16 +907,11 @@ export default function Home() {
         }
       }
 
-      // Call the analyze endpoint (same as fresh evaluation)
-      const analyzeRes = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea: modifiedIdea, profile }),
-      });
-      const analyzeData = await analyzeRes.json();
-      if (!analyzeRes.ok) throw new Error(analyzeData.error || "Analysis failed");
-      if (analyzeData.ethics_blocked) {
-        setError(analyzeData.ethics_message);
+      // Use SSE streaming
+      const result = await analyzeWithStream(modifiedIdea, profile);
+
+      if (result.ethicsBlocked) {
+        setError(result.message);
         return;
       }
 
@@ -854,7 +939,7 @@ export default function Home() {
       setReEvalRevisionNotes(revisions.length > 0 ? revisions : null);
 
       // Show results as FRESH evaluation (not saved, not viewing from saved)
-      setAnalysis(analyzeData);
+      setAnalysis(result.analysis);
       setEditedPhases(null);
       setExpandedPhases({});
       setPhaseProgress({});
@@ -1598,20 +1683,77 @@ export default function Home() {
             </div>
 
             {isAnalyzing && (
-              <div style={{ textAlign: "center", padding: "48px 0" }}>
+              <div style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 9999,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                background: "rgba(0,0,0,0.75)",
+                animation: "overlayFadeIn 0.3s ease-out",
+              }}>
                 <div style={{
-                  display: "inline-block",
-                  width: 32,
-                  height: 32,
-                  border: "2px solid #404040",
-                  borderTopColor: "#fff",
-                  borderRadius: "50%",
-                  animation: "spin 1s linear infinite",
-                }} />
-                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-                <p style={{ fontSize: 14, color: "#737373", marginTop: 16 }}>
-                  Analyzing your idea... This may take 15-30 seconds.
-                </p>
+                  background: "#0d0d0d",
+                  border: "1px solid #262626",
+                  borderRadius: 12,
+                  padding: "28px 32px",
+                  fontFamily: "'Courier New', Courier, monospace",
+                  fontSize: 13,
+                  lineHeight: 1.8,
+                  width: "90%",
+                  maxWidth: 520,
+                  boxShadow: "0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03)",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: "1px solid #1a1a1a" }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981", boxShadow: "0 0 8px rgba(16,185,129,0.5)" }} />
+                    <span style={{ color: "#525252", fontSize: 11, letterSpacing: "0.08em" }}>EVALUATION PIPELINE</span>
+                  </div>
+                  {streamSteps.map((s, i) => (
+                    <div key={i} style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 10,
+                      color: s.done ? "#a3a3a3" : "#e5e5e5",
+                      opacity: s.done ? 0.8 : 1,
+                      animation: "fadeInStep 0.3s ease-out",
+                    }}>
+                      <span style={{ color: s.done ? "#10b981" : "#f59e0b", flexShrink: 0, width: 16, textAlign: "center" }}>
+                        {s.done ? "✓" : "›"}
+                      </span>
+                      <span style={{ wordBreak: "break-word" }}>{s.message}</span>
+                    </div>
+                  ))}
+                  {streamSteps.length > 0 && !streamSteps.some(s => s.step === "complete") && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#525252", marginTop: 2 }}>
+                      <span style={{ width: 16, textAlign: "center", animation: "blink 1s step-end infinite" }}>_</span>
+                    </div>
+                  )}
+                  {streamSteps.length === 0 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#525252" }}>
+                      <span style={{ width: 16, textAlign: "center", animation: "blink 1s step-end infinite" }}>_</span>
+                      <span>Initializing...</span>
+                    </div>
+                  )}
+                </div>
+                <style>{`
+                  @keyframes fadeInStep {
+                    from { opacity: 0; transform: translateY(4px); }
+                    to { opacity: 1; transform: translateY(0); }
+                  }
+                  @keyframes blink {
+                    50% { opacity: 0; }
+                  }
+                  @keyframes overlayFadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                  }
+                `}</style>
               </div>
             )}
           </PageContainer>
@@ -2394,20 +2536,76 @@ export default function Home() {
 
             {isReEvaluating && (
               <div style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 9999,
                 display: "flex",
-                flexDirection: "column",
                 alignItems: "center",
-                gap: 16,
-                padding: "48px 0",
+                justifyContent: "center",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                background: "rgba(0,0,0,0.75)",
+                animation: "overlayFadeIn 0.3s ease-out",
               }}>
-                <div className="loading-spinner" style={{
-                  width: 40, height: 40,
-                  border: "3px solid #1a1a1a",
-                  borderTop: "3px solid #f5f5f5",
-                  borderRadius: "50%",
-                  animation: "spin 1s linear infinite",
-                }} />
-                <p style={{ fontSize: 14, color: "#737373" }}>Running fresh evaluation with latest market data...</p>
+                <div style={{
+                  background: "#0d0d0d",
+                  border: "1px solid #262626",
+                  borderRadius: 12,
+                  padding: "28px 32px",
+                  fontFamily: "'Courier New', Courier, monospace",
+                  fontSize: 13,
+                  lineHeight: 1.8,
+                  width: "90%",
+                  maxWidth: 520,
+                  boxShadow: "0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03)",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: "1px solid #1a1a1a" }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981", boxShadow: "0 0 8px rgba(16,185,129,0.5)" }} />
+                    <span style={{ color: "#525252", fontSize: 11, letterSpacing: "0.08em" }}>RE-EVALUATION PIPELINE</span>
+                  </div>
+                  {streamSteps.map((s, i) => (
+                    <div key={i} style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 10,
+                      color: s.done ? "#a3a3a3" : "#e5e5e5",
+                      opacity: s.done ? 0.8 : 1,
+                      animation: "fadeInStep 0.3s ease-out",
+                    }}>
+                      <span style={{ color: s.done ? "#10b981" : "#f59e0b", flexShrink: 0, width: 16, textAlign: "center" }}>
+                        {s.done ? "✓" : "›"}
+                      </span>
+                      <span style={{ wordBreak: "break-word" }}>{s.message}</span>
+                    </div>
+                  ))}
+                  {streamSteps.length > 0 && !streamSteps.some(s => s.step === "complete") && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#525252", marginTop: 2 }}>
+                      <span style={{ width: 16, textAlign: "center", animation: "blink 1s step-end infinite" }}>_</span>
+                    </div>
+                  )}
+                  {streamSteps.length === 0 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#525252" }}>
+                      <span style={{ width: 16, textAlign: "center", animation: "blink 1s step-end infinite" }}>_</span>
+                      <span>Initializing...</span>
+                    </div>
+                  )}
+                </div>
+                <style>{`
+                  @keyframes fadeInStep {
+                    from { opacity: 0; transform: translateY(4px); }
+                    to { opacity: 1; transform: translateY(0); }
+                  }
+                  @keyframes blink {
+                    50% { opacity: 0; }
+                  }
+                  @keyframes overlayFadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                  }
+                `}</style>
               </div>
             )}
           </PageContainer>
