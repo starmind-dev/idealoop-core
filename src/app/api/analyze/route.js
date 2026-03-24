@@ -94,7 +94,7 @@ async function searchGitHub(query) {
 
     const headers = {
       Accept: "application/vnd.github.v3+json",
-      "User-Agent": "IdeaValidator-App",
+      "User-Agent": "IdeaLoopCore-App",
     };
 
     // Use token if available for higher rate limits

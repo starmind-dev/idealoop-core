@@ -1265,7 +1265,7 @@ export default function Home() {
           <PageContainer>
             <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "#525252", margin: 0, cursor: "pointer" }}>
-                Idea Validator
+                IdeaLoop Core
               </h1>
               {!authLoading && (
                 user ? (
@@ -1451,7 +1451,7 @@ export default function Home() {
         <footer style={footerStyle}>
           <PageContainer>
             <p style={{ fontSize: 12, color: "#404040", margin: 0 }}>
-              IdeaValidator — All analysis is AI-generated. Use as a guide, not a definitive assessment.
+              IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
             </p>
           </PageContainer>
         </footer>
@@ -1469,7 +1469,7 @@ export default function Home() {
           <PageContainer>
             <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "#525252", margin: 0, cursor: "pointer" }}>
-                Idea Validator
+                IdeaLoop Core
               </h1>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <button onClick={() => setCurrentScreen("profile")} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
@@ -1529,7 +1529,7 @@ export default function Home() {
               <textarea
                 value={idea}
                 onChange={(e) => setIdea(e.target.value)}
-                placeholder="Example: An AI tool that evaluates startup ideas by scoring them against real competitor data from GitHub and Google. It's for solo founders and indie builders who waste weeks on ideas without knowing if there's real demand. The problem is that most people either ask friends who say 'great idea!' or use ChatGPT which gives generic encouragement instead of honest analysis..."
+                placeholder="Example: An AI-powered idea evaluation workflow that scores startup ideas against real competitor data from GitHub and Google. It's for founders and ambitious builders who waste weeks on ideas without knowing if there's real demand. The problem is that most people either ask friends who say 'great idea!' or use ChatGPT which gives generic encouragement instead of structured, honest analysis..."
                 rows={8}
                 style={{
                   width: "100%",
@@ -1620,7 +1620,7 @@ export default function Home() {
         <footer style={footerStyle}>
           <PageContainer>
             <p style={{ fontSize: 12, color: "#404040", margin: 0 }}>
-              IdeaValidator — All analysis is AI-generated. Use as a guide, not a definitive assessment.
+              IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
             </p>
           </PageContainer>
         </footer>
@@ -1645,7 +1645,7 @@ export default function Home() {
           <PageContainer>
             <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "#525252", margin: 0, cursor: "pointer" }}>
-                Idea Validator
+                IdeaLoop Core
               </h1>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <button onClick={() => setCurrentScreen("input")} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
@@ -2132,7 +2132,7 @@ export default function Home() {
         <footer style={footerStyle}>
           <PageContainer>
             <p style={{ fontSize: 12, color: "#404040", margin: 0 }}>
-              IdeaValidator — All analysis is AI-generated. Use as a guide, not a definitive assessment.
+              IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
             </p>
           </PageContainer>
         </footer>
@@ -2167,7 +2167,7 @@ export default function Home() {
           <PageContainer>
             <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "#525252", margin: 0, cursor: "pointer" }}>
-                Idea Validator
+                IdeaLoop Core
               </h1>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <button onClick={() => {
@@ -2416,7 +2416,7 @@ export default function Home() {
         <footer style={footerStyle}>
           <PageContainer>
             <p style={{ fontSize: 12, color: "#404040", margin: 0 }}>
-              IdeaValidator — All analysis is AI-generated. Use as a guide, not a definitive assessment.
+              IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
             </p>
           </PageContainer>
         </footer>
@@ -2434,7 +2434,7 @@ export default function Home() {
           <PageContainer wide>
             <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "#525252", margin: 0, cursor: "pointer" }}>
-                Idea Validator
+                IdeaLoop Core
               </h1>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <button onClick={() => {
@@ -3022,7 +3022,7 @@ export default function Home() {
         <footer style={footerStyle}>
           <PageContainer wide>
             <p style={{ fontSize: 12, color: "#404040", margin: 0 }}>
-              IdeaValidator — All analysis is AI-generated. Use as a guide, not a definitive assessment.
+              IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
             </p>
           </PageContainer>
         </footer>
@@ -3040,7 +3040,7 @@ export default function Home() {
           <PageContainer wide>
             <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "#525252", margin: 0, cursor: "pointer" }}>
-                Idea Validator
+                IdeaLoop Core
               </h1>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <button onClick={() => setCurrentScreen("results1")} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
@@ -3821,7 +3821,7 @@ export default function Home() {
         <footer style={footerStyle}>
           <PageContainer wide>
             <p style={{ fontSize: 12, color: "#404040", margin: 0 }}>
-              IdeaValidator — All analysis is AI-generated. Use as a guide, not a definitive assessment.
+              IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
             </p>
           </PageContainer>
         </footer>
