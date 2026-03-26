@@ -20,7 +20,7 @@ function StepProgress({ currentStep, savedMode }) {
     { number: 1, label: "Profile" },
     { number: 2, label: "Idea" },
     { number: 3, label: "Analysis" },
-    { number: 4, label: savedMode ? "Roadmap" : "Build Plan" },
+    { number: 4, label: "Roadmap" },
     ...(savedMode ? [{ number: 5, label: "Re-evaluate" }] : []),
   ];
 
@@ -3270,7 +3270,7 @@ export default function Home() {
                 cursor: "pointer",
               }}
             >
-              {viewingFromSaved ? "View Your Roadmap" : "Continue to Build Plan"}
+              {viewingFromSaved ? "View Your Roadmap" : "Continue to Roadmap"}
             </button>
           </PageContainer>
         </main>

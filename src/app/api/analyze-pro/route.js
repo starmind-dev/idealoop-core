@@ -140,7 +140,7 @@ ${idea}`;
 
           const stage1Response = await client.messages.create({
             model: "claude-sonnet-4-20250514",
-            max_tokens: 4096,
+            max_tokens: 3000,
             temperature: 0,
             system: stage1SystemPrompt,
             messages: [{ role: "user", content: stage1UserMessage }],
@@ -185,7 +185,7 @@ USER'S AI PRODUCT IDEA:
 ${idea}
 
 === STAGE 1 RESULTS: COMPETITION ANALYSIS ===
-${JSON.stringify(stage1Result, null, 2)}`;
+${JSON.stringify(stage1Result)}`;
 
           const stage2Response = await client.messages.create({
             model: "claude-sonnet-4-20250514",
@@ -225,10 +225,10 @@ USER'S AI PRODUCT IDEA:
 ${idea}
 
 === STAGE 1 RESULTS: COMPETITION ANALYSIS ===
-${JSON.stringify(stage1Result, null, 2)}
+${JSON.stringify(stage1Result)}
 
 === STAGE 2 RESULTS: SCORING ===
-${JSON.stringify(stage2Result, null, 2)}`;
+${JSON.stringify(stage2Result)}`;
 
           const stage3Response = await client.messages.create({
             model: "claude-sonnet-4-20250514",
@@ -264,6 +264,36 @@ ${JSON.stringify(stage2Result, null, 2)}`;
 
           const ev = stage2Result.evaluation;
           ev.overall_score = calculateOverallScore(ev);
+
+          // SANITY CHECK: Flag score-explanation contradictions
+          // Catches outlier runs where Stage 2 scores don't match rubric level language
+          const sanityWarnings = [];
+          const metrics = [
+            { name: "market_demand", score: ev.market_demand?.score, explanation: ev.market_demand?.explanation },
+            { name: "monetization", score: ev.monetization?.score, explanation: ev.monetization?.explanation },
+            { name: "originality", score: ev.originality?.score, explanation: ev.originality?.explanation },
+          ];
+
+          const positiveSignals = ["clear", "proven", "demonstrated", "strong", "growing", "established", "active demand", "willingness to pay"];
+          const negativeSignals = ["severely limited", "no viable", "no capturable", "structurally weak", "no clear", "eliminates", "impossible", "doomed"];
+
+          for (const m of metrics) {
+            if (!m.score || !m.explanation) continue;
+            const expLower = m.explanation.toLowerCase();
+            const hasPositive = positiveSignals.some(s => expLower.includes(s));
+            const hasNegative = negativeSignals.some(s => expLower.includes(s));
+
+            if (m.score <= 4.0 && hasPositive && !hasNegative) {
+              sanityWarnings.push(`${m.name}: score ${m.score} but explanation uses positive language`);
+            }
+            if (m.score >= 6.5 && hasNegative && !hasPositive) {
+              sanityWarnings.push(`${m.name}: score ${m.score} but explanation uses negative language`);
+            }
+          }
+
+          if (sanityWarnings.length > 0) {
+            console.warn("SANITY CHECK WARNINGS:", sanityWarnings);
+          }
 
           // Assemble final analysis in the same schema as free tier
           const analysis = {

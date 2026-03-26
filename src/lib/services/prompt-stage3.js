@@ -50,10 +50,10 @@ COMPETITION-AWARE PHASES:
 - If Stage 1 identified that incumbents are actively adding this capability: include urgency awareness — the window may be closing.
 - If Stage 1 identified key entry barriers: the roadmap must address how to overcome them specifically.
 
-SCORE-CALIBRATED GRANULARITY:
-- Low scores (3-5 overall): Lean roadmap. Focus on proving viability before investing time. 4-5 phases max.
-- Medium scores (5-6.5 overall): Balanced roadmap. Validation + building + initial launch. 5-7 phases.
-- High scores (6.5+ overall): Full roadmap with confidence. Can include growth phases. 6-8 phases.
+SCORE-CALIBRATED GRANULARITY (use the individual metric scores from Stage 2, since overall score is calculated later):
+- Weak signals (most metrics below 5.0): Lean roadmap. Focus on proving viability before investing time. 4-5 phases max.
+- Mixed signals (metrics averaging 5.0-6.5): Balanced roadmap. Validation + building + initial launch. 5-7 phases.
+- Strong signals (most metrics above 6.0): Full roadmap with confidence. Can include growth phases. 6-8 phases.
 
 === TOOL RECOMMENDATIONS ===
 
@@ -115,5 +115,6 @@ Additional rules:
 - Recommend 5-8 tools grouped by purpose with detailed explanations.
 - Tool alternative field is paid-tier exclusive — gives users a backup option.
 - Time estimates must account for the FULL journey, not just coding time.
-- If the idea scored poorly overall (<4.5), the roadmap should honestly suggest validation-first approaches and explicitly note when to consider pivoting or abandoning.
-- Phase details should be genuinely actionable — specific enough that the user could follow them as a plan.`;
+- If the idea scored poorly (most metrics below 4.5), the roadmap should honestly suggest validation-first approaches and explicitly note when to consider pivoting or abandoning.
+- Phase details should be genuinely actionable — specific enough that the user could follow them as a plan.
+- Write phase details and tool explanations that are specific, causally clear, and proportionate to the evidence. Avoid overstated conclusions or judgments stronger than the data supports. Stages 1 and 2 have already identified risks and barriers — your job is to generate the most intelligent action plan given those realities. Be realistic about difficulty but constructive about path.`;

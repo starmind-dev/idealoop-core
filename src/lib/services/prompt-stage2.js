@@ -25,36 +25,44 @@ You will receive a competition analysis as part of the user message. This includ
 - Classified competitors (direct, adjacent, substitute, internal_build) with strengths and weaknesses
 - Differentiation analysis
 - Landscape analysis with market maturity and entry barriers
-- Domain risk flags (is_high_trust, is_marketplace, is_consumer_habit, is_platform_framing, is_llm_wrapper, requires_relationship_displacement)
+- Domain risk flags with confidence levels (is_high_trust, is_marketplace, is_consumer_habit, is_platform_framing, llm_substitution_risk, requires_relationship_displacement — each with confidence ratings)
 - Classification (commercial vs social_impact)
 
-USE THIS DATA. Do not re-analyze competition from scratch. Reference specific competitors by name when relevant to scoring. Your scores should be GROUNDED in what the competition analysis found.
+USE THIS DATA. Do not re-analyze competition from scratch. Each metric has a different relationship to competition data — see the COMPETITION DATA RELATIONSHIP section below for how each metric should use Stage 1 findings.
 
 === DOMAIN RISK APPLICATION ===
-The prior stage identified domain risk flags. Apply them as follows:
+The prior stage identified domain risk flags with confidence levels. Apply them proportionally — high confidence flags should strongly influence scoring, medium flags should be considered but not dominating, low confidence flags should be noted but not used to cap scores.
 
 If is_high_trust is true:
 1. DEMAND: Trust and regulatory burden are demand FILTERS, not implementation footnotes. Score only the demand that survives the trust barrier. Do not accept "assistive/copilot/supportive" framing as evidence of lower trust requirements.
 2. MONETIZATION: Compliance costs, liability exposure, and trust-building investment reduce margins and delay revenue significantly.
 3. FAILURE RISKS: At least one failure risk must address the trust/regulatory/liability dimension.
 
-If is_marketplace is true:
+If is_marketplace is true (weight by marketplace_confidence):
 - DEMAND: Score based on likelihood of achieving initial liquidity, not demand for the transaction.
 - MONETIZATION: Transaction fees are downstream of unsolved liquidity. Score based on likelihood of reaching the point where fees can be charged.
 
-If is_consumer_habit is true:
+If is_consumer_habit is true (weight by consumer_habit_confidence):
 - DEMAND: Score behavioral demand, not aspirational demand. Evaluate natural usage frequency, onboarding burden, and post-novelty retention.
 
-If is_platform_framing is true:
+If is_platform_framing is true (weight by platform_framing_confidence):
 - DEMAND: Identify the ONE narrow sticky behavior. Score demand for that, not the platform vision.
 - ORIGINALITY: Score the core behavior, not the ambitious label.
 
-If is_llm_wrapper is true:
-- MONETIZATION: Apply free substitution check. Score the delta value only.
-- ORIGINALITY: If the core value is available through prompting, structural advantage is weak.
+Apply llm_substitution_risk as follows:
+- HIGH: Core value is clearly available through direct LLM prompting. MONETIZATION: Score the delta value only — what does the product add beyond what a user gets from ChatGPT/Claude? ORIGINALITY: Structural advantage is weak.
+- MEDIUM: Product adds real workflow delta but some core value overlaps with direct prompting. MONETIZATION: Acknowledge substitution pressure but recognize workflow/persistence value. ORIGINALITY: Score the workflow differentiation, not just the AI capability.
+- LOW: LLM cannot meaningfully replicate the value. No substitution penalty.
 
-If requires_relationship_displacement is true:
+If requires_relationship_displacement is true (weight by displacement_confidence):
 - DEMAND: Displacing trusted human relationships is the hardest adoption barrier. Score accordingly.
+
+CRITICAL — COMPETITION DATA DOES NOT AUTOMATICALLY EQUAL DEMAND OR OPPORTUNITY:
+A rich competitive landscape from Stage 1 means the CATEGORY is active — it does NOT mean demand is capturable by a new entrant. Apply this principle with particular force in these cases:
+- For high-trust domains (health, finance, legal): many competitors existing makes entry HARDER, not easier — incumbents have trust, compliance infrastructure, and switching costs that a new entrant lacks.
+- For marketplaces: many competitors existing means liquidity is fragmented, not available.
+- For regulated domains: established players have compliance advantages that take years to build.
+For other domains, treat competition data as context — neither automatically inflating nor automatically depressing scores. Score based on what the competition data reveals about capturable gaps, not on competitor count alone.
 
 === EVALUATION RUBRIC ===
 
@@ -100,7 +108,7 @@ Before scoring, use the competition data to answer:
 
 Anti-inflation rules:
 - LISTING REVENUE MODELS IS NOT EVIDENCE. Score the ONE most likely revenue path.
-- FREE SUBSTITUTION CHECK: If a general-purpose LLM delivers 70%+ of the value, monetization is structurally weak. Score the delta only.
+- FREE SUBSTITUTION CHECK: Use the llm_substitution_risk from Stage 1. If HIGH, monetization is structurally weak — score the delta only. If MEDIUM, acknowledge substitution pressure but recognize workflow/persistence value. If LOW, no substitution penalty.
 - LOW FREQUENCY PENALTY: If natural usage is episodic, subscription models are structurally weak.
 - MARKETPLACE MONETIZATION: Score based on likelihood of reaching the point where fees can be charged.
 - REGULATED DOMAINS: Compliance costs, liability insurance, and trust-building reduce margins.
@@ -176,8 +184,13 @@ If the idea is a marketplace/platform depending on network effects, set marketpl
 4. Each explanation MUST reference which rubric level the score maps to.
 5. Market Demand, Monetization, Originality evaluate the IDEA ONLY.
 6. Technical Complexity is the ONLY metric using user profile. Do not reference user background in any other metric. If background has minimal relevance, say so honestly.
-7. SCORE-EXPLANATION CONSISTENCY: After writing each explanation, verify the score matches the risks described. A score above 6.0 with an explanation describing significant barriers is a contradiction — lower the score.
-8. GROUNDING REQUIREMENT: Each metric explanation should reference at least one specific finding from the Stage 1 competition analysis. Do not score in a vacuum.
+7. SCORE-EXPLANATION CONSISTENCY (BOTH DIRECTIONS): After writing each explanation, verify the score matches what you described. A score above 6.0 with an explanation describing significant barriers is a contradiction — lower the score. Equally, a score below 5.0 with an explanation describing genuine buyer urgency, real wedge, manageable competition, or clear willingness to pay is also a contradiction — raise the score. Scores must reflect the balance of evidence, not default to pessimism or optimism.
+8. COMPETITION DATA RELATIONSHIP (metric-specific):
+   - MARKET DEMAND: Consider whether competitors indicate the market is well-served or gaps remain. Score primarily on buyer urgency, friction, and adoption likelihood — competition is context, not the primary driver.
+   - MONETIZATION: Consider whether substitutes create pricing pressure or free alternatives exist. Score primarily on willingness to pay, revenue model viability, and first-dollar realism.
+   - ORIGINALITY: Use competitor analysis directly — overlap, defensibility, and differentiation are primary here. This is where Stage 1 data matters most.
+   - TECHNICAL COMPLEXITY: Competition is generally not relevant. Score on technical requirements and founder profile.
+9. ANTI-DOUBLE-COUNTING: Each metric explanation should surface the most relevant Stage 1 findings for that specific metric's dimension. Do not let a single competitor or substitute dominate reasoning across all metrics. If the same finding appears in multiple explanations, each mention must address a genuinely different dimension of impact.
 
 === CONFIDENCE LEVEL ===
 HIGH: Well-understood market with clear comparables and strong evidence from competitor data.
@@ -192,6 +205,9 @@ Identify the top 2-3 most likely reasons this specific idea might fail. These mu
 Good failure risks reference specific barriers: adoption friction, named competitor threats, trust/regulatory barriers, weak monetization mechanics, low usage frequency, cold-start problems, LLM substitution risk, or specific entry barriers identified in Stage 1.
 
 Each risk should be one sentence, direct and concrete.
+
+=== EXPLANATION QUALITY ===
+Write explanations that are specific, causally clear, and proportionate to the evidence. Avoid overstated conclusions or judgments stronger than the data supports. Every claim in an explanation should be traceable to either the idea description, the user profile, or specific Stage 1 findings.
 
 === JSON STRUCTURE ===
 
@@ -208,18 +224,18 @@ Each risk should be one sentence, direct and concrete.
     ],
     "market_demand": {
       "score": 6.5,
-      "explanation": "2-3 sentences referencing rubric level AND specific competitors from Stage 1",
+      "explanation": "2-3 sentences referencing rubric level. Use competition data as context for market gaps, not as primary driver.",
       "geographic_note": null,
       "trajectory_note": null
     },
     "monetization": {
       "score": 5.5,
       "label": "Monetization Potential",
-      "explanation": "2-3 sentences referencing rubric level AND substitute competitors from Stage 1"
+      "explanation": "2-3 sentences referencing rubric level. Use substitute competitors as context for pricing pressure, not as primary driver."
     },
     "originality": {
       "score": 7.0,
-      "explanation": "2-3 sentences referencing rubric level AND competitive landscape from Stage 1"
+      "explanation": "2-3 sentences referencing rubric level AND competitive landscape from Stage 1. This metric uses competition data most directly."
     },
     "technical_complexity": {
       "score": 8.0,

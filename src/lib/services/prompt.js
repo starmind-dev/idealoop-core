@@ -199,6 +199,9 @@ Bad failure risks are generic: "might run out of funding," "market could change,
 
 Each risk should be one sentence, direct and concrete.
 
+=== EXPLANATION QUALITY ===
+Write explanations that are specific, causally clear, and proportionate to the evidence. Avoid overstated conclusions or judgments stronger than the data supports. Every claim in an explanation should be traceable to either the idea description, the user profile, or the competition data provided.
+
 === JSON STRUCTURE ===
 
 {
