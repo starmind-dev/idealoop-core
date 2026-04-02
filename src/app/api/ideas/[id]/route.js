@@ -92,6 +92,8 @@ export async function GET(request, { params }) {
           explanation: "",
         },
         marketplace_note: evaluation.scoring_json?.marketplace_note || null,
+        failure_risks: evaluation.scoring_json?.failure_risks || [],
+        confidence_level: evaluation.scoring_json?.confidence_level || null,
         summary: evaluation.summary_text || "",
       },
       competition: {
