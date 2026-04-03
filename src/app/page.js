@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
+import ComparisonView from "./ComparisonView";
 
 // ============================================
 // STEP PROGRESS BAR
@@ -518,6 +519,13 @@ export default function Home() {
   const [myIdeasError, setMyIdeasError] = useState("");
   const [deletingIdeaId, setDeletingIdeaId] = useState(null);
   const [viewingFromSaved, setViewingFromSaved] = useState(false); // tracks if we opened from My Ideas
+
+  // Comparison state
+  const [compareSelected, setCompareSelected] = useState([]); // array of idea IDs (max 2)
+  const [compareSelecting, setCompareSelecting] = useState(false); // true when in selection mode
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareData, setCompareData] = useState(null); // { ideaA, ideaB } with full analysis
+  const [compareLoading, setCompareLoading] = useState(false);
 
   // Progress tracking state
   const [currentEvaluationId, setCurrentEvaluationId] = useState(null);
@@ -1341,7 +1349,66 @@ export default function Home() {
   // Navigate to My Ideas Hub
   const goToMyIdeas = () => {
     setCurrentScreen("myideas");
+    setCompareMode(false);
+    setCompareSelecting(false);
+    setCompareSelected([]);
+    setCompareData(null);
     fetchMyIdeas();
+  };
+
+  // Toggle idea selection for comparison
+  const toggleCompareSelect = (ideaId) => {
+    setCompareSelected((prev) => {
+      if (prev.includes(ideaId)) return prev.filter((id) => id !== ideaId);
+      if (prev.length >= 2) return prev; // max 2
+      return [...prev, ideaId];
+    });
+  };
+
+  // Load two ideas for comparison and enter compare mode
+  const startComparison = async () => {
+    if (compareSelected.length !== 2 || !user) return;
+    setCompareLoading(true);
+    setMyIdeasError("");
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      // Load both ideas in parallel
+      const [resA, resB] = await Promise.all(
+        compareSelected.map((id) =>
+          fetch(`/api/ideas/${id}`, {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          }).then((r) => r.json())
+        )
+      );
+
+      if (resA.error) throw new Error(resA.error);
+      if (resB.error) throw new Error(resB.error);
+
+      // Find the idea objects from myIdeas for titles
+      const ideaObjA = myIdeas.find((i) => i.id === compareSelected[0]);
+      const ideaObjB = myIdeas.find((i) => i.id === compareSelected[1]);
+
+      setCompareData({
+        ideaA: {
+          id: compareSelected[0],
+          title: ideaObjA?.title || "Idea A",
+          analysis: resA.analysis,
+        },
+        ideaB: {
+          id: compareSelected[1],
+          title: ideaObjB?.title || "Idea B",
+          analysis: resB.analysis,
+        },
+      });
+      setCompareMode(true);
+    } catch (err) {
+      setMyIdeasError(err.message || "Failed to load ideas for comparison.");
+    } finally {
+      setCompareLoading(false);
+    }
   };
 
   // Shared header style
@@ -1839,6 +1906,55 @@ export default function Home() {
       return "#ef4444";
     };
 
+    // COMPARISON MODE: render ComparisonView instead of hub
+    if (compareMode && compareData) {
+      return (
+        <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#f5f5f5", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+          <header style={headerStyle}>
+            <PageContainer wide>
+              <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "#525252", margin: 0, cursor: "pointer" }}>
+                  IdeaLoop Core
+                </h1>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  {!authLoading && user && (
+                    <>
+                      <span style={{ fontSize: 12, color: "#525252" }}>{user.email}</span>
+                      <button onClick={handleLogout} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                        Log out
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </PageContainer>
+          </header>
+
+          <main style={{ flex: 1, paddingBottom: 48, paddingTop: 16 }}>
+            <ComparisonView
+              ideaA={compareData.ideaA}
+              ideaB={compareData.ideaB}
+              onBack={() => {
+                setCompareMode(false);
+                setCompareSelecting(false);
+                setCompareData(null);
+                setCompareSelected([]);
+                fetchMyIdeas();
+              }}
+            />
+          </main>
+
+          <footer style={footerStyle}>
+            <PageContainer>
+              <p style={{ fontSize: 12, color: "#404040", margin: 0 }}>
+                IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
+              </p>
+            </PageContainer>
+          </footer>
+        </div>
+      );
+    }
+
     return (
       <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#f5f5f5", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
         <header style={headerStyle}>
@@ -2092,6 +2208,66 @@ export default function Home() {
                     Open any idea to review your evaluation, track your roadmap progress, check recommended tools — and re-evaluate with fresh market data or changed variables.
                   </p>
                 </div>
+
+                {/* Compare button — enters selection mode */}
+                {myIdeas.length >= 2 && !compareSelecting && (
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
+                    <button
+                      onClick={() => { setCompareSelecting(true); setCompareSelected([]); }}
+                      style={{
+                        padding: "8px 16px", borderRadius: 10, fontSize: 13, fontWeight: 600,
+                        border: "1px solid rgba(59,130,246,0.3)", background: "rgba(59,130,246,0.08)",
+                        color: "#60a5fa", cursor: "pointer", transition: "all 0.2s",
+                      }}
+                    >
+                      Compare Ideas
+                    </button>
+                  </div>
+                )}
+
+                {/* Selection bar — shows when in selection mode */}
+                {compareSelecting && (
+                  <div style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "10px 18px", borderRadius: 12,
+                    background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.2)",
+                    marginBottom: 4,
+                  }}>
+                    <span style={{ fontSize: 13, color: "#60a5fa" }}>
+                      {compareSelected.length === 0
+                        ? "Tap 2 ideas to compare"
+                        : compareSelected.length === 1
+                        ? "Tap 1 more idea"
+                        : "2 ideas selected — ready to compare"}
+                    </span>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        onClick={() => { setCompareSelecting(false); setCompareSelected([]); }}
+                        style={{
+                          padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 500,
+                          border: "1px solid rgba(64,64,64,0.4)", background: "transparent",
+                          color: "#525252", cursor: "pointer",
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={startComparison}
+                        disabled={compareSelected.length !== 2 || compareLoading}
+                        style={{
+                          padding: "6px 16px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+                          border: "none",
+                          cursor: compareSelected.length !== 2 || compareLoading ? "not-allowed" : "pointer",
+                          background: compareSelected.length === 2 && !compareLoading ? "#60a5fa" : "rgba(38,38,38,0.6)",
+                          color: compareSelected.length === 2 && !compareLoading ? "#fff" : "#525252",
+                          transition: "all 0.2s",
+                        }}
+                      >
+                        {compareLoading ? "Loading..." : "Compare"}
+                      </button>
+                    </div>
+                  </div>
+                )}
                 {myIdeas.map((savedIdea) => {
                   const evals = savedIdea.evaluations || [];
                   const eval_ = evals.length > 0 ? evals[evals.length - 1] : null;
@@ -2101,13 +2277,14 @@ export default function Home() {
                     day: "numeric",
                     year: "numeric",
                   });
+                  const isCompareSelected = compareSelected.includes(savedIdea.id);
 
                   return (
                     <div
                       key={savedIdea.id}
                       style={{
                         background: "rgba(23,23,23,0.6)",
-                        border: "1px solid rgba(38,38,38,0.8)",
+                        border: compareSelecting && isCompareSelected ? "1px solid rgba(59,130,246,0.5)" : "1px solid rgba(38,38,38,0.8)",
                         borderRadius: 16,
                         overflow: "hidden",
                         transition: "border-color 0.2s",
@@ -2115,9 +2292,13 @@ export default function Home() {
                     >
                       <div
                         onClick={() => {
+                          // In selection mode, toggle selection instead of opening idea
+                          if (compareSelecting) {
+                            toggleCompareSelect(savedIdea.id);
+                            return;
+                          }
                           const evalCount = savedIdea.evaluation_count || savedIdea.evaluations?.length || 1;
                           if (evalCount > 1) {
-                            // Show alternatives popup
                             setAlternativesData({
                               ideaId: savedIdea.id,
                               title: savedIdea.title,
@@ -2136,6 +2317,28 @@ export default function Home() {
                           cursor: "pointer",
                         }}
                       >
+                        {/* Compare checkbox — only visible in selection mode */}
+                        {compareSelecting && (
+                          <div
+                            style={{
+                              width: 22,
+                              height: 22,
+                              borderRadius: 6,
+                              border: isCompareSelected ? "2px solid #60a5fa" : "2px solid rgba(64,64,64,0.6)",
+                              background: isCompareSelected ? "rgba(59,130,246,0.2)" : "transparent",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                              transition: "all 0.2s",
+                              fontSize: 12,
+                              color: "#60a5fa",
+                              fontWeight: 700,
+                            }}
+                          >
+                            {isCompareSelected ? "✓" : ""}
+                          </div>
+                        )}
                         {/* Score circle */}
                         <div style={{
                           width: 48,
