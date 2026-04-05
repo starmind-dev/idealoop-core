@@ -549,6 +549,9 @@ export default function Home() {
   const [reEvalRevisionNotes, setReEvalRevisionNotes] = useState(null); // stored for saving later
   const [reEvalChangedFields, setReEvalChangedFields] = useState(null); // changed_fields metadata for delta explanation
   const [reEvalContextSnapshot, setReEvalContextSnapshot] = useState(null); // analysis snapshot from before re-eval
+  const [reEvalEditTarget, setReEvalEditTarget] = useState(false); // toggle for target user edit field
+  const [reEvalEditProblem, setReEvalEditProblem] = useState(false); // toggle for problem edit field
+  const [reEvalEditCore, setReEvalEditCore] = useState(false); // toggle for core idea edit field
 
   // Alternatives popup state
   const [showAlternativesPopup, setShowAlternativesPopup] = useState(false);
@@ -992,7 +995,9 @@ export default function Home() {
   // Start re-evaluation flow from saved idea view
   const startReEvaluation = () => {
     // Capture context snapshot for the "Evolve This Idea" screen
+    const ideaTitle = myIdeas.find(i => i.id === currentIdeaId)?.title || "";
     setReEvalContextSnapshot(analysis ? {
+      title: ideaTitle,
       overall: analysis.evaluation?.weighted_overall,
       md: analysis.evaluation?.market_demand?.score,
       mo: analysis.evaluation?.monetization?.score,
@@ -1005,6 +1010,9 @@ export default function Home() {
     setReEvalTargetUser("");
     setReEvalProblem("");
     setReEvalCoreIdea("");
+    setReEvalEditTarget(false);
+    setReEvalEditProblem(false);
+    setReEvalEditCore(false);
     setError("");
     setReEvalMode(true);
     setCurrentScreen("reeval");
@@ -2669,24 +2677,23 @@ export default function Home() {
               <h2 style={{ fontSize: 30, fontWeight: 600, margin: "0 0 12px 0" }}>
                 Evolve This Idea
               </h2>
-              <p style={{ fontSize: 16, color: "#737373", lineHeight: 1.6, margin: 0 }}>
-                Run a fresh evaluation with updated market data, or change key dimensions to test a different strategic direction.
+              <p style={{ fontSize: 14, color: "#737373", lineHeight: 1.5, margin: 0 }}>
+                Review your current evaluation, then change one or more dimensions to test a different strategic angle.
               </p>
             </div>
 
             {/* SECTION 1: Context Snapshot */}
             {reEvalContextSnapshot && (
-              <Card style={{ padding: 20, marginBottom: 24, border: "1px solid rgba(108,99,255,0.15)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#737373" }}>Current Evaluation</span>
-                </div>
-
-                {/* Overall score + mini metric bars */}
-                <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 16 }}>
-                  {/* Overall score circle */}
+              <Card style={{ padding: 20, marginBottom: 24 }}>
+                {/* Title row + score circle */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                  <div>
+                    <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#525252", margin: "0 0 6px" }}>Current evaluation</p>
+                    <p style={{ fontSize: 15, fontWeight: 600, color: "#f5f5f5", margin: 0 }}>{reEvalContextSnapshot.title || "Untitled"}</p>
+                  </div>
                   <div style={{
-                    width: 52,
-                    height: 52,
+                    width: 48,
+                    height: 48,
                     borderRadius: "50%",
                     background: `rgba(${(reEvalContextSnapshot.overall || 0) >= 7 ? "16,185,129" : (reEvalContextSnapshot.overall || 0) >= 5 ? "59,130,246" : (reEvalContextSnapshot.overall || 0) >= 3 ? "245,158,11" : "239,68,68"},0.15)`,
                     border: `2px solid ${getScoreColor(reEvalContextSnapshot.overall || 0)}`,
@@ -2699,76 +2706,60 @@ export default function Home() {
                       {(reEvalContextSnapshot.overall || 0).toFixed(1)}
                     </span>
                   </div>
-
-                  {/* 4 metric mini bars */}
-                  <div style={{ display: "flex", gap: 12, flex: 1 }}>
-                    {[
-                      { label: "MD", score: reEvalContextSnapshot.md, isWeakest: weakest?.key === "md" },
-                      { label: "MO", score: reEvalContextSnapshot.mo, isWeakest: weakest?.key === "mo" },
-                      { label: "OR", score: reEvalContextSnapshot.or, isWeakest: weakest?.key === "or" },
-                      { label: "TC", score: reEvalContextSnapshot.tc, isTC: true, isWeakest: weakest?.key === "tc" },
-                    ].map((m, i) => (
-                      <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-                        <div style={{
-                          width: 8,
-                          height: 36,
-                          background: "#1a1a1a",
-                          borderRadius: 4,
-                          overflow: "hidden",
-                          display: "flex",
-                          flexDirection: "column-reverse",
-                        }}>
-                          <div style={{
-                            width: "100%",
-                            height: `${((m.score || 0) / 10) * 100}%`,
-                            background: m.isTC
-                              ? (m.score >= 8 ? "#ef4444" : m.score >= 6 ? "#f59e0b" : "#3b82f6")
-                              : getScoreColor(m.score || 0),
-                            borderRadius: 4,
-                          }} />
-                        </div>
-                        <span style={{
-                          fontSize: 9,
-                          fontWeight: 600,
-                          color: m.isWeakest ? "#f59e0b" : "#525252",
-                        }}>{m.label}</span>
-                        <span style={{ fontSize: 9, fontFamily: "monospace", color: "#525252" }}>{(m.score || 0).toFixed(1)}</span>
-                      </div>
-                    ))}
-                  </div>
                 </div>
 
-                {/* Weakest metric callout */}
+                {/* Horizontal metric bars */}
+                <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                  {[
+                    { label: "MD", score: reEvalContextSnapshot.md },
+                    { label: "MO", score: reEvalContextSnapshot.mo },
+                    { label: "OR", score: reEvalContextSnapshot.or },
+                    { label: "TC", score: reEvalContextSnapshot.tc, isTC: true },
+                  ].map((m, i) => {
+                    const s = m.score || 0;
+                    const color = m.isTC
+                      ? (s >= 8 ? "#ef4444" : s >= 6 ? "#f59e0b" : "#3b82f6")
+                      : getScoreColor(s);
+                    return (
+                      <div key={i} style={{ flex: 1 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                          <span style={{ fontSize: 11, color: "#525252" }}>{m.label}</span>
+                          <span style={{ fontSize: 11, fontFamily: "monospace", color }}>{s.toFixed(1)}</span>
+                        </div>
+                        <div style={{ height: 4, background: "#1a1a1a", borderRadius: 4, overflow: "hidden" }}>
+                          <div style={{ width: `${(s / 10) * 100}%`, height: "100%", background: color, borderRadius: 4 }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Weakest metric pill */}
                 {weakest && (
-                  <div style={{
-                    padding: "8px 12px",
-                    borderRadius: 8,
-                    background: "rgba(245,158,11,0.06)",
-                    border: "1px solid rgba(245,158,11,0.15)",
-                    marginBottom: reEvalContextSnapshot.failure_risks?.length > 0 ? 12 : 0,
-                  }}>
-                    <span style={{ fontSize: 12, color: "#fbbf24" }}>
-                      Weakest area: <strong>{weakest.label}</strong> ({weakest.key === "tc" ? weakest.rawScore?.toFixed(1) : weakest.score?.toFixed(1)})
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
+                    <span style={{ fontSize: 11, color: "#ef4444", fontWeight: 500 }}>Weakest:</span>
+                    <span style={{
+                      fontSize: 11,
+                      padding: "2px 8px",
+                      borderRadius: 9999,
+                      background: "rgba(245,158,11,0.12)",
+                      border: "1px solid rgba(245,158,11,0.25)",
+                      color: "#fbbf24",
+                    }}>
+                      {weakest.label} — {(weakest.key === "tc" ? weakest.rawScore : weakest.score)?.toFixed(1)}
                     </span>
                   </div>
                 )}
 
-                {/* Top failure risks */}
+                {/* Top risks — separated by border */}
                 {reEvalContextSnapshot.failure_risks?.length > 0 && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    {reEvalContextSnapshot.failure_risks.slice(0, 2).map((risk, i) => (
-                      <div key={i} style={{
-                        padding: "8px 12px",
-                        borderRadius: 8,
-                        background: "rgba(239,68,68,0.04)",
-                        border: "1px solid rgba(239,68,68,0.1)",
-                      }}>
-                        <span style={{ fontSize: 12, color: "#a3a3a3", lineHeight: 1.4 }}>
-                          <span style={{ color: "#f87171", marginRight: 6 }}>⚠</span>
-                          {risk}
-                        </span>
-                      </div>
-                    ))}
+                  <div style={{ borderTop: "1px solid rgba(38,38,38,0.6)", paddingTop: 12 }}>
+                    <p style={{ fontSize: 11, color: "#525252", fontWeight: 500, margin: "0 0 6px" }}>Top risks</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      {reEvalContextSnapshot.failure_risks.slice(0, 2).map((risk, i) => (
+                        <p key={i} style={{ fontSize: 12, color: "#737373", margin: 0, lineHeight: 1.4 }}>• {risk}</p>
+                      ))}
+                    </div>
                   </div>
                 )}
 
@@ -2776,12 +2767,10 @@ export default function Home() {
                 {reEvalContextSnapshot.confidence_level && (
                   <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 6 }}>
                     <span style={{
-                      fontSize: 10,
-                      fontWeight: 600,
+                      fontSize: 11,
                       padding: "2px 8px",
                       borderRadius: 9999,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
+                      fontWeight: 500,
                       ...(reEvalContextSnapshot.confidence_level.level === "HIGH"
                         ? { background: "rgba(16,185,129,0.12)", color: "#34d399", border: "1px solid rgba(16,185,129,0.25)" }
                         : reEvalContextSnapshot.confidence_level.level === "MEDIUM"
@@ -2807,118 +2796,134 @@ export default function Home() {
               </Card>
             </div>
 
-            {/* SECTION 2: Editable Change Fields */}
-            <div style={{ marginBottom: 24 }}>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#737373", marginBottom: 4 }}>
-                What would you change?
-              </label>
-              <p style={{ fontSize: 12, color: "#525252", margin: "0 0 16px 0" }}>
-                Leave empty to re-evaluate with fresh market data only. Fill in any field to test a different direction.
-              </p>
+            {/* SECTION 2: What do you want to change? */}
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ fontSize: 13, fontWeight: 500, color: "#a3a3a3", margin: "0 0 12px" }}>What do you want to change?</p>
 
               {/* Target User */}
               <div style={{
-                background: "rgba(255,255,255,0.02)",
-                border: `1px solid ${reEvalTargetUser.trim() ? "rgba(108,99,255,0.25)" : "rgba(255,255,255,0.08)"}`,
+                background: reEvalEditTarget ? "rgba(108,99,255,0.04)" : "rgba(255,255,255,0.02)",
+                border: `1px solid ${reEvalEditTarget ? "rgba(108,99,255,0.3)" : "rgba(255,255,255,0.08)"}`,
                 borderRadius: 12,
-                padding: "16px 18px",
-                marginBottom: 10,
-                transition: "border-color 0.2s",
+                padding: 16,
+                marginBottom: 8,
+                transition: "all 0.2s",
               }}>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#a3a3a3", marginBottom: 8 }}>
-                  Target user
-                  <span style={{ fontSize: 11, fontWeight: 400, color: "#404040", marginLeft: 8 }}>optional</span>
-                </label>
-                <textarea
-                  value={reEvalTargetUser}
-                  onChange={(e) => setReEvalTargetUser(e.target.value)}
-                  placeholder="e.g. Small e-commerce store owners with 10-50 products"
-                  rows={2}
-                  style={{
-                    width: "100%",
-                    background: "rgba(23,23,23,0.6)",
-                    border: "1px solid rgba(64,64,64,0.4)",
-                    borderRadius: 8,
-                    padding: "10px 14px",
-                    fontSize: 14,
-                    color: "#f5f5f5",
-                    lineHeight: 1.6,
-                    resize: "none",
-                    outline: "none",
-                    boxSizing: "border-box",
-                    fontFamily: "inherit",
-                  }}
-                />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: "#a3a3a3" }}>Target user</span>
+                  <button
+                    onClick={() => { setReEvalEditTarget(!reEvalEditTarget); if (reEvalEditTarget) setReEvalTargetUser(""); }}
+                    style={{ fontSize: 12, color: "#60a5fa", background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}
+                  >
+                    {reEvalEditTarget ? "Cancel" : "Edit"}
+                  </button>
+                </div>
+                {reEvalEditTarget && (
+                  <div style={{ marginTop: 10 }}>
+                    <input
+                      type="text"
+                      value={reEvalTargetUser}
+                      onChange={(e) => setReEvalTargetUser(e.target.value)}
+                      placeholder="e.g. Busy professionals aged 30-45 tracking macros"
+                      style={{
+                        width: "100%",
+                        background: "rgba(23,23,23,0.6)",
+                        border: "1px solid rgba(64,64,64,0.4)",
+                        borderRadius: 8,
+                        padding: "10px 14px",
+                        fontSize: 13,
+                        color: "#f5f5f5",
+                        outline: "none",
+                        boxSizing: "border-box",
+                        fontFamily: "inherit",
+                      }}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Problem */}
               <div style={{
-                background: "rgba(255,255,255,0.02)",
-                border: `1px solid ${reEvalProblem.trim() ? "rgba(108,99,255,0.25)" : "rgba(255,255,255,0.08)"}`,
+                background: reEvalEditProblem ? "rgba(108,99,255,0.04)" : "rgba(255,255,255,0.02)",
+                border: `1px solid ${reEvalEditProblem ? "rgba(108,99,255,0.3)" : "rgba(255,255,255,0.08)"}`,
                 borderRadius: 12,
-                padding: "16px 18px",
-                marginBottom: 10,
-                transition: "border-color 0.2s",
+                padding: 16,
+                marginBottom: 8,
+                transition: "all 0.2s",
               }}>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#a3a3a3", marginBottom: 8 }}>
-                  Problem it solves
-                  <span style={{ fontSize: 11, fontWeight: 400, color: "#404040", marginLeft: 8 }}>optional</span>
-                </label>
-                <textarea
-                  value={reEvalProblem}
-                  onChange={(e) => setReEvalProblem(e.target.value)}
-                  placeholder="e.g. They spend 3 hours/week on compliance reports that could be automated"
-                  rows={2}
-                  style={{
-                    width: "100%",
-                    background: "rgba(23,23,23,0.6)",
-                    border: "1px solid rgba(64,64,64,0.4)",
-                    borderRadius: 8,
-                    padding: "10px 14px",
-                    fontSize: 14,
-                    color: "#f5f5f5",
-                    lineHeight: 1.6,
-                    resize: "none",
-                    outline: "none",
-                    boxSizing: "border-box",
-                    fontFamily: "inherit",
-                  }}
-                />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: "#a3a3a3" }}>Problem it solves</span>
+                  <button
+                    onClick={() => { setReEvalEditProblem(!reEvalEditProblem); if (reEvalEditProblem) setReEvalProblem(""); }}
+                    style={{ fontSize: 12, color: "#60a5fa", background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}
+                  >
+                    {reEvalEditProblem ? "Cancel" : "Edit"}
+                  </button>
+                </div>
+                {reEvalEditProblem && (
+                  <div style={{ marginTop: 10 }}>
+                    <input
+                      type="text"
+                      value={reEvalProblem}
+                      onChange={(e) => setReEvalProblem(e.target.value)}
+                      placeholder="e.g. People waste money on meal plans they never follow"
+                      style={{
+                        width: "100%",
+                        background: "rgba(23,23,23,0.6)",
+                        border: "1px solid rgba(64,64,64,0.4)",
+                        borderRadius: 8,
+                        padding: "10px 14px",
+                        fontSize: 13,
+                        color: "#f5f5f5",
+                        outline: "none",
+                        boxSizing: "border-box",
+                        fontFamily: "inherit",
+                      }}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Core Idea */}
               <div style={{
-                background: "rgba(255,255,255,0.02)",
-                border: `1px solid ${reEvalCoreIdea.trim() ? "rgba(108,99,255,0.25)" : "rgba(255,255,255,0.08)"}`,
+                background: reEvalEditCore ? "rgba(108,99,255,0.04)" : "rgba(255,255,255,0.02)",
+                border: `1px solid ${reEvalEditCore ? "rgba(108,99,255,0.3)" : "rgba(255,255,255,0.08)"}`,
                 borderRadius: 12,
-                padding: "16px 18px",
+                padding: 16,
                 marginBottom: 0,
-                transition: "border-color 0.2s",
+                transition: "all 0.2s",
               }}>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#a3a3a3", marginBottom: 8 }}>
-                  Core idea
-                  <span style={{ fontSize: 11, fontWeight: 400, color: "#404040", marginLeft: 8 }}>optional</span>
-                </label>
-                <textarea
-                  value={reEvalCoreIdea}
-                  onChange={(e) => setReEvalCoreIdea(e.target.value)}
-                  placeholder="e.g. Instead of a full platform, a lightweight browser extension that..."
-                  rows={2}
-                  style={{
-                    width: "100%",
-                    background: "rgba(23,23,23,0.6)",
-                    border: "1px solid rgba(64,64,64,0.4)",
-                    borderRadius: 8,
-                    padding: "10px 14px",
-                    fontSize: 14,
-                    color: "#f5f5f5",
-                    lineHeight: 1.6,
-                    resize: "none",
-                    outline: "none",
-                    boxSizing: "border-box",
-                    fontFamily: "inherit",
-                  }}
-                />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: "#a3a3a3" }}>Core idea</span>
+                  <button
+                    onClick={() => { setReEvalEditCore(!reEvalEditCore); if (reEvalEditCore) setReEvalCoreIdea(""); }}
+                    style={{ fontSize: 12, color: "#60a5fa", background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}
+                  >
+                    {reEvalEditCore ? "Cancel" : "Edit"}
+                  </button>
+                </div>
+                {reEvalEditCore && (
+                  <div style={{ marginTop: 10 }}>
+                    <input
+                      type="text"
+                      value={reEvalCoreIdea}
+                      onChange={(e) => setReEvalCoreIdea(e.target.value)}
+                      placeholder="e.g. Instead of general nutrition, focus on post-workout recovery meals"
+                      style={{
+                        width: "100%",
+                        background: "rgba(23,23,23,0.6)",
+                        border: "1px solid rgba(64,64,64,0.4)",
+                        borderRadius: 8,
+                        padding: "10px 14px",
+                        fontSize: 13,
+                        color: "#f5f5f5",
+                        outline: "none",
+                        boxSizing: "border-box",
+                        fontFamily: "inherit",
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -4248,12 +4253,12 @@ export default function Home() {
                       </div>
                     ) : (
                       <>
-                        <p style={{ fontSize: 14, fontWeight: 600, color: "#d4d4d4", margin: "0 0 4px 0" }}>
-                          What do you want to do with this version?
-                        </p>
-                        <p style={{ fontSize: 12, color: "#525252", margin: "0 0 16px 0" }}>
-                          Save it as a new direction linked to the parent idea, or discard if this was just a test.
-                        </p>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#a78bfa", flexShrink: 0 }} />
+                          <p style={{ fontSize: 15, fontWeight: 600, color: "#f5f5f5", margin: 0 }}>
+                            What do you want to do with this version?
+                          </p>
+                        </div>
                         {saveStatus === "naming" ? (
                           <div style={{
                             padding: "16px 20px",
@@ -4321,38 +4326,46 @@ export default function Home() {
                             </div>
                           </div>
                         ) : (
-                          <div style={{ display: "flex", gap: 10 }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                             <button
                               onClick={handleSaveIdea}
                               disabled={saveStatus === "saving"}
                               style={{
-                                flex: 1,
-                                padding: "12px 0",
+                                width: "100%",
+                                padding: "14px 16px",
                                 borderRadius: 12,
                                 fontSize: 14,
                                 fontWeight: 600,
-                                border: "1px solid rgba(139,92,246,0.4)",
+                                border: "1px solid rgba(108,99,255,0.4)",
                                 cursor: saveStatus === "saving" ? "not-allowed" : "pointer",
-                                background: saveStatus === "saving" ? "rgba(38,38,38,0.6)" : "rgba(139,92,246,0.12)",
+                                background: saveStatus === "saving" ? "rgba(38,38,38,0.6)" : "rgba(108,99,255,0.12)",
                                 color: saveStatus === "saving" ? "#525252" : "#a78bfa",
+                                textAlign: "left",
                                 transition: "all 0.2s",
                               }}
                             >
-                              {saveStatus === "saving" ? "Saving..." : "Save as branch"}
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <span>{saveStatus === "saving" ? "Saving..." : "Save as branch"}</span>
+                                <span style={{ fontSize: 18, opacity: 0.5 }}>→</span>
+                              </div>
+                              <p style={{ fontSize: 12, color: "#737373", margin: "6px 0 0", fontWeight: 400 }}>
+                                Keep this as a new direction linked to the parent idea
+                              </p>
                             </button>
+
                             <button
                               onClick={() => {
-                                // Discard — navigate back to saved idea view without saving
                                 setIsReEvalResult(false);
                                 setReEvalRevisionNotes(null);
                                 setReEvalChangedFields(null);
                                 setReEvalContextSnapshot(null);
                                 setViewingFromSaved(true);
-                                setSaveStatus("saved"); // already saved parent
+                                setSaveStatus("saved");
                                 goToMyIdeas();
                               }}
                               style={{
-                                padding: "12px 24px",
+                                width: "100%",
+                                padding: "14px 16px",
                                 borderRadius: 12,
                                 fontSize: 14,
                                 fontWeight: 500,
@@ -4360,10 +4373,17 @@ export default function Home() {
                                 background: "transparent",
                                 color: "#737373",
                                 cursor: "pointer",
+                                textAlign: "left",
                                 transition: "all 0.2s",
                               }}
                             >
-                              Discard
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <span>Discard</span>
+                                <span style={{ fontSize: 18, opacity: 0.3 }}>×</span>
+                              </div>
+                              <p style={{ fontSize: 12, color: "#525252", margin: "6px 0 0", fontWeight: 400 }}>
+                                This was just a test, don't save
+                              </p>
                             </button>
                           </div>
                         )}
