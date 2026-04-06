@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import ComparisonView from "./ComparisonView";
+import LineageView from "./LineageView";
 
 // ============================================
 // STEP PROGRESS BAR
@@ -526,6 +527,10 @@ export default function Home() {
   const [compareMode, setCompareMode] = useState(false);
   const [compareData, setCompareData] = useState(null); // { ideaA, ideaB } with full analysis
   const [compareLoading, setCompareLoading] = useState(false);
+
+  // Lineage view state
+  const [lineageMode, setLineageMode] = useState(false);
+  const [lineageTargetId, setLineageTargetId] = useState(null);
 
   // Progress tracking state
   const [currentEvaluationId, setCurrentEvaluationId] = useState(null);
@@ -1436,8 +1441,9 @@ export default function Home() {
   };
 
   // Load two ideas/evaluations for comparison and enter compare mode
-  const startComparison = async () => {
-    if (compareSelected.length !== 2 || !user) return;
+  const startComparison = async (selectionsOverride) => {
+    const selections = selectionsOverride || compareSelected;
+    if (selections.length !== 2 || !user) return;
     setCompareLoading(true);
     setMyIdeasError("");
 
@@ -1447,7 +1453,7 @@ export default function Home() {
 
       // Load both ideas in parallel, using evaluation_id when specified
       const [resA, resB] = await Promise.all(
-        compareSelected.map((sel) => {
+        selections.map((sel) => {
           const url = sel.evaluationId
             ? `/api/ideas/${sel.ideaId}?evaluation_id=${sel.evaluationId}`
             : `/api/ideas/${sel.ideaId}`;
@@ -1474,13 +1480,13 @@ export default function Home() {
 
       setCompareData({
         ideaA: {
-          id: compareSelected[0].ideaId,
-          title: getTitleForSelection(compareSelected[0], resA),
+          id: selections[0].ideaId,
+          title: getTitleForSelection(selections[0], resA),
           analysis: resA.analysis,
         },
         ideaB: {
-          id: compareSelected[1].ideaId,
-          title: getTitleForSelection(compareSelected[1], resB),
+          id: selections[1].ideaId,
+          title: getTitleForSelection(selections[1], resB),
           analysis: resB.analysis,
         },
       });
@@ -2021,6 +2027,63 @@ export default function Home() {
                 setCompareData(null);
                 setCompareSelected([]);
                 fetchMyIdeas();
+              }}
+            />
+          </main>
+
+          <footer style={footerStyle}>
+            <PageContainer>
+              <p style={{ fontSize: 12, color: "#404040", margin: 0 }}>
+                IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
+              </p>
+            </PageContainer>
+          </footer>
+        </div>
+      );
+    }
+
+    // LINEAGE MODE: render LineageView instead of hub
+    if (lineageMode && lineageTargetId) {
+      return (
+        <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#f5f5f5", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+          <header style={headerStyle}>
+            <PageContainer wide>
+              <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "#525252", margin: 0, cursor: "pointer" }}>
+                  IdeaLoop Core
+                </h1>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  {!authLoading && user && (
+                    <>
+                      <span style={{ fontSize: 12, color: "#525252" }}>{user.email}</span>
+                      <button onClick={handleLogout} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                        Log out
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </PageContainer>
+          </header>
+
+          <main style={{ flex: 1, paddingBottom: 48, paddingTop: 16 }}>
+            <LineageView
+              myIdeas={myIdeas}
+              targetIdeaId={lineageTargetId}
+              onBack={() => {
+                setLineageMode(false);
+                setLineageTargetId(null);
+              }}
+              onViewIdea={(ideaId) => {
+                setLineageMode(false);
+                setLineageTargetId(null);
+                loadSavedIdea(ideaId);
+              }}
+              onStartComparison={(selectedPair) => {
+                setLineageMode(false);
+                setLineageTargetId(null);
+                setCompareSelected(selectedPair);
+                startComparison(selectedPair);
               }}
             />
           </main>
@@ -2650,24 +2713,44 @@ export default function Home() {
                         ) : (
                           <span />
                         )}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (confirm("Delete this saved idea? This cannot be undone.")) {
-                              deleteSavedIdea(savedIdea.id);
-                            }
-                          }}
-                          disabled={deletingIdeaId === savedIdea.id}
-                          style={{
-                            fontSize: 11,
-                            color: deletingIdeaId === savedIdea.id ? "#404040" : "#525252",
-                            background: "none",
-                            border: "none",
-                            cursor: deletingIdeaId === savedIdea.id ? "not-allowed" : "pointer",
-                          }}
-                        >
-                          {deletingIdeaId === savedIdea.id ? "Deleting..." : "Delete"}
-                        </button>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          {(savedIdea.parent_idea_id || myIdeas.some(i => i.parent_idea_id === savedIdea.id)) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setLineageTargetId(savedIdea.id);
+                                setLineageMode(true);
+                              }}
+                              style={{
+                                fontSize: 11,
+                                color: "#a78bfa",
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                              }}
+                            >
+                              View lineage
+                            </button>
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm("Delete this saved idea? This cannot be undone.")) {
+                                deleteSavedIdea(savedIdea.id);
+                              }
+                            }}
+                            disabled={deletingIdeaId === savedIdea.id}
+                            style={{
+                              fontSize: 11,
+                              color: deletingIdeaId === savedIdea.id ? "#404040" : "#525252",
+                              background: "none",
+                              border: "none",
+                              cursor: deletingIdeaId === savedIdea.id ? "not-allowed" : "pointer",
+                            }}
+                          >
+                            {deletingIdeaId === savedIdea.id ? "Deleting..." : "Delete"}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
