@@ -549,6 +549,11 @@ export default function Home() {
   const [reEvalRevisionNotes, setReEvalRevisionNotes] = useState(null); // stored for saving later
   const [reEvalChangedFields, setReEvalChangedFields] = useState(null); // changed_fields metadata for delta explanation
   const [reEvalContextSnapshot, setReEvalContextSnapshot] = useState(null); // analysis snapshot from before re-eval
+
+  // Branch creation form state (V4S14)
+  const [branchReason, setBranchReason] = useState("");
+  const [branchDimensions, setBranchDimensions] = useState([]); // array of strings like ["target_user", "problem"]
+  const [branchSetAsMain, setBranchSetAsMain] = useState(false); // if true, set-main after saving branch
   const [reEvalEditTarget, setReEvalEditTarget] = useState(false); // toggle for target user edit field
   const [reEvalEditProblem, setReEvalEditProblem] = useState(false); // toggle for problem edit field
   const [reEvalEditCore, setReEvalEditCore] = useState(false); // toggle for core idea edit field
@@ -1041,6 +1046,9 @@ export default function Home() {
       if (isReEvalResult) {
         // Pre-fill with "Branch" for re-evaluations
         setIdeaName("Branch");
+        setBranchReason("");
+        setBranchDimensions([]);
+        setBranchSetAsMain(false);
       } else {
         // Pre-fill with a sensible default from the idea text
         const firstLine = idea.split(/[.!?\n]/)[0].trim();
@@ -1065,17 +1073,32 @@ export default function Home() {
       }
 
       if (isReEvalResult && currentIdeaId) {
-        // Re-evaluation: save new evaluation on existing idea
-        const res = await fetch(`/api/ideas/${currentIdeaId}/re-evaluate`, {
+        // Branch save: create new idea linked to parent
+        // Validate branch form fields
+        if (!branchReason.trim()) {
+          setSaveStatus("naming");
+          setSaveError("Please explain why this is a different direction.");
+          return;
+        }
+        if (branchDimensions.length === 0) {
+          setSaveStatus("naming");
+          setSaveError("Select at least one dimension that changed.");
+          return;
+        }
+
+        const res = await fetch(`/api/ideas/${currentIdeaId}/branch`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
+            title: ideaName.trim(),
+            raw_idea_text: idea || reEvalOriginalIdea || "",
+            branch_reason: branchReason.trim(),
+            changed_dimensions: branchDimensions,
             analysis,
-            revision_notes: reEvalRevisionNotes,
-            alternative_name: ideaName.trim(),
+            profile,
             changed_fields: reEvalChangedFields,
           }),
         });
@@ -1089,8 +1112,26 @@ export default function Home() {
         }
 
         setSaveStatus("saved");
+        setCurrentIdeaId(data.idea_id);
         setCurrentEvaluationId(data.evaluation_id);
         setIsReEvalResult(false);
+
+        // If user chose "Set as main version", call set-main after branch is created
+        if (branchSetAsMain) {
+          try {
+            await fetch(`/api/ideas/${data.idea_id}/set-main`, {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${session.access_token}`,
+              },
+            });
+          } catch (e) {
+            console.error("Set-main failed:", e);
+            // Branch is already saved — don't fail the whole operation
+          }
+          setBranchSetAsMain(false);
+        }
       } else {
         // Normal save: create new idea + evaluation
         const res = await fetch("/api/ideas/save", {
@@ -2443,8 +2484,43 @@ export default function Home() {
                           }}>
                             {savedIdea.title}
                           </h3>
+                          {/* Branch origin label */}
+                          {savedIdea.parent_idea_id && (() => {
+                            const parentIdea = myIdeas.find(i => i.id === savedIdea.parent_idea_id);
+                            return (
+                              <p style={{ fontSize: 11, color: "#737373", margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                ↳ from {parentIdea?.title || "parent idea"}
+                                {savedIdea.branch_reason && <span style={{ color: "#525252" }}> — {savedIdea.branch_reason}</span>}
+                              </p>
+                            );
+                          })()}
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
                             <span style={{ fontSize: 12, color: "#525252" }}>{date}</span>
+                            {/* Main version badge */}
+                            {savedIdea.is_main_version && (
+                              <>
+                                <span style={{ fontSize: 12, color: "#333" }}>·</span>
+                                <span style={{
+                                  fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 9999,
+                                  background: "rgba(16,185,129,0.12)", color: "#34d399", border: "1px solid rgba(16,185,129,0.25)",
+                                }}>★ Main</span>
+                              </>
+                            )}
+                            {/* Branch children count */}
+                            {(() => {
+                              const childCount = myIdeas.filter(i => i.parent_idea_id === savedIdea.id).length;
+                              return childCount > 0 ? (
+                                <>
+                                  <span style={{ fontSize: 12, color: "#333" }}>·</span>
+                                  <span style={{
+                                    fontSize: 10, fontWeight: 500, padding: "2px 8px", borderRadius: 9999,
+                                    background: "rgba(245,158,11,0.12)", color: "#fbbf24", border: "1px solid rgba(245,158,11,0.25)",
+                                  }}>
+                                    {childCount} branch{childCount > 1 ? "es" : ""}
+                                  </span>
+                                </>
+                              ) : null;
+                            })()}
                             {eval_?.classification && (
                               <>
                                 <span style={{ fontSize: 12, color: "#333" }}>·</span>
@@ -4266,6 +4342,7 @@ export default function Home() {
                             background: "rgba(23,23,23,0.6)",
                             border: "1px solid rgba(108,99,255,0.3)",
                           }}>
+                            {/* Branch name */}
                             <label style={{ fontSize: 13, fontWeight: 500, color: "#a3a3a3", display: "block", marginBottom: 8 }}>
                               Name this branch
                             </label>
@@ -4273,7 +4350,6 @@ export default function Home() {
                               type="text"
                               value={ideaName}
                               onChange={(e) => setIdeaName(e.target.value)}
-                              onKeyDown={(e) => e.key === "Enter" && ideaName.trim() && handleSaveIdea()}
                               placeholder="e.g., B2B pivot, Enterprise focus, Narrower wedge..."
                               autoFocus
                               maxLength={80}
@@ -4287,13 +4363,79 @@ export default function Home() {
                                 color: "#f5f5f5",
                                 outline: "none",
                                 boxSizing: "border-box",
-                                marginBottom: 12,
+                                marginBottom: 14,
                               }}
                             />
+
+                            {/* Branch reason */}
+                            <label style={{ fontSize: 13, fontWeight: 500, color: "#a3a3a3", display: "block", marginBottom: 8 }}>
+                              Why is this a different direction?
+                            </label>
+                            <input
+                              type="text"
+                              value={branchReason}
+                              onChange={(e) => setBranchReason(e.target.value)}
+                              placeholder="e.g., Narrowed to enterprise buyers for clearer revenue"
+                              maxLength={200}
+                              style={{
+                                width: "100%",
+                                background: "rgba(23,23,23,0.8)",
+                                border: "1px solid rgba(64,64,64,0.6)",
+                                borderRadius: 10,
+                                padding: "10px 14px",
+                                fontSize: 14,
+                                color: "#f5f5f5",
+                                outline: "none",
+                                boxSizing: "border-box",
+                                marginBottom: 14,
+                              }}
+                            />
+
+                            {/* Changed dimensions */}
+                            <label style={{ fontSize: 13, fontWeight: 500, color: "#a3a3a3", display: "block", marginBottom: 8 }}>
+                              What changed? <span style={{ fontWeight: 400, color: "#525252" }}>(select at least one)</span>
+                            </label>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+                              {[
+                                { key: "target_user", label: "Target user" },
+                                { key: "problem", label: "Problem" },
+                                { key: "wedge", label: "Value prop / Wedge" },
+                                { key: "monetization", label: "Monetization" },
+                                { key: "gtm", label: "Go-to-market" },
+                                { key: "core_concept", label: "Core concept" },
+                              ].map((dim) => {
+                                const selected = branchDimensions.includes(dim.key);
+                                return (
+                                  <button
+                                    key={dim.key}
+                                    onClick={() => {
+                                      setBranchDimensions((prev) =>
+                                        selected ? prev.filter((d) => d !== dim.key) : [...prev, dim.key]
+                                      );
+                                    }}
+                                    style={{
+                                      padding: "6px 12px",
+                                      borderRadius: 8,
+                                      fontSize: 12,
+                                      fontWeight: 500,
+                                      border: selected ? "1px solid rgba(139,92,246,0.5)" : "1px solid rgba(64,64,64,0.4)",
+                                      background: selected ? "rgba(139,92,246,0.15)" : "transparent",
+                                      color: selected ? "#a78bfa" : "#737373",
+                                      cursor: "pointer",
+                                      transition: "all 0.15s",
+                                    }}
+                                  >
+                                    {selected ? "✓ " : ""}{dim.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {/* Action buttons */}
                             <div style={{ display: "flex", gap: 8 }}>
                               <button
                                 onClick={handleSaveIdea}
-                                disabled={!ideaName.trim()}
+                                disabled={!ideaName.trim() || !branchReason.trim() || branchDimensions.length === 0}
                                 style={{
                                   flex: 1,
                                   padding: "10px 0",
@@ -4301,15 +4443,15 @@ export default function Home() {
                                   fontSize: 13,
                                   fontWeight: 600,
                                   border: "none",
-                                  cursor: !ideaName.trim() ? "not-allowed" : "pointer",
-                                  background: !ideaName.trim() ? "rgba(38,38,38,0.6)" : "rgba(139,92,246,0.2)",
-                                  color: !ideaName.trim() ? "#525252" : "#a78bfa",
+                                  cursor: (!ideaName.trim() || !branchReason.trim() || branchDimensions.length === 0) ? "not-allowed" : "pointer",
+                                  background: (!ideaName.trim() || !branchReason.trim() || branchDimensions.length === 0) ? "rgba(38,38,38,0.6)" : "rgba(139,92,246,0.2)",
+                                  color: (!ideaName.trim() || !branchReason.trim() || branchDimensions.length === 0) ? "#525252" : "#a78bfa",
                                 }}
                               >
                                 Save branch
                               </button>
                               <button
-                                onClick={() => { setSaveStatus("idle"); setIdeaName(""); }}
+                                onClick={() => { setSaveStatus("idle"); setIdeaName(""); setBranchReason(""); setBranchDimensions([]); }}
                                 style={{
                                   padding: "10px 16px",
                                   borderRadius: 10,
@@ -4350,6 +4492,40 @@ export default function Home() {
                               </div>
                               <p style={{ fontSize: 12, color: "#737373", margin: "6px 0 0", fontWeight: 400 }}>
                                 Keep this as a new direction linked to the parent idea
+                              </p>
+                            </button>
+
+                            {/* Set as main version — saves branch + marks it as main */}
+                            <button
+                              onClick={() => {
+                                // Open branch form with set-as-main flag
+                                setBranchSetAsMain(true);
+                                setBranchReason("");
+                                setBranchDimensions([]);
+                                setIdeaName("Branch");
+                                setSaveStatus("naming");
+                              }}
+                              disabled={saveStatus === "saving"}
+                              style={{
+                                width: "100%",
+                                padding: "14px 16px",
+                                borderRadius: 12,
+                                fontSize: 14,
+                                fontWeight: 500,
+                                border: "1px solid rgba(16,185,129,0.3)",
+                                cursor: saveStatus === "saving" ? "not-allowed" : "pointer",
+                                background: "rgba(16,185,129,0.06)",
+                                color: "#34d399",
+                                textAlign: "left",
+                                transition: "all 0.2s",
+                              }}
+                            >
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <span>★ Set as main version</span>
+                                <span style={{ fontSize: 18, opacity: 0.5 }}>→</span>
+                              </div>
+                              <p style={{ fontSize: 12, color: "#525252", margin: "6px 0 0", fontWeight: 400 }}>
+                                Save as branch and promote it as your current best direction
                               </p>
                             </button>
 
@@ -4562,6 +4738,43 @@ export default function Home() {
                 >
                   {evalsRemaining <= 0 ? "No evaluations remaining" : "Evolve this idea"}
                 </button>
+                {/* Set as main version — only for branches that aren't already main */}
+                {currentIdeaId && (() => {
+                  const currentIdea = myIdeas.find(i => i.id === currentIdeaId);
+                  if (!currentIdea?.parent_idea_id || currentIdea?.is_main_version) return null;
+                  return (
+                    <button
+                      onClick={async () => {
+                        try {
+                          const { data: { session } } = await supabase.auth.getSession();
+                          if (!session) return;
+                          await fetch(`/api/ideas/${currentIdeaId}/set-main`, {
+                            method: "PATCH",
+                            headers: { Authorization: `Bearer ${session.access_token}` },
+                          });
+                          // Refresh hub data
+                          fetchMyIdeas();
+                        } catch (e) {
+                          console.error("Set-main failed:", e);
+                        }
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "12px 0",
+                        borderRadius: 12,
+                        fontSize: 13,
+                        fontWeight: 600,
+                        border: "1px solid rgba(16,185,129,0.3)",
+                        background: "rgba(16,185,129,0.06)",
+                        color: "#34d399",
+                        cursor: "pointer",
+                        marginBottom: 10,
+                      }}
+                    >
+                      ★ Set as main version
+                    </button>
+                  );
+                })()}
                 <button
                   onClick={() => {
                     setViewingFromSaved(false);

@@ -45,6 +45,10 @@ export async function GET(request) {
         status,
         created_at,
         updated_at,
+        parent_idea_id,
+        branch_reason,
+        changed_dimensions,
+        is_main_version,
         evaluations (
           id,
           weighted_overall_score,
