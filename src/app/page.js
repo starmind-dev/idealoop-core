@@ -8,7 +8,7 @@ import LineageView from "./LineageView";
 // ============================================
 // STEP PROGRESS BAR
 // ============================================
-function StepProgress({ currentStep, savedMode }) {
+function StepProgress({ currentStep, savedMode, branchMode }) {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -23,7 +23,7 @@ function StepProgress({ currentStep, savedMode }) {
     { number: 2, label: "Idea" },
     { number: 3, label: "Analysis" },
     { number: 4, label: "Roadmap" },
-    ...(savedMode ? [{ number: 5, label: "Evolve" }] : []),
+    ...(branchMode ? [{ number: 5, label: "Delta" }] : savedMode ? [{ number: 5, label: "Evolve" }] : []),
   ];
 
   const circleSize = isMobile ? 28 : 40;
@@ -563,6 +563,11 @@ export default function Home() {
   const [reEvalEditProblem, setReEvalEditProblem] = useState(false); // toggle for problem edit field
   const [reEvalEditCore, setReEvalEditCore] = useState(false); // toggle for core idea edit field
 
+  // Delta explanation state (V4S16)
+  const [deltaData, setDeltaData] = useState(null); // cached delta result from Sonnet
+  const [deltaLoading, setDeltaLoading] = useState(false);
+  const [deltaError, setDeltaError] = useState("");
+
   // Alternatives popup state
   const [showAlternativesPopup, setShowAlternativesPopup] = useState(false);
   const [alternativesData, setAlternativesData] = useState(null); // { ideaId, title, evaluations: [...] }
@@ -629,6 +634,7 @@ export default function Home() {
       .select("*", { count: "exact", head: true })
       .eq("user_id", user.id)
       .eq("status", "active")
+      .is("parent_idea_id", null)
       .then(({ count, error }) => {
         if (!error && count !== null) setSavedIdeasCount(count);
       });
@@ -696,9 +702,12 @@ export default function Home() {
   const currentPhases = editedPhases || (analysis ? analysis.phases : []);
 
   const getStepNumber = () => {
-    const map = { profile: 1, input: 2, myideas: 2, reeval: 5, results1: 3, results2: 4 };
+    const map = { profile: 1, input: 2, myideas: 2, reeval: 5, results1: 3, results2: 4, delta: 5 };
     return map[currentScreen] || 1;
   };
+
+  // Check if the currently viewed idea is a branch (has a parent)
+  const isBranchIdea = currentIdeaId ? !!myIdeas.find(i => i.id === currentIdeaId)?.parent_idea_id : false;
 
   // SSE streaming helper — reads events from /api/analyze and returns the final analysis
   const analyzeWithStream = async (ideaText, profileData, endpoint = "/api/analyze") => {
@@ -1206,6 +1215,8 @@ export default function Home() {
     setMyIdeasError("");
     setShowAlternativesPopup(false);
     setPhaseProgress({}); // Clear stale progress immediately so alternatives don't share state
+    setDeltaData(null); // Clear previous delta
+    setDeltaError("");
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -1283,6 +1294,33 @@ export default function Home() {
       console.error("Failed to fetch progress:", err);
     } finally {
       setProgressLoading(false);
+    }
+  };
+
+  // Fetch delta explanation for a branch idea
+  const fetchDelta = async (ideaId) => {
+    if (!user || !ideaId) return;
+    setDeltaLoading(true);
+    setDeltaError("");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const res = await fetch(`/api/ideas/${ideaId}/delta`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load delta");
+      setDeltaData(data.delta);
+    } catch (err) {
+      console.error("Delta fetch failed:", err);
+      setDeltaError(err.message || "Failed to analyze changes");
+    } finally {
+      setDeltaLoading(false);
     }
   };
 
@@ -1556,7 +1594,7 @@ export default function Home() {
           />
         )}
 
-        <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} />
+        <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} branchMode={viewingFromSaved && isBranchIdea} />
 
         <main style={{ flex: 1, paddingBottom: 48 }}>
           <PageContainer>
@@ -1768,7 +1806,7 @@ export default function Home() {
           />
         )}
 
-        <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} />
+        <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} branchMode={viewingFromSaved && isBranchIdea} />
 
         <main style={{ flex: 1, paddingBottom: 48 }}>
           <PageContainer>
@@ -2383,7 +2421,7 @@ export default function Home() {
                 </div>
 
                 {/* Compare button — enters selection mode */}
-                {myIdeas.length >= 2 && !compareSelecting && (
+                {myIdeas.filter(i => !i.parent_idea_id || i.is_main_version).length >= 2 && !compareSelecting && (
                   <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
                     <button
                       onClick={() => { setCompareSelecting(true); setCompareSelected([]); }}
@@ -2441,7 +2479,7 @@ export default function Home() {
                     </div>
                   </div>
                 )}
-                {myIdeas.map((savedIdea) => {
+                {myIdeas.filter(i => !i.parent_idea_id || i.is_main_version).map((savedIdea) => {
                   const evals = savedIdea.evaluations || [];
                   const eval_ = evals.length > 0 ? evals[evals.length - 1] : null;
                   const score = eval_?.weighted_overall_score || 0;
@@ -2828,7 +2866,7 @@ export default function Home() {
           </PageContainer>
         </header>
 
-        <StepProgress currentStep={getStepNumber()} savedMode={true} />
+        <StepProgress currentStep={getStepNumber()} savedMode={true} branchMode={isBranchIdea} />
 
         <main style={{ flex: 1, paddingBottom: 48 }}>
           <PageContainer>
@@ -3285,7 +3323,7 @@ export default function Home() {
           />
         )}
 
-        <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} />
+        <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} branchMode={viewingFromSaved && isBranchIdea} />
 
         <main style={{ flex: 1, paddingBottom: 64 }}>
           <PageContainer wide>
@@ -3872,7 +3910,7 @@ export default function Home() {
           />
         )}
 
-        <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} />
+        <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} branchMode={viewingFromSaved && isBranchIdea} />
 
         <main style={{ flex: 1, paddingBottom: 64 }}>
           <PageContainer wide>
@@ -4803,85 +4841,142 @@ export default function Home() {
 
             {viewingFromSaved ? (
               <>
-                <button
-                  onClick={startReEvaluation}
-                  disabled={evalsRemaining <= 0}
-                  style={{
-                    width: "100%",
-                    padding: "14px 0",
-                    borderRadius: 12,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    border: "none",
-                    cursor: evalsRemaining <= 0 ? "not-allowed" : "pointer",
-                    background: evalsRemaining <= 0 ? "rgba(38,38,38,0.6)" : "rgba(108,99,255,0.12)",
-                    color: evalsRemaining <= 0 ? "#525252" : "#a78bfa",
-                    marginBottom: 10,
-                  }}
-                >
-                  {evalsRemaining <= 0 ? "No evaluations remaining" : "Evolve this idea"}
-                </button>
-                {/* Set as main version — only for branches that aren't already main */}
-                {currentIdeaId && (() => {
-                  const currentIdea = myIdeas.find(i => i.id === currentIdeaId);
-                  if (!currentIdea?.parent_idea_id || currentIdea?.is_main_version) return null;
-                  return (
+                {/* Branch ideas get "See what changed" button leading to delta screen */}
+                {isBranchIdea ? (
+                  <>
                     <button
-                      onClick={async () => {
-                        try {
-                          const { data: { session } } = await supabase.auth.getSession();
-                          if (!session) return;
-                          await fetch(`/api/ideas/${currentIdeaId}/set-main`, {
-                            method: "PATCH",
-                            headers: { Authorization: `Bearer ${session.access_token}` },
-                          });
-                          // Refresh hub data
-                          fetchMyIdeas();
-                        } catch (e) {
-                          console.error("Set-main failed:", e);
+                      onClick={() => {
+                        setCurrentScreen("delta");
+                        if (!deltaData && !deltaLoading) {
+                          fetchDelta(currentIdeaId);
                         }
                       }}
                       style={{
                         width: "100%",
-                        padding: "12px 0",
+                        padding: "14px 0",
                         borderRadius: 12,
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: 600,
-                        border: "1px solid rgba(16,185,129,0.3)",
-                        background: "rgba(16,185,129,0.06)",
-                        color: "#34d399",
+                        border: "none",
                         cursor: "pointer",
+                        background: "rgba(139,92,246,0.15)",
+                        color: "#a78bfa",
                         marginBottom: 10,
                       }}
                     >
-                      ★ Set as main version
+                      See what changed →
                     </button>
-                  );
-                })()}
-                <button
-                  onClick={() => {
-                    setViewingFromSaved(false);
-                    setPhaseProgress({});
-                    setCurrentEvaluationId(null);
-                    setCurrentIdeaId(null);
-                    setEditingNotePhase(null);
-                    setNoteText("");
-                    goToMyIdeas();
-                  }}
-                  style={{
-                    width: "100%",
-                    padding: "14px 0",
-                    borderRadius: 12,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    border: "1px solid rgba(64,64,64,0.6)",
-                    background: "transparent",
-                    color: "#a3a3a3",
-                    cursor: "pointer",
-                  }}
-                >
-                  ← Back to My Ideas
-                </button>
+                    <button
+                      onClick={() => {
+                        setViewingFromSaved(false);
+                        setPhaseProgress({});
+                        setCurrentEvaluationId(null);
+                        setCurrentIdeaId(null);
+                        setEditingNotePhase(null);
+                        setNoteText("");
+                        setDeltaData(null);
+                        setDeltaError("");
+                        goToMyIdeas();
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "14px 0",
+                        borderRadius: 12,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        border: "1px solid rgba(64,64,64,0.6)",
+                        background: "transparent",
+                        color: "#a3a3a3",
+                        cursor: "pointer",
+                      }}
+                    >
+                      ← Back to My Ideas
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={startReEvaluation}
+                      disabled={evalsRemaining <= 0}
+                      style={{
+                        width: "100%",
+                        padding: "14px 0",
+                        borderRadius: 12,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        border: "none",
+                        cursor: evalsRemaining <= 0 ? "not-allowed" : "pointer",
+                        background: evalsRemaining <= 0 ? "rgba(38,38,38,0.6)" : "rgba(108,99,255,0.12)",
+                        color: evalsRemaining <= 0 ? "#525252" : "#a78bfa",
+                        marginBottom: 10,
+                      }}
+                    >
+                      {evalsRemaining <= 0 ? "No evaluations remaining" : "Evolve this idea"}
+                    </button>
+                    {/* Set as main version — only for branches that aren't already main */}
+                    {currentIdeaId && (() => {
+                      const currentIdea = myIdeas.find(i => i.id === currentIdeaId);
+                      if (!currentIdea?.parent_idea_id || currentIdea?.is_main_version) return null;
+                      return (
+                        <button
+                          onClick={async () => {
+                            try {
+                              const { data: { session } } = await supabase.auth.getSession();
+                              if (!session) return;
+                              await fetch(`/api/ideas/${currentIdeaId}/set-main`, {
+                                method: "PATCH",
+                                headers: { Authorization: `Bearer ${session.access_token}` },
+                              });
+                              fetchMyIdeas();
+                            } catch (e) {
+                              console.error("Set-main failed:", e);
+                            }
+                          }}
+                          style={{
+                            width: "100%",
+                            padding: "12px 0",
+                            borderRadius: 12,
+                            fontSize: 13,
+                            fontWeight: 600,
+                            border: "1px solid rgba(16,185,129,0.3)",
+                            background: "rgba(16,185,129,0.06)",
+                            color: "#34d399",
+                            cursor: "pointer",
+                            marginBottom: 10,
+                          }}
+                        >
+                          ★ Set as main version
+                        </button>
+                      );
+                    })()}
+                    <button
+                      onClick={() => {
+                        setViewingFromSaved(false);
+                        setPhaseProgress({});
+                        setCurrentEvaluationId(null);
+                        setCurrentIdeaId(null);
+                        setEditingNotePhase(null);
+                        setNoteText("");
+                        setDeltaData(null);
+                        setDeltaError("");
+                        goToMyIdeas();
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "14px 0",
+                        borderRadius: 12,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        border: "1px solid rgba(64,64,64,0.6)",
+                        background: "transparent",
+                        color: "#a3a3a3",
+                        cursor: "pointer",
+                      }}
+                    >
+                      ← Back to My Ideas
+                    </button>
+                  </>
+                )}
               </>
             ) : (
               <button
@@ -4918,6 +5013,367 @@ export default function Home() {
                 Analyze Another Idea
               </button>
             )}
+          </PageContainer>
+        </main>
+
+        <footer style={footerStyle}>
+          <PageContainer wide>
+            <p style={{ fontSize: 12, color: "#404040", margin: 0 }}>
+              IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
+            </p>
+          </PageContainer>
+        </footer>
+      </div>
+    );
+  }
+
+  // ============================================
+  // SCREEN: DELTA EXPLANATION (branches only)
+  // ============================================
+  if (currentScreen === "delta" && viewingFromSaved && isBranchIdea) {
+    const currentIdea = myIdeas.find(i => i.id === currentIdeaId);
+    const parentIdea = currentIdea ? myIdeas.find(i => i.id === currentIdea.parent_idea_id) : null;
+
+    // Color helpers
+    const deltaColor = (delta) => {
+      if (delta > 0.3) return "#34d399"; // green
+      if (delta < -0.3) return "#f87171"; // red
+      return "#737373"; // gray — negligible
+    };
+    const deltaArrow = (delta) => {
+      if (delta > 0.3) return "↑";
+      if (delta < -0.3) return "↓";
+      return "→";
+    };
+
+    return (
+      <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#f5f5f5", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+        <header style={headerStyle}>
+          <PageContainer wide>
+            <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "#525252", margin: 0, cursor: "pointer" }}>
+                IdeaLoop Core
+              </h1>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <button onClick={() => setCurrentScreen("results2")} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                  ← Back to roadmap
+                </button>
+                {!authLoading && user && (
+                  <>
+                    <span style={{ color: "#262626" }}>|</span>
+                    <span style={{ fontSize: 12, color: "#525252" }}>{user.email}</span>
+                    <button onClick={handleLogout} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                      Log out
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </PageContainer>
+        </header>
+
+        {showAuthModal && (
+          <AuthModal
+            onClose={() => setShowAuthModal(false)}
+            onAuth={(u) => setUser(u)}
+          />
+        )}
+
+        <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} branchMode={viewingFromSaved && isBranchIdea} />
+
+        <main style={{ flex: 1, paddingBottom: 64 }}>
+          <PageContainer wide>
+            {/* Delta screen header */}
+            <SectionHeader
+              icon="△"
+              title="What Changed"
+              subtitle={parentIdea ? `Changes from "${parentIdea.title}" to "${currentIdea?.title}"` : "How this branch differs from its parent"}
+            />
+
+            {/* Loading state */}
+            {deltaLoading && (
+              <div style={{
+                background: "rgba(23,23,23,0.6)",
+                border: "1px solid rgba(38,38,38,0.8)",
+                borderRadius: 16,
+                padding: 40,
+                textAlign: "center",
+                marginBottom: 20,
+              }}>
+                <div style={{ fontSize: 14, color: "#737373", marginBottom: 8 }}>Analyzing changes...</div>
+                <div style={{ fontSize: 12, color: "#525252" }}>Comparing evaluations and attributing score movements</div>
+              </div>
+            )}
+
+            {/* Error state */}
+            {deltaError && !deltaLoading && (
+              <div style={{
+                background: "rgba(239,68,68,0.08)",
+                border: "1px solid rgba(239,68,68,0.3)",
+                borderRadius: 16,
+                padding: 24,
+                marginBottom: 20,
+              }}>
+                <div style={{ fontSize: 14, color: "#f87171", marginBottom: 8 }}>{deltaError}</div>
+                <button
+                  onClick={() => fetchDelta(currentIdeaId)}
+                  style={{
+                    padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600,
+                    border: "1px solid rgba(239,68,68,0.3)", background: "transparent",
+                    color: "#f87171", cursor: "pointer",
+                  }}
+                >
+                  Try again
+                </button>
+              </div>
+            )}
+
+            {/* Delta content */}
+            {deltaData && !deltaLoading && (
+              <>
+                {/* Block 1: Change Summary */}
+                <div style={{
+                  background: "rgba(23,23,23,0.6)",
+                  border: "1px solid rgba(38,38,38,0.8)",
+                  borderRadius: 16,
+                  padding: 24,
+                  marginBottom: 16,
+                }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#a78bfa", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    What you changed
+                  </div>
+                  <div style={{ fontSize: 14, color: "#d4d4d4", lineHeight: 1.7 }}>
+                    {deltaData.change_summary}
+                  </div>
+                </div>
+
+                {/* Block 2: Improvements */}
+                {deltaData.improvements && deltaData.improvements.length > 0 && (
+                  <div style={{
+                    background: "rgba(16,185,129,0.04)",
+                    border: "1px solid rgba(16,185,129,0.2)",
+                    borderRadius: 16,
+                    padding: 24,
+                    marginBottom: 16,
+                  }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#34d399", marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                      What improved
+                    </div>
+                    {deltaData.improvements.map((item, idx) => (
+                      <div key={idx} style={{
+                        display: "flex",
+                        gap: 12,
+                        marginBottom: idx < deltaData.improvements.length - 1 ? 16 : 0,
+                        alignItems: "flex-start",
+                      }}>
+                        <div style={{
+                          flexShrink: 0,
+                          width: 36,
+                          height: 36,
+                          borderRadius: 8,
+                          background: "rgba(16,185,129,0.12)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 14,
+                          fontWeight: 700,
+                          color: "#34d399",
+                        }}>
+                          {item.delta != null ? `+${Math.abs(item.delta).toFixed(1)}` : "↑"}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 12, color: "#34d399", fontWeight: 600, marginBottom: 4, textTransform: "uppercase" }}>
+                            {(item.metric || "").replace(/_/g, " ")}
+                          </div>
+                          <div style={{ fontSize: 14, color: "#d4d4d4", lineHeight: 1.6 }}>
+                            {item.shift}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Block 3: Worsenings */}
+                {deltaData.worsenings && deltaData.worsenings.length > 0 && (
+                  <div style={{
+                    background: "rgba(239,68,68,0.04)",
+                    border: "1px solid rgba(239,68,68,0.2)",
+                    borderRadius: 16,
+                    padding: 24,
+                    marginBottom: 16,
+                  }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#f87171", marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                      What weakened
+                    </div>
+                    {deltaData.worsenings.map((item, idx) => (
+                      <div key={idx} style={{
+                        display: "flex",
+                        gap: 12,
+                        marginBottom: idx < deltaData.worsenings.length - 1 ? 16 : 0,
+                        alignItems: "flex-start",
+                      }}>
+                        <div style={{
+                          flexShrink: 0,
+                          width: 36,
+                          height: 36,
+                          borderRadius: 8,
+                          background: "rgba(239,68,68,0.12)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 14,
+                          fontWeight: 700,
+                          color: "#f87171",
+                        }}>
+                          {item.delta != null ? `-${Math.abs(item.delta).toFixed(1)}` : "↓"}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 12, color: "#f87171", fontWeight: 600, marginBottom: 4, textTransform: "uppercase" }}>
+                            {(item.metric || "").replace(/_/g, " ")}
+                          </div>
+                          <div style={{ fontSize: 14, color: "#d4d4d4", lineHeight: 1.6 }}>
+                            {item.shift}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Block 4: Net Interpretation */}
+                <div style={{
+                  background: "rgba(23,23,23,0.6)",
+                  border: "1px solid rgba(64,64,64,0.4)",
+                  borderRadius: 16,
+                  padding: 24,
+                  marginBottom: 24,
+                }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#e5e5e5", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    Net assessment
+                  </div>
+                  <div style={{ fontSize: 14, color: "#a3a3a3", lineHeight: 1.7 }}>
+                    {deltaData.net_interpretation}
+                  </div>
+                </div>
+
+                {/* Score movement summary bar */}
+                {deltaData.score_deltas && (
+                  <div style={{
+                    background: "rgba(23,23,23,0.6)",
+                    border: "1px solid rgba(38,38,38,0.8)",
+                    borderRadius: 16,
+                    padding: 20,
+                    marginBottom: 24,
+                    display: "flex",
+                    justifyContent: "space-around",
+                    flexWrap: "wrap",
+                    gap: 12,
+                  }}>
+                    {[
+                      { key: "overall", label: "Overall" },
+                      { key: "market_demand", label: "MD" },
+                      { key: "monetization", label: "MO" },
+                      { key: "originality", label: "OR" },
+                      { key: "technical_complexity", label: "TC" },
+                    ].map(({ key, label }) => {
+                      const d = deltaData.score_deltas[key];
+                      if (d == null) return null;
+                      return (
+                        <div key={key} style={{ textAlign: "center", minWidth: 50 }}>
+                          <div style={{ fontSize: 11, color: "#525252", marginBottom: 4, fontWeight: 600 }}>{label}</div>
+                          <div style={{ fontSize: 16, fontWeight: 700, color: deltaColor(key === "technical_complexity" ? -d : d) }}>
+                            {deltaArrow(key === "technical_complexity" ? -d : d)} {d > 0 ? "+" : ""}{d.toFixed(1)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Action buttons — same as what was on results2 for non-branch ideas */}
+            <button
+              onClick={startReEvaluation}
+              disabled={evalsRemaining <= 0}
+              style={{
+                width: "100%",
+                padding: "14px 0",
+                borderRadius: 12,
+                fontSize: 14,
+                fontWeight: 600,
+                border: "none",
+                cursor: evalsRemaining <= 0 ? "not-allowed" : "pointer",
+                background: evalsRemaining <= 0 ? "rgba(38,38,38,0.6)" : "rgba(108,99,255,0.12)",
+                color: evalsRemaining <= 0 ? "#525252" : "#a78bfa",
+                marginBottom: 10,
+              }}
+            >
+              {evalsRemaining <= 0 ? "No evaluations remaining" : "Evolve this idea"}
+            </button>
+            {/* Set as main version — only for branches that aren't already main */}
+            {currentIdeaId && (() => {
+              const ci = myIdeas.find(i => i.id === currentIdeaId);
+              if (!ci?.parent_idea_id || ci?.is_main_version) return null;
+              return (
+                <button
+                  onClick={async () => {
+                    try {
+                      const { data: { session } } = await supabase.auth.getSession();
+                      if (!session) return;
+                      await fetch(`/api/ideas/${currentIdeaId}/set-main`, {
+                        method: "PATCH",
+                        headers: { Authorization: `Bearer ${session.access_token}` },
+                      });
+                      fetchMyIdeas();
+                    } catch (e) {
+                      console.error("Set-main failed:", e);
+                    }
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "12px 0",
+                    borderRadius: 12,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    border: "1px solid rgba(16,185,129,0.3)",
+                    background: "rgba(16,185,129,0.06)",
+                    color: "#34d399",
+                    cursor: "pointer",
+                    marginBottom: 10,
+                  }}
+                >
+                  ★ Set as main version
+                </button>
+              );
+            })()}
+            <button
+              onClick={() => {
+                setViewingFromSaved(false);
+                setPhaseProgress({});
+                setCurrentEvaluationId(null);
+                setCurrentIdeaId(null);
+                setEditingNotePhase(null);
+                setNoteText("");
+                setDeltaData(null);
+                setDeltaError("");
+                goToMyIdeas();
+              }}
+              style={{
+                width: "100%",
+                padding: "14px 0",
+                borderRadius: 12,
+                fontSize: 14,
+                fontWeight: 600,
+                border: "1px solid rgba(64,64,64,0.6)",
+                background: "transparent",
+                color: "#a3a3a3",
+                cursor: "pointer",
+              }}
+            >
+              ← Back to My Ideas
+            </button>
           </PageContainer>
         </main>
 
