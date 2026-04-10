@@ -49,6 +49,7 @@ export async function GET(request) {
         branch_reason,
         changed_dimensions,
         is_main_version,
+        status_label,
         evaluations (
           id,
           weighted_overall_score,
