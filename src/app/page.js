@@ -531,6 +531,10 @@ export default function Home() {
   // Lineage view state
   const [lineageMode, setLineageMode] = useState(false);
   const [lineageTargetId, setLineageTargetId] = useState(null);
+  const [loadingIdeaId, setLoadingIdeaId] = useState(null);
+
+  // Evaluation cache — avoids re-fetching already-viewed ideas
+  const evaluationCacheRef = useRef({});
 
   // Inline idea editing state (hub card rename)
   const [editingIdeaId, setEditingIdeaId] = useState(null);
@@ -1215,15 +1219,61 @@ export default function Home() {
     }
   };
 
+  // Apply loaded evaluation data to state (shared by cache hit and fetch paths)
+  const applyLoadedIdea = (data, ideaId) => {
+    setIdea(data.idea.raw_idea_text);
+    setAnalysis(data.analysis);
+    setEditedPhases(null);
+    setExpandedPhases({});
+    setSaveStatus("saved");
+    setSavedIdeaId(ideaId);
+    setCurrentIdeaId(ideaId);
+    setCurrentEvaluationId(data.evaluation_id);
+    setViewingFromSaved(true);
+
+    // Reconstruct the full idea text including revisions
+    let fullIdeaText = data.idea.raw_idea_text;
+    const revisionNotes = data.analysis?._meta?.revision_notes;
+    if (revisionNotes && Array.isArray(revisionNotes) && revisionNotes.length > 0) {
+      const changeLabel = (type) => {
+        if (type === "target_user") return "Target user";
+        if (type === "problem") return "Problem it solves";
+        if (type === "core_idea") return "Core idea";
+        return "";
+      };
+      revisionNotes.forEach((rev) => {
+        if (rev.type && rev.text) {
+          fullIdeaText += `\n\n[REVISION — ${changeLabel(rev.type)} changed to: ${rev.text}]`;
+        }
+      });
+    }
+    setLoadedIdeaText(fullIdeaText);
+    setCurrentScreen("results1");
+  };
+
   // Load a saved idea's full evaluation and show it
   const loadSavedIdea = async (ideaId, evaluationId) => {
     if (!user) return;
-    setMyIdeasLoading(true);
     setMyIdeasError("");
     setShowAlternativesPopup(false);
     setPhaseProgress({}); // Clear stale progress immediately so alternatives don't share state
     setDeltaData(null); // Clear previous delta
     setDeltaError("");
+
+    const cacheKey = evaluationId ? `${ideaId}-${evaluationId}` : ideaId;
+
+    // Check cache first — instant load if available
+    if (evaluationCacheRef.current[cacheKey]) {
+      const cached = evaluationCacheRef.current[cacheKey];
+      applyLoadedIdea(cached, ideaId);
+      // Still refresh progress (lightweight)
+      if (cached.evaluation_id) {
+        fetchProgress(cached.evaluation_id);
+      }
+      return;
+    }
+
+    setMyIdeasLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -1237,41 +1287,15 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      // Set state to show the evaluation screens
-      setIdea(data.idea.raw_idea_text);
-      setAnalysis(data.analysis);
-      setEditedPhases(null);
-      setExpandedPhases({});
-      setSaveStatus("saved"); // already saved, don't show save button again
-      setSavedIdeaId(ideaId);
-      setCurrentIdeaId(ideaId);
-      setCurrentEvaluationId(data.evaluation_id);
-      setViewingFromSaved(true);
+      // Store in cache
+      evaluationCacheRef.current[cacheKey] = data;
 
-      // Reconstruct the full idea text including revisions (for re-evaluating alternatives)
-      let fullIdeaText = data.idea.raw_idea_text;
-      const revisionNotes = data.analysis?._meta?.revision_notes;
-      if (revisionNotes && Array.isArray(revisionNotes) && revisionNotes.length > 0) {
-        const changeLabel = (type) => {
-          if (type === "target_user") return "Target user";
-          if (type === "problem") return "Problem it solves";
-          if (type === "core_idea") return "Core idea";
-          return "";
-        };
-        revisionNotes.forEach((rev) => {
-          if (rev.type && rev.text) {
-            fullIdeaText += `\n\n[REVISION — ${changeLabel(rev.type)} changed to: ${rev.text}]`;
-          }
-        });
-      }
-      setLoadedIdeaText(fullIdeaText);
+      applyLoadedIdea(data, ideaId);
 
       // Fetch progress for this evaluation
       if (data.evaluation_id) {
         fetchProgress(data.evaluation_id, session.access_token);
       }
-
-      setCurrentScreen("results1");
     } catch (err) {
       setMyIdeasError(err.message || "Failed to load idea.");
     } finally {
@@ -2161,7 +2185,9 @@ export default function Home() {
                 setLineageTargetId(null);
               }}
               onViewIdea={async (ideaId) => {
+                setLoadingIdeaId(ideaId);
                 await loadSavedIdea(ideaId);
+                setLoadingIdeaId(null);
                 setLineageMode(false);
                 setLineageTargetId(null);
               }}
@@ -2172,6 +2198,7 @@ export default function Home() {
                 setLineageTargetId(null);
               }}
               onUpdateIdea={updateIdea}
+              loadingIdeaId={loadingIdeaId}
             />
           </main>
 

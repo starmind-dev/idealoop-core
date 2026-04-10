@@ -127,7 +127,7 @@ function StatusDropdown({ currentStatus, onSelect, onClose }) {
 // ============================================
 // NODE CARD
 // ============================================
-function NodeCard({ idea, isRoot, isSelected, comparing, onToggleSelect, onClickNode, onUpdateIdea }) {
+function NodeCard({ idea, isRoot, isSelected, comparing, onToggleSelect, onClickNode, onUpdateIdea, isLoading }) {
   const evals = idea.evaluations || [];
   const latestEval = evals.length > 0 ? evals[0] : null; // sorted desc by list route
   const score = latestEval?.weighted_overall_score || 0;
@@ -168,23 +168,51 @@ function NodeCard({ idea, isRoot, isSelected, comparing, onToggleSelect, onClick
     <div
       style={{
         background: "rgba(23,23,23,0.8)",
-        border: isSelected
+        border: isLoading
+          ? "1px solid rgba(234,179,8,0.6)"
+          : isSelected
           ? "1px solid rgba(59,130,246,0.6)"
           : "1px solid rgba(38,38,38,0.8)",
         borderRadius: 12,
         padding: "12px 16px",
         minWidth: 160,
         maxWidth: 220,
-        cursor: "pointer",
+        cursor: isLoading ? "default" : "pointer",
         transition: "border-color 0.2s, box-shadow 0.2s",
-        boxShadow: isSelected ? "0 0 12px rgba(59,130,246,0.15)" : "none",
+        boxShadow: isLoading
+          ? "0 0 16px rgba(234,179,8,0.2)"
+          : isSelected ? "0 0 12px rgba(59,130,246,0.15)" : "none",
         position: "relative",
+        opacity: isLoading ? 0.7 : 1,
       }}
       onClick={(e) => {
         e.stopPropagation();
-        onClickNode(idea.id);
+        if (!isLoading) onClickNode(idea.id);
       }}
     >
+      {/* Loading overlay */}
+      {isLoading && (
+        <div style={{
+          position: "absolute",
+          inset: 0,
+          borderRadius: 12,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 10,
+          background: "rgba(10,10,10,0.5)",
+        }}>
+          <style>{`@keyframes lineage-spin { to { transform: rotate(360deg); } }`}</style>
+          <div style={{
+            width: 20,
+            height: 20,
+            border: "2px solid rgba(234,179,8,0.3)",
+            borderTopColor: "#eab308",
+            borderRadius: "50%",
+            animation: "lineage-spin 0.6s linear infinite",
+          }} />
+        </div>
+      )}
       {/* Checkbox — only in compare mode */}
       {comparing && (
         <div
@@ -409,7 +437,7 @@ function NodeCard({ idea, isRoot, isSelected, comparing, onToggleSelect, onClick
 // ============================================
 // TREE NODE (recursive with connectors)
 // ============================================
-function TreeNode({ node, isRoot, selected, comparing, onToggleSelect, onClickNode, onUpdateIdea }) {
+function TreeNode({ node, isRoot, selected, comparing, onToggleSelect, onClickNode, onUpdateIdea, loadingIdeaId }) {
   const { idea, children } = node;
   const isSelected = selected.some((s) => s.ideaId === idea.id);
 
@@ -429,6 +457,7 @@ function TreeNode({ node, isRoot, selected, comparing, onToggleSelect, onClickNo
         onToggleSelect={onToggleSelect}
         onClickNode={onClickNode}
         onUpdateIdea={onUpdateIdea}
+        isLoading={idea.id === loadingIdeaId}
       />
 
       {children.length > 0 && (
@@ -503,6 +532,7 @@ function TreeNode({ node, isRoot, selected, comparing, onToggleSelect, onClickNo
                   onToggleSelect={onToggleSelect}
                   onClickNode={onClickNode}
                   onUpdateIdea={onUpdateIdea}
+                  loadingIdeaId={loadingIdeaId}
                 />
               </div>
             ))}
@@ -523,6 +553,7 @@ export default function LineageView({
   onViewIdea,
   onStartComparison,
   onUpdateIdea,
+  loadingIdeaId,
 }) {
   const [selected, setSelected] = useState([]);
   const [comparing, setComparing] = useState(false);
@@ -667,6 +698,7 @@ export default function LineageView({
             onToggleSelect={toggleSelect}
             onClickNode={(ideaId) => onViewIdea(ideaId)}
             onUpdateIdea={onUpdateIdea}
+            loadingIdeaId={loadingIdeaId}
           />
         </div>
       </div>
