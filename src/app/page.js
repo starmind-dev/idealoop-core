@@ -1331,6 +1331,14 @@ export default function Home() {
   // Fetch delta explanation for a branch idea
   const fetchDelta = async (ideaId) => {
     if (!user || !ideaId) return;
+
+    // Check client-side cache first
+    const cacheKey = `delta-${ideaId}`;
+    if (evaluationCacheRef.current[cacheKey]) {
+      setDeltaData(evaluationCacheRef.current[cacheKey]);
+      return;
+    }
+
     setDeltaLoading(true);
     setDeltaError("");
     try {
@@ -1347,6 +1355,9 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load delta");
       setDeltaData(data.delta);
+
+      // Cache for instant revisits
+      evaluationCacheRef.current[cacheKey] = data.delta;
     } catch (err) {
       console.error("Delta fetch failed:", err);
       setDeltaError(err.message || "Failed to analyze changes");
