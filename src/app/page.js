@@ -1585,6 +1585,17 @@ export default function Home() {
   };
 
   // ==========================================
+  // AUTH LOADING GATE — prevent screen flash on refresh
+  // ==========================================
+  if (authLoading) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#0a0a0a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <p style={{ color: "#525252", fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase" }}>IdeaLoop Core</p>
+      </div>
+    );
+  }
+
+  // ==========================================
   // SCREEN 0: PROFILE
   // ==========================================
   if (currentScreen === "profile") {
@@ -2149,16 +2160,16 @@ export default function Home() {
                 setLineageMode(false);
                 setLineageTargetId(null);
               }}
-              onViewIdea={(ideaId) => {
+              onViewIdea={async (ideaId) => {
+                await loadSavedIdea(ideaId);
                 setLineageMode(false);
                 setLineageTargetId(null);
-                loadSavedIdea(ideaId);
               }}
-              onStartComparison={(selectedPair) => {
+              onStartComparison={async (selectedPair) => {
+                setCompareSelected(selectedPair);
+                await startComparison(selectedPair);
                 setLineageMode(false);
                 setLineageTargetId(null);
-                setCompareSelected(selectedPair);
-                startComparison(selectedPair);
               }}
               onUpdateIdea={updateIdea}
             />
