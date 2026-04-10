@@ -308,7 +308,7 @@ function ToolsScreen({ data, isMobile, activeTab }) {
   );
 
   const renderEstimates = (estimates) => (
-    <div style={{ display: "flex", gap: 10 }}>
+    <div style={{ display: "flex", gap: 10, height: "100%" }}>
       <div style={{ flex: 1, background: "rgba(38,38,38,0.4)", borderRadius: 10, padding: "10px 12px" }}>
         <p style={{ fontSize: 10, color: "#525252", margin: 0, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Duration</p>
         <p style={{ fontSize: 15, fontWeight: 700, color: "#f5f5f5", margin: "4px 0 0 0" }}>{estimates.duration || "N/A"}</p>
@@ -383,8 +383,8 @@ function ToolsScreen({ data, isMobile, activeTab }) {
           );
         })}
         <div style={{ display: "contents" }}>
-          <div style={{ borderRight: "1px solid rgba(38,38,38,0.8)", padding: "16px 20px 20px 20px" }}>{renderEstimates(data.estimatesA)}</div>
-          <div style={{ padding: "16px 20px 20px 20px" }}>{renderEstimates(data.estimatesB)}</div>
+          <div style={{ borderRight: "1px solid rgba(38,38,38,0.8)", padding: "16px 20px 20px 20px", display: "flex" }}>{renderEstimates(data.estimatesA)}</div>
+          <div style={{ padding: "16px 20px 20px 20px", display: "flex" }}>{renderEstimates(data.estimatesB)}</div>
         </div>
       </div>
     );
@@ -400,8 +400,8 @@ function ToolsScreen({ data, isMobile, activeTab }) {
         </div>
       ))}
       <div style={{ display: "contents" }}>
-        <div style={{ borderRight: "1px solid rgba(38,38,38,0.8)", padding: "16px 20px 20px 20px" }}>{renderEstimates(data.estimatesA)}</div>
-        <div style={{ padding: "16px 20px 20px 20px" }}>{renderEstimates(data.estimatesB)}</div>
+        <div style={{ borderRight: "1px solid rgba(38,38,38,0.8)", padding: "16px 20px 20px 20px", display: "flex" }}>{renderEstimates(data.estimatesA)}</div>
+        <div style={{ padding: "16px 20px 20px 20px", display: "flex" }}>{renderEstimates(data.estimatesB)}</div>
       </div>
     </div>
   );
