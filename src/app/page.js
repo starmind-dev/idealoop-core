@@ -1576,7 +1576,7 @@ export default function Home() {
               </p>
             </div>
 
-            <Card style={{ padding: 6, marginBottom: 24 }}>
+            <Card style={{ padding: 6, marginBottom: 24 }} t={t}>
               <textarea
                 value={idea}
                 onChange={(e) => setIdea(e.target.value)}
@@ -2142,7 +2142,7 @@ export default function Home() {
                 <p style={{ fontSize: 14, color: t.sec, marginTop: 16 }}>Loading your ideas...</p>
               </div>
             ) : myIdeas.length === 0 ? (
-              <Card style={{ padding: 48, textAlign: "center" }}>
+              <Card style={{ padding: 48, textAlign: "center" }} t={t}>
                 <p style={{ fontSize: 48, margin: "0 0 16px 0" }}>💡</p>
                 <p style={{ fontSize: 16, color: t.sec, margin: "0 0 8px 0" }}>No saved ideas yet</p>
                 <p style={{ fontSize: 14, color: t.mut, margin: "0 0 24px 0" }}>
@@ -2714,7 +2714,7 @@ export default function Home() {
           </PageContainer>
         </header>
 
-        <StepProgress currentStep={getStepNumber()} savedMode={true} branchMode={isBranchIdea} />
+        <StepProgress currentStep={getStepNumber()} savedMode={true} branchMode={isBranchIdea} t={t} />
 
         <main style={{ flex: 1, paddingBottom: 48 }}>
           <PageContainer>
@@ -2729,7 +2729,7 @@ export default function Home() {
 
             {/* SECTION 1: Context Snapshot */}
             {reEvalContextSnapshot && (
-              <Card style={{ padding: 20, marginBottom: 24 }}>
+              <Card style={{ padding: 20, marginBottom: 24 }} t={t}>
                 {/* Title row + score circle */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
                   <div>
@@ -2834,7 +2834,7 @@ export default function Home() {
               <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: t.sec, marginBottom: 8 }}>
                 Original idea
               </label>
-              <Card style={{ padding: "16px 20px", maxHeight: 150, overflowY: "auto" }}>
+              <Card style={{ padding: "16px 20px", maxHeight: 150, overflowY: "auto" }} t={t}>
                 <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>
                   {reEvalOriginalIdea}
                 </p>
@@ -3288,6 +3288,7 @@ export default function Home() {
               icon="△"
               title="What Changed"
               subtitle={parentIdea ? `Changes from "${parentIdea.title}" to "${currentIdea?.title}"` : "How this branch differs from its parent"}
+              t={t}
             />
 
             {/* Loading state */}
