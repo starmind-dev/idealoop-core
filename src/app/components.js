@@ -8,10 +8,10 @@ import { supabase } from "../lib/supabase";
 // ============================================
 export const T = {
   light: {
-    bg: "#f5f5f4", surface: "#ffffff", surfAlt: "#eeeeed",
-    border: "rgba(0,0,0,0.07)", text: "#1a1a1a", sec: "#5c5c5c", mut: "#8a8a8a",
-    shadow: "0 1px 3px rgba(0,0,0,0.04)",
-    headerBg: "#ffffff", headerBorder: "rgba(0,0,0,0.06)",
+    bg: "#eae8e4", surface: "#ffffff", surfAlt: "#e0deda",
+    border: "rgba(0,0,0,0.08)", text: "#1a1a1a", sec: "#5c5c5c", mut: "#8a8a8a",
+    shadow: "0 1px 4px rgba(0,0,0,0.06)",
+    headerBg: "#eae8e4", headerBorder: "rgba(0,0,0,0.08)",
     scoreRing: "#6b7280", scoreGlow: false,
     barBg: "rgba(0,0,0,0.06)",
     stepDone: "#16a34a", stepCurrent: "#1a1a1a", stepCurrentText: "#ffffff",
@@ -30,11 +30,14 @@ export const T = {
     srcBadge: { google: "#2563eb", github: "#7c3aed", llm: "#8a8a8a" },
     typeBadge: { direct: "#dc2626", adjacent: "#b45309", substitute: "#2563eb" },
     hubCard: "#ffffff", hubCardBorder: "rgba(0,0,0,0.08)",
-    inputBg: "rgba(0,0,0,0.03)", inputBorder: "rgba(0,0,0,0.1)", inputText: "#1a1a1a",
+    inputBg: "rgba(0,0,0,0.03)", inputBorder: "rgba(0,0,0,0.12)", inputText: "#1a1a1a",
     link: "#2563eb",
     accentBar: false,
     modalBg: "#ffffff", modalBorder: "rgba(0,0,0,0.1)",
     divider: "rgba(0,0,0,0.06)",
+    streamOverlay: "rgba(255,255,255,0.8)", streamBg: "#ffffff",
+    streamBorder: "rgba(0,0,0,0.12)", streamDivider: "rgba(0,0,0,0.08)",
+    streamShadow: "0 24px 64px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.04)",
   },
   dark: {
     bg: "#0a0a0a", surface: "rgba(20,20,20,0.95)", surfAlt: "rgba(30,30,30,0.8)",
@@ -61,9 +64,12 @@ export const T = {
     hubCard: "rgba(23,23,23,0.8)", hubCardBorder: "rgba(38,38,38,0.8)",
     inputBg: "rgba(23,23,23,0.8)", inputBorder: "rgba(64,64,64,0.6)", inputText: "#f5f5f5",
     link: "#60a5fa",
-    accentBar: true,
+    accentBar: false,
     modalBg: "#171717", modalBorder: "rgba(38,38,38,0.8)",
     divider: "#262626",
+    streamOverlay: "rgba(0,0,0,0.75)", streamBg: "#0d0d0d",
+    streamBorder: "#262626", streamDivider: "#1a1a1a",
+    streamShadow: "0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03)",
   },
 };
 
@@ -207,7 +213,7 @@ export function StatusBadge({ status }) {
 // ============================================
 // SCORE BAR
 // ============================================
-export function ScoreBar({ name, score, explanation, weight, notes, t }) {
+export function ScoreBar({ name, score, explanation, weight, notes, t, gated }) {
   const percentage = (score / 10) * 100;
 
   return (
@@ -232,10 +238,14 @@ export function ScoreBar({ name, score, explanation, weight, notes, t }) {
           }}
         />
       </div>
-      <p style={{ fontSize: 12, color: t.sec, marginTop: 8, lineHeight: 1.5 }}>{explanation}</p>
-      {notes && notes.map((note, i) => (
-        <p key={i} style={{ fontSize: 11, color: t.mut, marginTop: 4, lineHeight: 1.4, fontStyle: "italic" }}>{note}</p>
-      ))}
+      {!gated && (
+        <>
+          <p style={{ fontSize: 12, color: t.sec, marginTop: 8, lineHeight: 1.5 }}>{explanation}</p>
+          {notes && notes.map((note, i) => (
+            <p key={i} style={{ fontSize: 11, color: t.mut, marginTop: 4, lineHeight: 1.4, fontStyle: "italic" }}>{note}</p>
+          ))}
+        </>
+      )}
     </div>
   );
 }
@@ -556,6 +566,126 @@ export function DevModeBadge({ mode }) {
       pointerEvents: "none",
     }}>
       DEV: {c.label}
+    </div>
+  );
+}
+
+// ============================================
+// CONTENT GATING COMPONENTS (V4S25)
+// ============================================
+
+// Lock CTA button — shown below gated sections
+export function GateCTA({ text, t }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "center", padding: "16px 0 4px 0" }}>
+      <button style={{
+        background: t.lockBg,
+        color: "#fff",
+        border: "none",
+        borderRadius: 10,
+        padding: "10px 24px",
+        fontSize: 12,
+        fontWeight: 600,
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        letterSpacing: "0.01em",
+        transition: "opacity 0.2s",
+      }}
+        onMouseOver={(e) => e.currentTarget.style.opacity = "0.85"}
+        onMouseOut={(e) => e.currentTarget.style.opacity = "1"}
+      >
+        <span style={{ fontSize: 13 }}>🔒</span> {text}
+      </button>
+    </div>
+  );
+}
+
+// Blur gate — shows first sentence(s) of text, blurs the rest
+export function BlurGate({ isGated, text, t }) {
+  if (!isGated || !text) {
+    return <p style={{ fontSize: 14, color: t.sec, textAlign: "center", lineHeight: 1.6, maxWidth: 560, margin: "0 auto" }}>{text}</p>;
+  }
+
+  // Split into sentences — match period/question/exclamation followed by space or end
+  const sentences = text.match(/[^.!?]+[.!?]+[\s]?/g) || [text];
+  const firstSentence = sentences[0] || "";
+  const restText = sentences.slice(1).join("");
+
+  return (
+    <div>
+      <p style={{ fontSize: 14, color: t.sec, textAlign: "center", lineHeight: 1.6, maxWidth: 560, margin: "0 auto" }}>
+        {firstSentence}
+      </p>
+      {restText && (
+        <div style={{
+          position: "relative",
+          maxHeight: 60,
+          overflow: "hidden",
+          marginTop: 4,
+        }}>
+          <p style={{
+            fontSize: 14,
+            color: t.sec,
+            textAlign: "center",
+            lineHeight: 1.6,
+            maxWidth: 560,
+            margin: "0 auto",
+            filter: "blur(4px)",
+            opacity: 0.5,
+            userSelect: "none",
+          }}>
+            {restText}
+          </p>
+          <div style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 40,
+            background: `linear-gradient(transparent, ${t.surface})`,
+          }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Preview banner — shown at top of gated evaluation screens
+export function PreviewBanner({ t }) {
+  return (
+    <div style={{
+      background: t.surface,
+      border: `1px solid ${t.border}`,
+      borderRadius: 12,
+      padding: "14px 20px",
+      marginBottom: 24,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 16,
+      flexWrap: "wrap",
+    }}>
+      <p style={{ fontSize: 13, color: t.sec, margin: 0 }}>
+        <span style={{ fontWeight: 600, color: t.text }}>Free Preview</span> — some sections are condensed.
+      </p>
+      <button style={{
+        background: t.lockBg,
+        color: "#fff",
+        border: "none",
+        borderRadius: 8,
+        padding: "8px 18px",
+        fontSize: 11,
+        fontWeight: 600,
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        whiteSpace: "nowrap",
+      }}>
+        🔒 Unlock Full Report
+      </button>
     </div>
   );
 }

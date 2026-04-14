@@ -11,6 +11,9 @@ import {
   DevModeBadge,
   getScoreColor,
   getTcColor,
+  GateCTA,
+  BlurGate,
+  PreviewBanner,
 } from "./components";
 
 export default function EvaluationView({
@@ -96,13 +99,15 @@ export default function EvaluationView({
   onNavigateToDelta,
 }) {
 
+  // Content gating — true for free preview users viewing unpaid evaluations
+  const isGated = !entitlements.canSeeFullContent;
+
   // ==========================================
   // SCREEN: ANALYSIS (results1)
   // ==========================================
   if (screen === "results1") {
     return (
       <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
-        {t.accentBar && <div style={{ height: 3, background: "#eab308", opacity: 0.4 }} />}
         {devModeExplicit && <DevModeBadge mode={devMode} />}
         <header style={headerStyle}>
           <PageContainer wide>
@@ -167,6 +172,9 @@ export default function EvaluationView({
 
         <main style={{ flex: 1, paddingBottom: 64 }}>
           <PageContainer wide>
+
+            {/* Free Preview Banner */}
+            {isGated && <PreviewBanner t={t} />}
 
             {/* Scope Warning */}
             {analysis.scope_warning && (
@@ -601,6 +609,7 @@ export default function EvaluationView({
                   explanation={analysis.evaluation.monetization.explanation}
                   weight="25%"
                   t={t}
+                  gated={isGated}
                 />
                 <ScoreBar
                   name="Originality"
@@ -608,6 +617,7 @@ export default function EvaluationView({
                   explanation={analysis.evaluation.originality.explanation}
                   weight="25%"
                   t={t}
+                  gated={isGated}
                 />
                 <div style={{ marginBottom: 24 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
@@ -633,17 +643,24 @@ export default function EvaluationView({
                       transition: "width 1s ease-out",
                     }} />
                   </div>
-                  <p style={{ fontSize: 12, color: t.sec, marginTop: 8, lineHeight: 1.5 }}>
-                    {analysis.evaluation.technical_complexity.base_score_explanation}
-                    {" "}{analysis.evaluation.technical_complexity.adjustment_explanation}
-                    {" "}{analysis.evaluation.technical_complexity.explanation}
-                  </p>
-                  {analysis.evaluation.technical_complexity.incremental_note && (
-                    <p style={{ fontSize: 11, color: t.mut, marginTop: 4, lineHeight: 1.4, fontStyle: "italic" }}>
-                      {analysis.evaluation.technical_complexity.incremental_note}
-                    </p>
+                  {!isGated && (
+                    <>
+                      <p style={{ fontSize: 12, color: t.sec, marginTop: 8, lineHeight: 1.5 }}>
+                        {analysis.evaluation.technical_complexity.base_score_explanation}
+                        {" "}{analysis.evaluation.technical_complexity.adjustment_explanation}
+                        {" "}{analysis.evaluation.technical_complexity.explanation}
+                      </p>
+                      {analysis.evaluation.technical_complexity.incremental_note && (
+                        <p style={{ fontSize: 11, color: t.mut, marginTop: 4, lineHeight: 1.4, fontStyle: "italic" }}>
+                          {analysis.evaluation.technical_complexity.incremental_note}
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
+                {isGated && (
+                  <GateCTA text="Unlock full metric analysis — including your personalized technical assessment" t={t} />
+                )}
               </Card>
 
               {/* Marketplace Note */}
@@ -708,7 +725,6 @@ export default function EvaluationView({
   if (screen === "results2") {
     return (
       <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
-        {t.accentBar && <div style={{ height: 3, background: "#eab308", opacity: 0.4 }} />}
         {devModeExplicit && <DevModeBadge mode={devMode} />}
         <header style={headerStyle}>
           <PageContainer wide>
@@ -754,6 +770,10 @@ export default function EvaluationView({
 
         <main style={{ flex: 1, paddingBottom: 64 }}>
           <PageContainer wide>
+
+            {/* Free Preview Banner */}
+            {isGated && <PreviewBanner t={t} />}
+
             {/* Failure Risks */}
             {analysis.evaluation.failure_risks && analysis.evaluation.failure_risks.length > 0 && (
               <section style={{ marginBottom: 48 }}>
@@ -909,8 +929,8 @@ export default function EvaluationView({
                       )}
 
                       <div
-                        onClick={() => togglePhase(i)}
-                        style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
+                        onClick={() => !isGated && togglePhase(i)}
+                        style={{ flex: 1, minWidth: 0, cursor: isGated ? "default" : "pointer" }}
                       >
                         <h3 style={{
                           fontSize: 14,
@@ -931,6 +951,7 @@ export default function EvaluationView({
                           {phase.summary}
                         </p>
                       </div>
+                      {!isGated && (
                       <span
                         onClick={() => togglePhase(i)}
                         style={{
@@ -944,9 +965,10 @@ export default function EvaluationView({
                       >
                         ▾
                       </span>
+                      )}
                     </div>
 
-                    {expandedPhases[i] && (
+                    {expandedPhases[i] && !isGated && (
                       <div style={{ padding: "0 24px 24px 24px", borderTop: `1px solid ${t.border}` }}>
                         {editingPhase === i ? (
                           <div style={{ paddingTop: 20 }}>
@@ -1155,6 +1177,11 @@ export default function EvaluationView({
               })()}
             </section>
 
+            {isGated && (
+              <div style={{ marginBottom: 32 }}>
+                <GateCTA text="Unlock full phase guidance" t={t} />
+              </div>
+            )}
 
 
             {/* Tools */}
@@ -1258,14 +1285,43 @@ export default function EvaluationView({
                     </span>
                   </div>
                 </div>
-                <p style={{ fontSize: 14, color: t.sec, textAlign: "center", lineHeight: 1.6, maxWidth: 560, margin: "0 auto" }}>
-                  {analysis.estimates.explanation}
-                </p>
+                <BlurGate isGated={isGated} text={analysis.estimates.explanation} t={t} />
               </Card>
+              {isGated && (
+                <div style={{ marginTop: 16 }}>
+                  <GateCTA text="Unlock full execution breakdown" t={t} />
+                </div>
+              )}
             </section>
 
             {/* Save / Decision block — shown after user has seen everything */}
             {!viewingFromSaved && (
+              isGated ? (
+                /* GATED — show unlock prompt instead of save */
+                <Card style={{ padding: 28, textAlign: "center" }} t={t}>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: t.text, margin: "0 0 6px 0" }}>
+                    Want the full picture?
+                  </p>
+                  <p style={{ fontSize: 13, color: t.sec, margin: "0 0 20px 0", lineHeight: 1.5 }}>
+                    Unlock all metric explanations, phase details, and execution guidance for this evaluation.
+                  </p>
+                  <button style={{
+                    background: t.lockBg,
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 10,
+                    padding: "12px 32px",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}>
+                    <span>🔒</span> Unlock Full Report
+                  </button>
+                </Card>
+              ) : (
               <div style={{ marginBottom: 16 }}>
                 {isReEvalResult ? (
                   /* POST-EVALUATION DECISION BLOCK — shown for re-eval results */
@@ -1670,6 +1726,7 @@ export default function EvaluationView({
                 )
                 )}
               </div>
+              )
             )}
 
             {viewingFromSaved ? (

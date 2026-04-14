@@ -1308,7 +1308,6 @@ export default function Home() {
 
     return (
       <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
-        {t.accentBar && <div style={{ height: 3, background: "#eab308", opacity: 0.4 }} />}
         <header style={headerStyle}>
           <PageContainer>
             <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1514,7 +1513,6 @@ export default function Home() {
   if (currentScreen === "input") {
     return (
       <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
-        {t.accentBar && <div style={{ height: 3, background: "#eab308", opacity: 0.4 }} />}
         <header style={headerStyle}>
           <PageContainer>
             <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1701,12 +1699,12 @@ export default function Home() {
                 justifyContent: "center",
                 backdropFilter: "blur(8px)",
                 WebkitBackdropFilter: "blur(8px)",
-                background: "rgba(0,0,0,0.75)",
+                background: t.streamOverlay,
                 animation: "overlayFadeIn 0.3s ease-out",
               }}>
                 <div style={{
-                  background: "#0d0d0d",
-                  border: "1px solid #262626",
+                  background: t.streamBg,
+                  border: `1px solid ${t.streamBorder}`,
                   borderRadius: 12,
                   padding: "28px 32px",
                   fontFamily: "'Courier New', Courier, monospace",
@@ -1714,9 +1712,9 @@ export default function Home() {
                   lineHeight: 1.8,
                   width: "90%",
                   maxWidth: 520,
-                  boxShadow: "0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03)",
+                  boxShadow: t.streamShadow,
                 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: "1px solid #1a1a1a" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: `1px solid ${t.streamDivider}` }}>
                     <div style={{ width: 8, height: 8, borderRadius: "50%", background: proMode ? "#8b5cf6" : "#10b981", boxShadow: proMode ? "0 0 8px rgba(139,92,246,0.5)" : "0 0 8px rgba(16,185,129,0.5)" }} />
                     <span style={{ color: t.mut, fontSize: 11, letterSpacing: "0.08em" }}>{proMode ? "PRO EVALUATION PIPELINE" : "EVALUATION PIPELINE"}</span>
                   </div>
@@ -1893,7 +1891,6 @@ export default function Home() {
 
     return (
       <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
-        {t.accentBar && <div style={{ height: 3, background: "#eab308", opacity: 0.4 }} />}
         {devModeExplicit && <DevModeBadge mode={devMode} />}
         <header style={headerStyle}>
           <PageContainer>
@@ -2686,7 +2683,6 @@ export default function Home() {
 
     return (
       <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
-        {t.accentBar && <div style={{ height: 3, background: "#eab308", opacity: 0.4 }} />}
         <header style={headerStyle}>
           <PageContainer>
             <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -3066,12 +3062,12 @@ export default function Home() {
                 justifyContent: "center",
                 backdropFilter: "blur(8px)",
                 WebkitBackdropFilter: "blur(8px)",
-                background: "rgba(0,0,0,0.75)",
+                background: t.streamOverlay,
                 animation: "overlayFadeIn 0.3s ease-out",
               }}>
                 <div style={{
-                  background: "#0d0d0d",
-                  border: "1px solid #262626",
+                  background: t.streamBg,
+                  border: `1px solid ${t.streamBorder}`,
                   borderRadius: 12,
                   padding: "28px 32px",
                   fontFamily: "'Courier New', Courier, monospace",
@@ -3079,9 +3075,9 @@ export default function Home() {
                   lineHeight: 1.8,
                   width: "90%",
                   maxWidth: 520,
-                  boxShadow: "0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03)",
+                  boxShadow: t.streamShadow,
                 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: "1px solid #1a1a1a" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: `1px solid ${t.streamDivider}` }}>
                     <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#8b5cf6", boxShadow: "0 0 8px rgba(139,92,246,0.5)" }} />
                     <span style={{ color: t.mut, fontSize: 11, letterSpacing: "0.08em" }}>EVOLUTION PIPELINE</span>
                   </div>
@@ -3246,7 +3242,6 @@ export default function Home() {
 
     return (
       <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
-        {t.accentBar && <div style={{ height: 3, background: "#eab308", opacity: 0.4 }} />}
         <header style={headerStyle}>
           <PageContainer wide>
             <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
