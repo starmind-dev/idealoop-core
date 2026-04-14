@@ -14,6 +14,8 @@ import {
   PageContainer,
   AuthModal,
   DevModeBadge,
+  getTheme,
+  getScoreColor,
 } from "./components";
 
 // ============================================
@@ -183,6 +185,9 @@ export default function Home() {
       devMode,
     };
   })();
+
+  // Theme derived from entitlements
+  const t = getTheme(entitlements.themeMode);
 
   // Listen for auth state changes (login, logout, session restore)
   useEffect(() => {
@@ -1273,12 +1278,14 @@ export default function Home() {
   // Shared header style
   const headerStyle = {
     width: "100%",
-    borderBottom: "1px solid rgba(38,38,38,0.8)",
+    borderBottom: `1px solid ${t.headerBorder}`,
+    background: t.headerBg,
+    backdropFilter: "blur(12px)",
   };
 
   const footerStyle = {
     width: "100%",
-    borderTop: "1px solid rgba(38,38,38,0.8)",
+    borderTop: `1px solid ${t.headerBorder}`,
     padding: "20px 0",
   };
 
@@ -1287,8 +1294,8 @@ export default function Home() {
   // ==========================================
   if (authLoading) {
     return (
-      <div style={{ minHeight: "100vh", background: "#0a0a0a", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <p style={{ color: "#525252", fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase" }}>IdeaLoop Core</p>
+      <div style={{ minHeight: "100vh", background: t.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <p style={{ color: t.mut, fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase" }}>IdeaLoop Core</p>
       </div>
     );
   }
@@ -1300,29 +1307,30 @@ export default function Home() {
     const canContinue = profile.coding && profile.ai;
 
     return (
-      <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#f5f5f5", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+      <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+        {t.accentBar && <div style={{ height: 3, background: "#eab308", opacity: 0.4 }} />}
         <header style={headerStyle}>
           <PageContainer>
             <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "#525252", margin: 0, cursor: "pointer" }}>
+              <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: t.mut, margin: 0, cursor: "pointer" }}>
                 IdeaLoop Core
               </h1>
               {!authLoading && (
                 user ? (
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <button onClick={goToMyIdeas} style={{ fontSize: 12, color: "#60a5fa", background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>
+                    <button onClick={goToMyIdeas} style={{ fontSize: 12, color: t.link, background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>
                       My Ideas
                     </button>
-                    <span style={{ color: "#262626" }}>|</span>
-                    <span style={{ fontSize: 12, color: "#525252" }}>{user.email}</span>
-                    <button onClick={handleLogout} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                    <span style={{ color: t.divider }}>|</span>
+                    <span style={{ fontSize: 12, color: t.mut }}>{user.email}</span>
+                    <button onClick={handleLogout} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
                       Log out
                     </button>
                   </div>
                 ) : (
                   <button
                     onClick={() => setShowAuthModal(true)}
-                    style={{ fontSize: 12, color: "#60a5fa", background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}
+                    style={{ fontSize: 12, color: t.link, background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}
                   >
                     Log in
                   </button>
@@ -1336,10 +1344,11 @@ export default function Home() {
           <AuthModal
             onClose={() => setShowAuthModal(false)}
             onAuth={(u) => setUser(u)}
+            t={t}
           />
         )}
 
-        <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} branchMode={viewingFromSaved && isBranchIdea} />
+        <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} branchMode={viewingFromSaved && isBranchIdea} t={t} />
 
         <main style={{ flex: 1, paddingBottom: 48 }}>
           <PageContainer>
@@ -1347,16 +1356,16 @@ export default function Home() {
               <h2 style={{ fontSize: 24, fontWeight: 600, margin: "0 0 12px 0" }}>
                 Tell us about yourself
               </h2>
-              <p style={{ fontSize: 14, color: "#737373", lineHeight: 1.6, margin: 0 }}>
+              <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.6, margin: 0 }}>
                 We'll calibrate the analysis to your experience level<br />
                 so the recommendations are relevant to you.
               </p>
             </div>
 
-            <Card style={{ padding: 28, marginBottom: 32 }}>
+            <Card style={{ padding: 28, marginBottom: 32 }} t={t}>
               {/* Coding */}
               <div style={{ marginBottom: 28 }}>
-                <label style={{ fontSize: 14, fontWeight: 600, color: "#d4d4d4", display: "block", marginBottom: 12 }}>
+                <label style={{ fontSize: 14, fontWeight: 600, color: t.text, display: "block", marginBottom: 12 }}>
                   How familiar are you with coding?
                 </label>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -1376,8 +1385,8 @@ export default function Home() {
                         transition: "all 0.2s",
                         boxSizing: "border-box",
                         ...(profile.coding === opt
-                          ? { background: "#fff", color: "#0a0a0a", borderColor: "#fff" }
-                          : { background: "rgba(23,23,23,0.8)", color: "#a3a3a3", borderColor: "rgba(64,64,64,0.6)" }),
+                          ? { background: t.ctaBg, color: t.ctaText, borderColor: t.ctaBg }
+                          : { background: t.inputBg, color: t.sec, borderColor: t.inputBorder }),
                       }}
                     >
                       {opt}
@@ -1388,7 +1397,7 @@ export default function Home() {
 
               {/* AI */}
               <div style={{ marginBottom: 28 }}>
-                <label style={{ fontSize: 14, fontWeight: 600, color: "#d4d4d4", display: "block", marginBottom: 12 }}>
+                <label style={{ fontSize: 14, fontWeight: 600, color: t.text, display: "block", marginBottom: 12 }}>
                   How much experience do you have with AI tools?
                 </label>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -1408,8 +1417,8 @@ export default function Home() {
                         transition: "all 0.2s",
                         boxSizing: "border-box",
                         ...(profile.ai === opt
-                          ? { background: "#fff", color: "#0a0a0a", borderColor: "#fff" }
-                          : { background: "rgba(23,23,23,0.8)", color: "#a3a3a3", borderColor: "rgba(64,64,64,0.6)" }),
+                          ? { background: t.ctaBg, color: t.ctaText, borderColor: t.ctaBg }
+                          : { background: t.inputBg, color: t.sec, borderColor: t.inputBorder }),
                       }}
                     >
                       {opt}
@@ -1420,7 +1429,7 @@ export default function Home() {
 
               {/* Education */}
               <div>
-                <label style={{ fontSize: 14, fontWeight: 600, color: "#d4d4d4", display: "block", marginBottom: 12 }}>
+                <label style={{ fontSize: 14, fontWeight: 600, color: t.text, display: "block", marginBottom: 12 }}>
                   What is your education or professional background?
                 </label>
                 <input
@@ -1430,12 +1439,12 @@ export default function Home() {
                   placeholder="e.g., Software Engineer, Marketing Manager, Student..."
                   style={{
                     width: "100%",
-                    background: "rgba(23,23,23,0.8)",
-                    border: "1px solid rgba(64,64,64,0.6)",
+                    background: t.inputBg,
+                    border: `1px solid ${t.inputBorder}`,
                     borderRadius: 12,
                     padding: "12px 16px",
                     fontSize: 14,
-                    color: "#f5f5f5",
+                    color: t.inputText,
                     outline: "none",
                     boxSizing: "border-box",
                   }}
@@ -1479,8 +1488,8 @@ export default function Home() {
                 cursor: canContinue ? "pointer" : "not-allowed",
                 transition: "all 0.2s",
                 ...(canContinue
-                  ? { background: "#fff", color: "#0a0a0a" }
-                  : { background: "rgba(38,38,38,0.6)", color: "#525252" }),
+                  ? { background: t.ctaBg, color: t.ctaText }
+                  : { background: t.surfAlt, color: t.mut }),
               }}
             >
               Continue
@@ -1490,7 +1499,7 @@ export default function Home() {
 
         <footer style={footerStyle}>
           <PageContainer>
-            <p style={{ fontSize: 12, color: "#404040", margin: 0 }}>
+            <p style={{ fontSize: 12, color: t.mut, margin: 0 }}>
               IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
             </p>
           </PageContainer>
@@ -1504,35 +1513,36 @@ export default function Home() {
   // ==========================================
   if (currentScreen === "input") {
     return (
-      <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#f5f5f5", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+      <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+        {t.accentBar && <div style={{ height: 3, background: "#eab308", opacity: 0.4 }} />}
         <header style={headerStyle}>
           <PageContainer>
             <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "#525252", margin: 0, cursor: "pointer" }}>
+              <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: t.mut, margin: 0, cursor: "pointer" }}>
                 IdeaLoop Core
               </h1>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <button onClick={() => setCurrentScreen("profile")} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                <button onClick={() => setCurrentScreen("profile")} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
                   {profile.coding} · {profile.ai} AI · Edit ✎
                 </button>
                 {!authLoading && (
                   user ? (
                     <>
-                      <span style={{ color: "#262626" }}>|</span>
-                      <button onClick={goToMyIdeas} style={{ fontSize: 12, color: "#60a5fa", background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>
+                      <span style={{ color: t.divider }}>|</span>
+                      <button onClick={goToMyIdeas} style={{ fontSize: 12, color: t.link, background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>
                         My Ideas
                       </button>
-                      <span style={{ color: "#262626" }}>|</span>
-                      <button onClick={handleLogout} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                      <span style={{ color: t.divider }}>|</span>
+                      <button onClick={handleLogout} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
                         Log out
                       </button>
                     </>
                   ) : (
                     <>
-                      <span style={{ color: "#262626" }}>|</span>
+                      <span style={{ color: t.divider }}>|</span>
                       <button
                         onClick={() => setShowAuthModal(true)}
-                        style={{ fontSize: 12, color: "#60a5fa", background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}
+                        style={{ fontSize: 12, color: t.link, background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}
                       >
                         Log in
                       </button>
@@ -1548,10 +1558,11 @@ export default function Home() {
           <AuthModal
             onClose={() => setShowAuthModal(false)}
             onAuth={(u) => setUser(u)}
+            t={t}
           />
         )}
 
-        <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} branchMode={viewingFromSaved && isBranchIdea} />
+        <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} branchMode={viewingFromSaved && isBranchIdea} t={t} />
 
         <main style={{ flex: 1, paddingBottom: 48 }}>
           <PageContainer>
@@ -1559,7 +1570,7 @@ export default function Home() {
               <h2 style={{ fontSize: 30, fontWeight: 600, margin: "0 0 12px 0" }}>
                 Describe your AI product idea
               </h2>
-              <p style={{ fontSize: 16, color: "#737373", lineHeight: 1.6, margin: 0 }}>
+              <p style={{ fontSize: 16, color: t.sec, lineHeight: 1.6, margin: 0 }}>
                 Include what it does, who would use it, and what problem it solves.
                 Specific ideas get sharper evaluations.
               </p>
@@ -1577,7 +1588,7 @@ export default function Home() {
                   border: "none",
                   padding: "16px 20px",
                   fontSize: 16,
-                  color: "#f5f5f5",
+                  color: t.inputText,
                   lineHeight: 1.6,
                   resize: "none",
                   outline: "none",
@@ -1603,14 +1614,14 @@ export default function Home() {
                 marginBottom: 16,
                 padding: "8px 16px",
                 borderRadius: 8,
-                background: proMode ? "rgba(139,92,246,0.1)" : "rgba(38,38,38,0.3)",
-                border: `1px solid ${proMode ? "rgba(139,92,246,0.3)" : "rgba(64,64,64,0.2)"}`,
+                background: proMode ? "rgba(139,92,246,0.1)" : t.surfAlt,
+                border: `1px solid ${proMode ? "rgba(139,92,246,0.3)" : t.border}`,
                 transition: "all 0.2s ease",
               }}>
                 <button
                   onClick={() => setProMode(!proMode)}
                   style={{
-                    background: proMode ? "#8b5cf6" : "#404040",
+                    background: proMode ? "#8b5cf6" : t.mut,
                     color: "#fff",
                     border: "none",
                     borderRadius: 6,
@@ -1625,14 +1636,14 @@ export default function Home() {
                 >
                   {proMode ? "PRO ✓" : "PRO"}
                 </button>
-                <span style={{ fontSize: 12, color: proMode ? "#a78bfa" : "#525252", fontFamily: "monospace" }}>
+                <span style={{ fontSize: 12, color: proMode ? "#a78bfa" : t.mut, fontFamily: "monospace" }}>
                   {proMode ? "3-stage chained pipeline (Discover → Judge → Act)" : "Standard single-call evaluation"}
                 </span>
               </div>
             )}
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-              <span style={{ fontSize: 14, color: "#525252", fontFamily: "monospace" }}>
+              <span style={{ fontSize: 14, color: t.mut, fontFamily: "monospace" }}>
                 {idea.length > 0 ? `${idea.length} characters` : ""}
               </span>
               <button
@@ -1646,10 +1657,10 @@ export default function Home() {
                   border: "none",
                   cursor: !idea.trim() || isAnalyzing || evalsRemaining <= 0 ? "not-allowed" : "pointer",
                   ...(!idea.trim() || isAnalyzing || evalsRemaining <= 0
-                    ? { background: "rgba(38,38,38,0.6)", color: "#525252" }
+                    ? { background: t.surfAlt, color: t.mut }
                     : proMode
                       ? { background: "#8b5cf6", color: "#fff" }
-                      : { background: "#fff", color: "#0a0a0a" }),
+                      : { background: t.ctaBg, color: t.ctaText }),
                 }}
               >
                 {isAnalyzing ? "Analyzing..." : evalsRemaining <= 0 ? "Limit Reached" : proMode ? "Pro Analyze" : "Analyze Idea"}
@@ -1664,12 +1675,12 @@ export default function Home() {
               marginBottom: 24,
               padding: "10px 16px",
               borderRadius: 12,
-              background: evalsRemaining <= 0 ? "rgba(239,68,68,0.08)" : evalsRemaining === 1 ? "rgba(245,158,11,0.08)" : "rgba(38,38,38,0.4)",
-              border: `1px solid ${evalsRemaining <= 0 ? "rgba(239,68,68,0.2)" : evalsRemaining === 1 ? "rgba(245,158,11,0.2)" : "rgba(64,64,64,0.3)"}`,
+              background: evalsRemaining <= 0 ? "rgba(239,68,68,0.08)" : evalsRemaining === 1 ? "rgba(245,158,11,0.08)" : t.surfAlt,
+              border: `1px solid ${evalsRemaining <= 0 ? "rgba(239,68,68,0.2)" : evalsRemaining === 1 ? "rgba(245,158,11,0.2)" : t.border}`,
             }}>
               <span style={{
                 fontSize: 13,
-                color: evalsRemaining <= 0 ? "#f87171" : evalsRemaining === 1 ? "#fbbf24" : "#737373",
+                color: evalsRemaining <= 0 ? "#f87171" : evalsRemaining === 1 ? "#fbbf24" : t.sec,
               }}>
                 {evalsRemaining <= 0
                   ? `No evaluations remaining this week. Next slot opens in ${user && dbNextResetTime ? formatResetTime(dbNextResetTime) : getNextResetTime()}.`
@@ -1707,14 +1718,14 @@ export default function Home() {
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: "1px solid #1a1a1a" }}>
                     <div style={{ width: 8, height: 8, borderRadius: "50%", background: proMode ? "#8b5cf6" : "#10b981", boxShadow: proMode ? "0 0 8px rgba(139,92,246,0.5)" : "0 0 8px rgba(16,185,129,0.5)" }} />
-                    <span style={{ color: "#525252", fontSize: 11, letterSpacing: "0.08em" }}>{proMode ? "PRO EVALUATION PIPELINE" : "EVALUATION PIPELINE"}</span>
+                    <span style={{ color: t.mut, fontSize: 11, letterSpacing: "0.08em" }}>{proMode ? "PRO EVALUATION PIPELINE" : "EVALUATION PIPELINE"}</span>
                   </div>
                   {streamSteps.map((s, i) => (
                     <div key={i} style={{
                       display: "flex",
                       alignItems: "flex-start",
                       gap: 10,
-                      color: s.done ? "#a3a3a3" : "#e5e5e5",
+                      color: s.done ? t.sec : t.text,
                       opacity: s.done ? 0.8 : 1,
                       animation: "fadeInStep 0.3s ease-out",
                     }}>
@@ -1725,12 +1736,12 @@ export default function Home() {
                     </div>
                   ))}
                   {streamSteps.length > 0 && !streamSteps.some(s => s.step === "complete") && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#525252", marginTop: 2 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, color: t.mut, marginTop: 2 }}>
                       <span style={{ width: 16, textAlign: "center", animation: "blink 1s step-end infinite" }}>_</span>
                     </div>
                   )}
                   {streamSteps.length === 0 && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#525252" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, color: t.mut }}>
                       <span style={{ width: 16, textAlign: "center", animation: "blink 1s step-end infinite" }}>_</span>
                       <span>Initializing...</span>
                     </div>
@@ -1756,7 +1767,7 @@ export default function Home() {
 
         <footer style={footerStyle}>
           <PageContainer>
-            <p style={{ fontSize: 12, color: "#404040", margin: 0 }}>
+            <p style={{ fontSize: 12, color: t.mut, margin: 0 }}>
               IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
             </p>
           </PageContainer>
@@ -1769,28 +1780,21 @@ export default function Home() {
   // MY IDEAS HUB
   // ==========================================
   if (currentScreen === "myideas") {
-    const getScoreColor = (s) => {
-      if (s >= 8) return "#10b981";
-      if (s >= 6) return "#3b82f6";
-      if (s >= 4) return "#f59e0b";
-      return "#ef4444";
-    };
-
     // COMPARISON MODE: render ComparisonView instead of hub (subscribers only)
     if (entitlements.canUseWorkflow && compareMode && compareData) {
       return (
-        <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#f5f5f5", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+        <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
           <header style={headerStyle}>
             <PageContainer wide>
               <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "#525252", margin: 0, cursor: "pointer" }}>
+                <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: t.mut, margin: 0, cursor: "pointer" }}>
                   IdeaLoop Core
                 </h1>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   {!authLoading && user && (
                     <>
-                      <span style={{ fontSize: 12, color: "#525252" }}>{user.email}</span>
-                      <button onClick={handleLogout} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                      <span style={{ fontSize: 12, color: t.mut }}>{user.email}</span>
+                      <button onClick={handleLogout} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
                         Log out
                       </button>
                     </>
@@ -1817,7 +1821,7 @@ export default function Home() {
 
           <footer style={footerStyle}>
             <PageContainer>
-              <p style={{ fontSize: 12, color: "#404040", margin: 0 }}>
+              <p style={{ fontSize: 12, color: t.mut, margin: 0 }}>
                 IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
               </p>
             </PageContainer>
@@ -1829,18 +1833,18 @@ export default function Home() {
     // LINEAGE MODE: render LineageView instead of hub (subscribers only)
     if (entitlements.canUseWorkflow && lineageMode && lineageTargetId) {
       return (
-        <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#f5f5f5", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+        <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
           <header style={headerStyle}>
             <PageContainer wide>
               <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "#525252", margin: 0, cursor: "pointer" }}>
+                <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: t.mut, margin: 0, cursor: "pointer" }}>
                   IdeaLoop Core
                 </h1>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   {!authLoading && user && (
                     <>
-                      <span style={{ fontSize: 12, color: "#525252" }}>{user.email}</span>
-                      <button onClick={handleLogout} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                      <span style={{ fontSize: 12, color: t.mut }}>{user.email}</span>
+                      <button onClick={handleLogout} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
                         Log out
                       </button>
                     </>
@@ -1878,7 +1882,7 @@ export default function Home() {
 
           <footer style={footerStyle}>
             <PageContainer>
-              <p style={{ fontSize: 12, color: "#404040", margin: 0 }}>
+              <p style={{ fontSize: 12, color: t.mut, margin: 0 }}>
                 IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
               </p>
             </PageContainer>
@@ -1888,23 +1892,24 @@ export default function Home() {
     }
 
     return (
-      <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#f5f5f5", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+      <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+        {t.accentBar && <div style={{ height: 3, background: "#eab308", opacity: 0.4 }} />}
         {devModeExplicit && <DevModeBadge mode={devMode} />}
         <header style={headerStyle}>
           <PageContainer>
             <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "#525252", margin: 0, cursor: "pointer" }}>
+              <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: t.mut, margin: 0, cursor: "pointer" }}>
                 IdeaLoop Core
               </h1>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <button onClick={() => setCurrentScreen("input")} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                <button onClick={() => setCurrentScreen("input")} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
                   ← New Evaluation
                 </button>
                 {!authLoading && user && (
                   <>
-                    <span style={{ color: "#262626" }}>|</span>
-                    <span style={{ fontSize: 12, color: "#525252" }}>{user.email}</span>
-                    <button onClick={handleLogout} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                    <span style={{ color: t.divider }}>|</span>
+                    <span style={{ fontSize: 12, color: t.mut }}>{user.email}</span>
+                    <button onClick={handleLogout} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
                       Log out
                     </button>
                   </>
@@ -1933,8 +1938,8 @@ export default function Home() {
               <div
                 onClick={(e) => e.stopPropagation()}
                 style={{
-                  background: "#1a1a1a",
-                  border: "1px solid rgba(64,64,64,0.6)",
+                  background: t.modalBg,
+                  border: `1px solid ${t.modalBorder}`,
                   borderRadius: 16,
                   padding: "24px",
                   maxWidth: 420,
@@ -1945,16 +1950,16 @@ export default function Home() {
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
                   <div>
-                    <h3 style={{ fontSize: 16, fontWeight: 600, color: "#f5f5f5", margin: 0 }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 600, color: t.text, margin: 0 }}>
                       {alternativesData.title}
                     </h3>
-                    <p style={{ fontSize: 12, color: "#737373", margin: "4px 0 0 0" }}>
+                    <p style={{ fontSize: 12, color: t.sec, margin: "4px 0 0 0" }}>
                       {alternativesData.evaluations.length} version{alternativesData.evaluations.length > 1 ? "s" : ""}
                     </p>
                   </div>
                   <button
                     onClick={() => setShowAlternativesPopup(false)}
-                    style={{ background: "none", border: "none", color: "#525252", fontSize: 18, cursor: "pointer", padding: 4 }}
+                    style={{ background: "none", border: "none", color: t.mut, fontSize: 18, cursor: "pointer", padding: 4 }}
                   >
                     ✕
                   </button>
@@ -1986,7 +1991,7 @@ export default function Home() {
                           gap: 14,
                           padding: "14px 16px",
                           background: isOriginal ? "rgba(255,255,255,0.03)" : "rgba(108,99,255,0.04)",
-                          border: `1px solid ${compareSelecting && evIsSelected ? "rgba(59,130,246,0.5)" : isOriginal ? "rgba(64,64,64,0.4)" : "rgba(108,99,255,0.15)"}`,
+                          border: `1px solid ${compareSelecting && evIsSelected ? "rgba(59,130,246,0.5)" : isOriginal ? t.border : "rgba(108,99,255,0.15)"}`,
                           borderRadius: 12,
                           cursor: "pointer",
                           textAlign: "left",
@@ -2001,7 +2006,7 @@ export default function Home() {
                               width: 20,
                               height: 20,
                               borderRadius: 5,
-                              border: evIsSelected ? "2px solid #60a5fa" : "2px solid rgba(64,64,64,0.6)",
+                              border: evIsSelected ? `2px solid ${t.link}` : `2px solid ${t.border}`,
                               background: evIsSelected ? "rgba(59,130,246,0.2)" : "transparent",
                               display: "flex",
                               alignItems: "center",
@@ -2009,7 +2014,7 @@ export default function Home() {
                               flexShrink: 0,
                               transition: "all 0.2s",
                               fontSize: 11,
-                              color: "#60a5fa",
+                              color: t.link,
                               fontWeight: 700,
                             }}
                           >
@@ -2035,11 +2040,11 @@ export default function Home() {
                         </div>
 
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 500, color: isOriginal ? "#a3a3a3" : "#a78bfa" }}>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: isOriginal ? t.sec : "#a78bfa" }}>
                             {altLabel}
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
-                            <span style={{ fontSize: 11, color: "#525252" }}>{evDate}</span>
+                            <span style={{ fontSize: 11, color: t.mut }}>{evDate}</span>
                             {ev.progress?.has_progress && (
                               <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
                                 <div style={{ display: "flex", gap: 1 }}>
@@ -2051,12 +2056,12 @@ export default function Home() {
                                         width: 10,
                                         height: 3,
                                         borderRadius: 1.5,
-                                        background: isCompleted ? "#10b981" : "#262626",
+                                        background: isCompleted ? "#10b981" : t.barBg,
                                       }} />
                                     );
                                   })}
                                 </div>
-                                <span style={{ fontSize: 9, color: "#525252" }}>
+                                <span style={{ fontSize: 9, color: t.mut }}>
                                   {ev.progress.completed}/{ev.progress.total_phases}
                                 </span>
                               </div>
@@ -2091,12 +2096,12 @@ export default function Home() {
                                   borderRadius: 2,
                                 }} />
                               </div>
-                              <span style={{ fontSize: 7, color: "#404040", fontWeight: 500 }}>{m.label}</span>
+                              <span style={{ fontSize: 7, color: t.mut, fontWeight: 500 }}>{m.label}</span>
                             </div>
                           ))}
                         </div>
 
-                        <span style={{ fontSize: 14, color: "#404040" }}>→</span>
+                        <span style={{ fontSize: 14, color: t.mut }}>→</span>
                       </button>
                     );
                   })}
@@ -2107,7 +2112,7 @@ export default function Home() {
           <PageContainer>
             <div style={{ marginBottom: 32 }}>
               <h2 style={{ fontSize: 24, fontWeight: 600, margin: "0 0 8px 0" }}>My Ideas</h2>
-              <p style={{ fontSize: 14, color: "#737373", margin: 0 }}>
+              <p style={{ fontSize: 14, color: t.sec, margin: 0 }}>
                 {savedIdeasCount > 0
                   ? entitlements.isSubscriber
                     ? `${savedIdeasCount} ideas saved`
@@ -2134,13 +2139,13 @@ export default function Home() {
                   animation: "spin 1s linear infinite",
                 }} />
                 <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-                <p style={{ fontSize: 14, color: "#737373", marginTop: 16 }}>Loading your ideas...</p>
+                <p style={{ fontSize: 14, color: t.sec, marginTop: 16 }}>Loading your ideas...</p>
               </div>
             ) : myIdeas.length === 0 ? (
               <Card style={{ padding: 48, textAlign: "center" }}>
                 <p style={{ fontSize: 48, margin: "0 0 16px 0" }}>💡</p>
-                <p style={{ fontSize: 16, color: "#a3a3a3", margin: "0 0 8px 0" }}>No saved ideas yet</p>
-                <p style={{ fontSize: 14, color: "#525252", margin: "0 0 24px 0" }}>
+                <p style={{ fontSize: 16, color: t.sec, margin: "0 0 8px 0" }}>No saved ideas yet</p>
+                <p style={{ fontSize: 14, color: t.mut, margin: "0 0 24px 0" }}>
                   Run an evaluation and click "Save to My Ideas" to keep it here.
                 </p>
                 <button
@@ -2152,7 +2157,7 @@ export default function Home() {
                     fontWeight: 600,
                     border: "none",
                     background: "#fff",
-                    color: "#0a0a0a",
+                    color: t.ctaText,
                     cursor: "pointer",
                   }}
                 >
@@ -2168,7 +2173,7 @@ export default function Home() {
                   border: "1px solid rgba(108,99,255,0.15)",
                   marginBottom: 4,
                 }}>
-                  <p style={{ fontSize: 13, color: "#a3a3a3", lineHeight: 1.6, margin: 0 }}>
+                  <p style={{ fontSize: 13, color: t.sec, lineHeight: 1.6, margin: 0 }}>
                     Open any idea to review your evaluation, track your roadmap progress, check recommended tools — and re-evaluate with fresh market data or changed variables.
                   </p>
                 </div>
@@ -2181,7 +2186,7 @@ export default function Home() {
                       style={{
                         padding: "8px 16px", borderRadius: 10, fontSize: 13, fontWeight: 600,
                         border: "1px solid rgba(59,130,246,0.3)", background: "rgba(59,130,246,0.08)",
-                        color: "#60a5fa", cursor: "pointer", transition: "all 0.2s",
+                        color: t.link, cursor: "pointer", transition: "all 0.2s",
                       }}
                     >
                       Compare Ideas
@@ -2197,7 +2202,7 @@ export default function Home() {
                     background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.2)",
                     marginBottom: 4,
                   }}>
-                    <span style={{ fontSize: 13, color: "#60a5fa" }}>
+                    <span style={{ fontSize: 13, color: t.link }}>
                       {compareSelected.length === 0
                         ? "Tap 2 ideas to compare"
                         : compareSelected.length === 1
@@ -2209,8 +2214,8 @@ export default function Home() {
                         onClick={() => { setCompareSelecting(false); setCompareSelected([]); }}
                         style={{
                           padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 500,
-                          border: "1px solid rgba(64,64,64,0.4)", background: "transparent",
-                          color: "#525252", cursor: "pointer",
+                          border: `1px solid ${t.border}`, background: "transparent",
+                          color: t.mut, cursor: "pointer",
                         }}
                       >
                         Cancel
@@ -2222,8 +2227,8 @@ export default function Home() {
                           padding: "6px 16px", borderRadius: 8, fontSize: 12, fontWeight: 600,
                           border: "none",
                           cursor: compareSelected.length !== 2 || compareLoading ? "not-allowed" : "pointer",
-                          background: compareSelected.length === 2 && !compareLoading ? "#60a5fa" : "rgba(38,38,38,0.6)",
-                          color: compareSelected.length === 2 && !compareLoading ? "#fff" : "#525252",
+                          background: compareSelected.length === 2 && !compareLoading ? t.link : t.surfAlt,
+                          color: compareSelected.length === 2 && !compareLoading ? "#fff" : t.mut,
                           transition: "all 0.2s",
                         }}
                       >
@@ -2247,8 +2252,8 @@ export default function Home() {
                     <div
                       key={savedIdea.id}
                       style={{
-                        background: "rgba(23,23,23,0.6)",
-                        border: compareSelecting && isSelected ? "1px solid rgba(59,130,246,0.5)" : "1px solid rgba(38,38,38,0.8)",
+                        background: t.hubCard,
+                        border: compareSelecting && isSelected ? "1px solid rgba(59,130,246,0.5)" : `1px solid ${t.hubCardBorder}`,
                         borderRadius: 16,
                         overflow: "hidden",
                         transition: "border-color 0.2s",
@@ -2288,7 +2293,7 @@ export default function Home() {
                               width: 22,
                               height: 22,
                               borderRadius: 6,
-                              border: isSelected ? "2px solid #60a5fa" : "2px solid rgba(64,64,64,0.6)",
+                              border: isSelected ? `2px solid ${t.link}` : `2px solid ${t.border}`,
                               background: isSelected ? "rgba(59,130,246,0.2)" : "transparent",
                               display: "flex",
                               alignItems: "center",
@@ -2296,7 +2301,7 @@ export default function Home() {
                               flexShrink: 0,
                               transition: "all 0.2s",
                               fontSize: 12,
-                              color: "#60a5fa",
+                              color: t.link,
                               fontWeight: 700,
                             }}
                           >
@@ -2346,9 +2351,9 @@ export default function Home() {
                                 style={{
                                   fontSize: 14,
                                   fontWeight: 600,
-                                  color: "#f5f5f5",
-                                  background: "rgba(38,38,38,0.8)",
-                                  border: "1px solid rgba(59,130,246,0.4)",
+                                  color: t.inputText,
+                                  background: t.inputBg,
+                                  border: `1px solid ${t.link}40`,
                                   borderRadius: 6,
                                   padding: "2px 6px",
                                   outline: "none",
@@ -2361,7 +2366,7 @@ export default function Home() {
                                 <h3 style={{
                                   fontSize: 14,
                                   fontWeight: 600,
-                                  color: "#f5f5f5",
+                                  color: t.text,
                                   margin: 0,
                                   overflow: "hidden",
                                   textOverflow: "ellipsis",
@@ -2397,18 +2402,18 @@ export default function Home() {
                           {savedIdea.parent_idea_id && (() => {
                             const parentIdea = myIdeas.find(i => i.id === savedIdea.parent_idea_id);
                             return (
-                              <p style={{ fontSize: 11, color: "#737373", margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              <p style={{ fontSize: 11, color: t.sec, margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                 ↳ from {parentIdea?.title || "parent idea"}
-                                {savedIdea.branch_reason && <span style={{ color: "#525252" }}> — {savedIdea.branch_reason}</span>}
+                                {savedIdea.branch_reason && <span style={{ color: t.mut }}> — {savedIdea.branch_reason}</span>}
                               </p>
                             );
                           })()}
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
-                            <span style={{ fontSize: 12, color: "#525252" }}>{date}</span>
+                            <span style={{ fontSize: 12, color: t.mut }}>{date}</span>
                             {/* Main version badge */}
                             {savedIdea.is_main_version && (
                               <>
-                                <span style={{ fontSize: 12, color: "#333" }}>·</span>
+                                <span style={{ fontSize: 12, color: t.mut }}>·</span>
                                 <span style={{
                                   fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 9999,
                                   background: "rgba(16,185,129,0.12)", color: "#34d399", border: "1px solid rgba(16,185,129,0.25)",
@@ -2420,7 +2425,7 @@ export default function Home() {
                               const childCount = myIdeas.filter(i => i.parent_idea_id === savedIdea.id).length;
                               return childCount > 0 ? (
                                 <>
-                                  <span style={{ fontSize: 12, color: "#333" }}>·</span>
+                                  <span style={{ fontSize: 12, color: t.mut }}>·</span>
                                   <span style={{
                                     fontSize: 10, fontWeight: 500, padding: "2px 8px", borderRadius: 9999,
                                     background: "rgba(245,158,11,0.12)", color: "#fbbf24", border: "1px solid rgba(245,158,11,0.25)",
@@ -2432,7 +2437,7 @@ export default function Home() {
                             })()}
                             {eval_?.classification && (
                               <>
-                                <span style={{ fontSize: 12, color: "#333" }}>·</span>
+                                <span style={{ fontSize: 12, color: t.mut }}>·</span>
                                 <span style={{
                                   fontSize: 10,
                                   fontWeight: 600,
@@ -2442,7 +2447,7 @@ export default function Home() {
                                   letterSpacing: "0.05em",
                                   ...(eval_.classification === "social_impact"
                                     ? { background: "rgba(16,185,129,0.12)", color: "#34d399", border: "1px solid rgba(16,185,129,0.25)" }
-                                    : { background: "rgba(59,130,246,0.12)", color: "#60a5fa", border: "1px solid rgba(59,130,246,0.25)" }),
+                                    : { background: "rgba(59,130,246,0.12)", color: t.link, border: "1px solid rgba(59,130,246,0.25)" }),
                                 }}>
                                   {eval_.classification === "social_impact" ? "Social Impact" : "Commercial"}
                                 </span>
@@ -2450,13 +2455,13 @@ export default function Home() {
                             )}
                             {eval_?.data_source === "verified" && (
                               <>
-                                <span style={{ fontSize: 12, color: "#333" }}>·</span>
+                                <span style={{ fontSize: 12, color: t.mut }}>·</span>
                                 <span style={{ fontSize: 10, color: "#34d399", fontWeight: 500, flexShrink: 0 }}>Verified</span>
                               </>
                             )}
                             {(savedIdea.evaluation_count || savedIdea.evaluations?.length || 1) > 1 && (
                               <>
-                                <span style={{ fontSize: 12, color: "#333" }}>·</span>
+                                <span style={{ fontSize: 12, color: t.mut }}>·</span>
                                 <span style={{
                                   fontSize: 10,
                                   fontWeight: 500,
@@ -2474,7 +2479,7 @@ export default function Home() {
                           {eval_?.summary_text && (
                             <p style={{
                               fontSize: 12,
-                              color: "#525252",
+                              color: t.mut,
                               margin: "6px 0 0 0",
                               lineHeight: 1.4,
                               overflow: "hidden",
@@ -2515,13 +2520,13 @@ export default function Home() {
                                   borderRadius: 3,
                                 }} />
                               </div>
-                              <span style={{ fontSize: 8, color: "#404040", fontWeight: 500 }}>{m.label}</span>
+                              <span style={{ fontSize: 8, color: t.mut, fontWeight: 500 }}>{m.label}</span>
                             </div>
                           ))}
                         </div>
 
                         {/* Arrow */}
-                        <span style={{ color: "#404040", fontSize: 16, flexShrink: 0 }}>→</span>
+                        <span style={{ color: t.mut, fontSize: 16, flexShrink: 0 }}>→</span>
                       </div>
 
                       {/* Delete row */}
@@ -2543,17 +2548,17 @@ export default function Home() {
                                     width: 16,
                                     height: 4,
                                     borderRadius: 2,
-                                    background: isCompleted ? "#10b981" : "#262626",
+                                    background: isCompleted ? "#10b981" : t.barBg,
                                   }} />
                                 );
                               })}
                             </div>
-                            <span style={{ fontSize: 11, color: "#737373" }}>
+                            <span style={{ fontSize: 11, color: t.sec }}>
                               {savedIdea.progress.completed}/{savedIdea.progress.total_phases}
                             </span>
                           </div>
                         ) : savedIdea.progress?.total_phases > 0 ? (
-                          <span style={{ fontSize: 11, color: "#404040" }}>
+                          <span style={{ fontSize: 11, color: t.mut }}>
                             {savedIdea.progress.total_phases} phases · no progress yet
                           </span>
                         ) : (
@@ -2588,7 +2593,7 @@ export default function Home() {
                             disabled={deletingIdeaId === savedIdea.id}
                             style={{
                               fontSize: 11,
-                              color: deletingIdeaId === savedIdea.id ? "#404040" : "#525252",
+                              color: deletingIdeaId === savedIdea.id ? t.mut : t.mut,
                               background: "none",
                               border: "none",
                               cursor: deletingIdeaId === savedIdea.id ? "not-allowed" : "pointer",
@@ -2617,7 +2622,7 @@ export default function Home() {
                 <p style={{ fontSize: 16, fontWeight: 600, color: "#a78bfa", margin: "0 0 8px" }}>
                   Unlock the full workspace
                 </p>
-                <p style={{ fontSize: 13, color: "#737373", lineHeight: 1.6, margin: "0 0 16px" }}>
+                <p style={{ fontSize: 13, color: t.sec, lineHeight: 1.6, margin: "0 0 16px" }}>
                   Evolve ideas, compare versions side by side, see what changed between iterations, track your decision lineage, and save unlimited ideas.
                 </p>
                 <button
@@ -2641,7 +2646,7 @@ export default function Home() {
 
         <footer style={footerStyle}>
           <PageContainer>
-            <p style={{ fontSize: 12, color: "#404040", margin: 0 }}>
+            <p style={{ fontSize: 12, color: t.mut, margin: 0 }}>
               IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
             </p>
           </PageContainer>
@@ -2677,33 +2682,29 @@ export default function Home() {
     };
     const weakest = getWeakestMetric();
 
-    const getScoreColor = (s) => {
-      if (s >= 8) return "#10b981";
-      if (s >= 6) return "#3b82f6";
-      if (s >= 4) return "#f59e0b";
-      return "#ef4444";
-    };
+    // getScoreColor imported from components.js
 
     return (
-      <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#f5f5f5", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+      <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+        {t.accentBar && <div style={{ height: 3, background: "#eab308", opacity: 0.4 }} />}
         <header style={headerStyle}>
           <PageContainer>
             <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "#525252", margin: 0, cursor: "pointer" }}>
+              <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: t.mut, margin: 0, cursor: "pointer" }}>
                 IdeaLoop Core
               </h1>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <button onClick={() => {
                   setReEvalMode(false);
                   setCurrentScreen("results2");
-                }} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                }} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
                   ← Back to evaluation
                 </button>
                 {!authLoading && user && (
                   <>
-                    <span style={{ color: "#262626" }}>|</span>
-                    <span style={{ fontSize: 12, color: "#525252" }}>{user.email}</span>
-                    <button onClick={handleLogout} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                    <span style={{ color: t.divider }}>|</span>
+                    <span style={{ fontSize: 12, color: t.mut }}>{user.email}</span>
+                    <button onClick={handleLogout} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
                       Log out
                     </button>
                   </>
@@ -2721,7 +2722,7 @@ export default function Home() {
               <h2 style={{ fontSize: 30, fontWeight: 600, margin: "0 0 12px 0" }}>
                 Evolve This Idea
               </h2>
-              <p style={{ fontSize: 14, color: "#737373", lineHeight: 1.5, margin: 0 }}>
+              <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.5, margin: 0 }}>
                 Review your current evaluation, then change one or more dimensions to test a different strategic angle.
               </p>
             </div>
@@ -2732,8 +2733,8 @@ export default function Home() {
                 {/* Title row + score circle */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
                   <div>
-                    <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#525252", margin: "0 0 6px" }}>Current evaluation</p>
-                    <p style={{ fontSize: 15, fontWeight: 600, color: "#f5f5f5", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{reEvalContextSnapshot.title || "Untitled"}</p>
+                    <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: t.mut, margin: "0 0 6px" }}>Current evaluation</p>
+                    <p style={{ fontSize: 15, fontWeight: 600, color: t.text, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{reEvalContextSnapshot.title || "Untitled"}</p>
                   </div>
                   <div style={{
                     width: 48,
@@ -2767,7 +2768,7 @@ export default function Home() {
                     return (
                       <div key={i} style={{ flex: 1 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                          <span style={{ fontSize: 11, color: "#525252" }}>{m.label}</span>
+                          <span style={{ fontSize: 11, color: t.mut }}>{m.label}</span>
                           <span style={{ fontSize: 11, fontFamily: "monospace", color }}>{s.toFixed(1)}</span>
                         </div>
                         <div style={{ height: 4, background: "#1a1a1a", borderRadius: 4, overflow: "hidden" }}>
@@ -2797,11 +2798,11 @@ export default function Home() {
 
                 {/* Top risks — separated by border */}
                 {reEvalContextSnapshot.failure_risks?.length > 0 && (
-                  <div style={{ borderTop: "1px solid rgba(38,38,38,0.6)", paddingTop: 12 }}>
-                    <p style={{ fontSize: 11, color: "#525252", fontWeight: 500, margin: "0 0 6px" }}>Top risks</p>
+                  <div style={{ borderTop: `1px solid ${t.border}`, paddingTop: 12 }}>
+                    <p style={{ fontSize: 11, color: t.mut, fontWeight: 500, margin: "0 0 6px" }}>Top risks</p>
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                       {reEvalContextSnapshot.failure_risks.slice(0, 2).map((risk, i) => (
-                        <p key={i} style={{ fontSize: 12, color: "#737373", margin: 0, lineHeight: 1.4 }}>• {risk}</p>
+                        <p key={i} style={{ fontSize: 12, color: t.sec, margin: 0, lineHeight: 1.4 }}>• {risk}</p>
                       ))}
                     </div>
                   </div>
@@ -2830,11 +2831,11 @@ export default function Home() {
 
             {/* Original idea — read-only */}
             <div style={{ marginBottom: 24 }}>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#737373", marginBottom: 8 }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: t.sec, marginBottom: 8 }}>
                 Original idea
               </label>
               <Card style={{ padding: "16px 20px", maxHeight: 150, overflowY: "auto" }}>
-                <p style={{ fontSize: 14, color: "#a3a3a3", lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>
+                <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>
                   {reEvalOriginalIdea}
                 </p>
               </Card>
@@ -2842,7 +2843,7 @@ export default function Home() {
 
             {/* SECTION 2: What do you want to change? */}
             <div style={{ marginBottom: 20 }}>
-              <p style={{ fontSize: 13, fontWeight: 500, color: "#a3a3a3", margin: "0 0 12px" }}>What do you want to change?</p>
+              <p style={{ fontSize: 13, fontWeight: 500, color: t.sec, margin: "0 0 12px" }}>What do you want to change?</p>
 
               {/* Target User */}
               <div style={{
@@ -2854,10 +2855,10 @@ export default function Home() {
                 transition: "all 0.2s",
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: "#a3a3a3" }}>Target user</span>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: t.sec }}>Target user</span>
                   <button
                     onClick={() => { setReEvalEditTarget(!reEvalEditTarget); if (reEvalEditTarget) setReEvalTargetUser(""); }}
-                    style={{ fontSize: 12, color: "#60a5fa", background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}
+                    style={{ fontSize: 12, color: t.link, background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}
                   >
                     {reEvalEditTarget ? "Cancel" : "Edit"}
                   </button>
@@ -2871,12 +2872,12 @@ export default function Home() {
                       placeholder="e.g. Busy professionals aged 30-45 tracking macros"
                       style={{
                         width: "100%",
-                        background: "rgba(23,23,23,0.6)",
-                        border: "1px solid rgba(64,64,64,0.4)",
+                        background: t.inputBg,
+                        border: `1px solid ${t.inputBorder}`,
                         borderRadius: 8,
                         padding: "10px 14px",
                         fontSize: 13,
-                        color: "#f5f5f5",
+                        color: t.inputText,
                         outline: "none",
                         boxSizing: "border-box",
                         fontFamily: "inherit",
@@ -2896,10 +2897,10 @@ export default function Home() {
                 transition: "all 0.2s",
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: "#a3a3a3" }}>Problem it solves</span>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: t.sec }}>Problem it solves</span>
                   <button
                     onClick={() => { setReEvalEditProblem(!reEvalEditProblem); if (reEvalEditProblem) setReEvalProblem(""); }}
-                    style={{ fontSize: 12, color: "#60a5fa", background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}
+                    style={{ fontSize: 12, color: t.link, background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}
                   >
                     {reEvalEditProblem ? "Cancel" : "Edit"}
                   </button>
@@ -2913,12 +2914,12 @@ export default function Home() {
                       placeholder="e.g. People waste money on meal plans they never follow"
                       style={{
                         width: "100%",
-                        background: "rgba(23,23,23,0.6)",
-                        border: "1px solid rgba(64,64,64,0.4)",
+                        background: t.inputBg,
+                        border: `1px solid ${t.inputBorder}`,
                         borderRadius: 8,
                         padding: "10px 14px",
                         fontSize: 13,
-                        color: "#f5f5f5",
+                        color: t.inputText,
                         outline: "none",
                         boxSizing: "border-box",
                         fontFamily: "inherit",
@@ -2938,10 +2939,10 @@ export default function Home() {
                 transition: "all 0.2s",
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: "#a3a3a3" }}>Core idea</span>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: t.sec }}>Core idea</span>
                   <button
                     onClick={() => { setReEvalEditCore(!reEvalEditCore); if (reEvalEditCore) setReEvalCoreIdea(""); }}
-                    style={{ fontSize: 12, color: "#60a5fa", background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}
+                    style={{ fontSize: 12, color: t.link, background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}
                   >
                     {reEvalEditCore ? "Cancel" : "Edit"}
                   </button>
@@ -2955,12 +2956,12 @@ export default function Home() {
                       placeholder="e.g. Instead of general nutrition, focus on post-workout recovery meals"
                       style={{
                         width: "100%",
-                        background: "rgba(23,23,23,0.6)",
-                        border: "1px solid rgba(64,64,64,0.4)",
+                        background: t.inputBg,
+                        border: `1px solid ${t.inputBorder}`,
                         borderRadius: 8,
                         padding: "10px 14px",
                         fontSize: 13,
-                        color: "#f5f5f5",
+                        color: t.inputText,
                         outline: "none",
                         boxSizing: "border-box",
                         fontFamily: "inherit",
@@ -2985,14 +2986,14 @@ export default function Home() {
               marginBottom: 16,
               padding: "8px 16px",
               borderRadius: 8,
-              background: proMode ? "rgba(139,92,246,0.1)" : "rgba(38,38,38,0.3)",
-              border: `1px solid ${proMode ? "rgba(139,92,246,0.3)" : "rgba(64,64,64,0.2)"}`,
+              background: proMode ? "rgba(139,92,246,0.1)" : t.surfAlt,
+              border: `1px solid ${proMode ? "rgba(139,92,246,0.3)" : t.border}`,
               transition: "all 0.2s ease",
             }}>
               <button
                 onClick={() => setProMode(!proMode)}
                 style={{
-                  background: proMode ? "#8b5cf6" : "#404040",
+                  background: proMode ? "#8b5cf6" : t.mut,
                   color: "#fff",
                   border: "none",
                   borderRadius: 6,
@@ -3007,7 +3008,7 @@ export default function Home() {
               >
                 {proMode ? "PRO ✓" : "PRO"}
               </button>
-              <span style={{ fontSize: 12, color: proMode ? "#a78bfa" : "#525252", fontFamily: "monospace" }}>
+              <span style={{ fontSize: 12, color: proMode ? "#a78bfa" : t.mut, fontFamily: "monospace" }}>
                 {proMode ? "3-stage chained pipeline (Discover → Judge → Act)" : "Standard single-call evaluation"}
               </span>
             </div>
@@ -3023,8 +3024,8 @@ export default function Home() {
                 fontWeight: 600,
                 border: "none",
                 cursor: isReEvaluating || evalsRemaining <= 0 ? "not-allowed" : "pointer",
-                background: isReEvaluating || evalsRemaining <= 0 ? "rgba(38,38,38,0.6)" : hasAnyChange ? "#8b5cf6" : "#fff",
-                color: isReEvaluating || evalsRemaining <= 0 ? "#525252" : hasAnyChange ? "#fff" : "#0a0a0a",
+                background: isReEvaluating || evalsRemaining <= 0 ? t.surfAlt : hasAnyChange ? "#8b5cf6" : t.ctaBg,
+                color: isReEvaluating || evalsRemaining <= 0 ? t.mut : hasAnyChange ? "#fff" : t.ctaText,
                 marginBottom: 12,
               }}
             >
@@ -3039,12 +3040,12 @@ export default function Home() {
               gap: 8,
               padding: "10px 16px",
               borderRadius: 12,
-              background: evalsRemaining <= 0 ? "rgba(239,68,68,0.08)" : evalsRemaining === 1 ? "rgba(245,158,11,0.08)" : "rgba(38,38,38,0.4)",
-              border: `1px solid ${evalsRemaining <= 0 ? "rgba(239,68,68,0.2)" : evalsRemaining === 1 ? "rgba(245,158,11,0.2)" : "rgba(64,64,64,0.3)"}`,
+              background: evalsRemaining <= 0 ? "rgba(239,68,68,0.08)" : evalsRemaining === 1 ? "rgba(245,158,11,0.08)" : t.surfAlt,
+              border: `1px solid ${evalsRemaining <= 0 ? "rgba(239,68,68,0.2)" : evalsRemaining === 1 ? "rgba(245,158,11,0.2)" : t.border}`,
             }}>
               <span style={{
                 fontSize: 13,
-                color: evalsRemaining <= 0 ? "#f87171" : evalsRemaining === 1 ? "#fbbf24" : "#737373",
+                color: evalsRemaining <= 0 ? "#f87171" : evalsRemaining === 1 ? "#fbbf24" : t.sec,
               }}>
                 {evalsRemaining <= 0
                   ? `No evaluations remaining this week.`
@@ -3082,14 +3083,14 @@ export default function Home() {
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: "1px solid #1a1a1a" }}>
                     <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#8b5cf6", boxShadow: "0 0 8px rgba(139,92,246,0.5)" }} />
-                    <span style={{ color: "#525252", fontSize: 11, letterSpacing: "0.08em" }}>EVOLUTION PIPELINE</span>
+                    <span style={{ color: t.mut, fontSize: 11, letterSpacing: "0.08em" }}>EVOLUTION PIPELINE</span>
                   </div>
                   {streamSteps.map((s, i) => (
                     <div key={i} style={{
                       display: "flex",
                       alignItems: "flex-start",
                       gap: 10,
-                      color: s.done ? "#a3a3a3" : "#e5e5e5",
+                      color: s.done ? t.sec : t.text,
                       opacity: s.done ? 0.8 : 1,
                       animation: "fadeInStep 0.3s ease-out",
                     }}>
@@ -3100,12 +3101,12 @@ export default function Home() {
                     </div>
                   ))}
                   {streamSteps.length > 0 && !streamSteps.some(s => s.step === "complete") && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#525252", marginTop: 2 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, color: t.mut, marginTop: 2 }}>
                       <span style={{ width: 16, textAlign: "center", animation: "blink 1s step-end infinite" }}>_</span>
                     </div>
                   )}
                   {streamSteps.length === 0 && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#525252" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, color: t.mut }}>
                       <span style={{ width: 16, textAlign: "center", animation: "blink 1s step-end infinite" }}>_</span>
                       <span>Initializing...</span>
                     </div>
@@ -3131,7 +3132,7 @@ export default function Home() {
 
         <footer style={footerStyle}>
           <PageContainer>
-            <p style={{ fontSize: 12, color: "#404040", margin: 0 }}>
+            <p style={{ fontSize: 12, color: t.mut, margin: 0 }}>
               IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
             </p>
           </PageContainer>
@@ -3147,6 +3148,7 @@ export default function Home() {
     return (
       <EvaluationView
         screen={currentScreen}
+        t={t}
         analysis={analysis}
         entitlements={entitlements}
         profile={profile}
@@ -3234,7 +3236,7 @@ export default function Home() {
     const deltaColor = (delta) => {
       if (delta > 0.3) return "#34d399"; // green
       if (delta < -0.3) return "#f87171"; // red
-      return "#737373"; // gray — negligible
+      return t.sec; // gray — negligible
     };
     const deltaArrow = (delta) => {
       if (delta > 0.3) return "↑";
@@ -3243,22 +3245,23 @@ export default function Home() {
     };
 
     return (
-      <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#f5f5f5", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+      <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+        {t.accentBar && <div style={{ height: 3, background: "#eab308", opacity: 0.4 }} />}
         <header style={headerStyle}>
           <PageContainer wide>
             <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "#525252", margin: 0, cursor: "pointer" }}>
+              <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: t.mut, margin: 0, cursor: "pointer" }}>
                 IdeaLoop Core
               </h1>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <button onClick={() => setCurrentScreen("results2")} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                <button onClick={() => setCurrentScreen("results2")} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
                   ← Back to roadmap
                 </button>
                 {!authLoading && user && (
                   <>
-                    <span style={{ color: "#262626" }}>|</span>
-                    <span style={{ fontSize: 12, color: "#525252" }}>{user.email}</span>
-                    <button onClick={handleLogout} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                    <span style={{ color: t.divider }}>|</span>
+                    <span style={{ fontSize: 12, color: t.mut }}>{user.email}</span>
+                    <button onClick={handleLogout} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
                       Log out
                     </button>
                   </>
@@ -3272,10 +3275,11 @@ export default function Home() {
           <AuthModal
             onClose={() => setShowAuthModal(false)}
             onAuth={(u) => setUser(u)}
+            t={t}
           />
         )}
 
-        <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} branchMode={viewingFromSaved && isBranchIdea} />
+        <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} branchMode={viewingFromSaved && isBranchIdea} t={t} />
 
         <main style={{ flex: 1, paddingBottom: 64 }}>
           <PageContainer wide>
@@ -3289,15 +3293,15 @@ export default function Home() {
             {/* Loading state */}
             {deltaLoading && (
               <div style={{
-                background: "rgba(23,23,23,0.6)",
-                border: "1px solid rgba(38,38,38,0.8)",
+                background: t.surface,
+                border: `1px solid ${t.border}`,
                 borderRadius: 16,
                 padding: 40,
                 textAlign: "center",
                 marginBottom: 20,
               }}>
-                <div style={{ fontSize: 14, color: "#737373", marginBottom: 8 }}>Analyzing changes...</div>
-                <div style={{ fontSize: 12, color: "#525252" }}>Comparing evaluations and attributing score movements</div>
+                <div style={{ fontSize: 14, color: t.sec, marginBottom: 8 }}>Analyzing changes...</div>
+                <div style={{ fontSize: 12, color: t.mut }}>Comparing evaluations and attributing score movements</div>
               </div>
             )}
 
@@ -3329,8 +3333,8 @@ export default function Home() {
               <>
                 {/* Block 1: Change Summary */}
                 <div style={{
-                  background: "rgba(23,23,23,0.6)",
-                  border: "1px solid rgba(38,38,38,0.8)",
+                  background: t.surface,
+                  border: `1px solid ${t.border}`,
                   borderRadius: 16,
                   padding: 24,
                   marginBottom: 16,
@@ -3338,7 +3342,7 @@ export default function Home() {
                   <div style={{ fontSize: 13, fontWeight: 600, color: "#a78bfa", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                     What you changed
                   </div>
-                  <div style={{ fontSize: 14, color: "#d4d4d4", lineHeight: 1.7 }}>
+                  <div style={{ fontSize: 14, color: t.text, lineHeight: 1.7 }}>
                     {deltaData.change_summary}
                   </div>
                 </div>
@@ -3381,7 +3385,7 @@ export default function Home() {
                           <div style={{ fontSize: 12, color: "#34d399", fontWeight: 600, marginBottom: 4, textTransform: "uppercase" }}>
                             {(item.metric || "").replace(/_/g, " ")}
                           </div>
-                          <div style={{ fontSize: 14, color: "#d4d4d4", lineHeight: 1.6 }}>
+                          <div style={{ fontSize: 14, color: t.text, lineHeight: 1.6 }}>
                             {item.shift}
                           </div>
                         </div>
@@ -3428,7 +3432,7 @@ export default function Home() {
                           <div style={{ fontSize: 12, color: "#f87171", fontWeight: 600, marginBottom: 4, textTransform: "uppercase" }}>
                             {(item.metric || "").replace(/_/g, " ")}
                           </div>
-                          <div style={{ fontSize: 14, color: "#d4d4d4", lineHeight: 1.6 }}>
+                          <div style={{ fontSize: 14, color: t.text, lineHeight: 1.6 }}>
                             {item.shift}
                           </div>
                         </div>
@@ -3439,16 +3443,16 @@ export default function Home() {
 
                 {/* Block 4: Net Interpretation */}
                 <div style={{
-                  background: "rgba(23,23,23,0.6)",
-                  border: "1px solid rgba(64,64,64,0.4)",
+                  background: t.surface,
+                  border: `1px solid ${t.border}`,
                   borderRadius: 16,
                   padding: 24,
                   marginBottom: 24,
                 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "#e5e5e5", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: t.text, marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                     Net assessment
                   </div>
-                  <div style={{ fontSize: 14, color: "#a3a3a3", lineHeight: 1.7 }}>
+                  <div style={{ fontSize: 14, color: t.sec, lineHeight: 1.7 }}>
                     {deltaData.net_interpretation}
                   </div>
                 </div>
@@ -3456,8 +3460,8 @@ export default function Home() {
                 {/* Score movement summary bar */}
                 {deltaData.score_deltas && (
                   <div style={{
-                    background: "rgba(23,23,23,0.6)",
-                    border: "1px solid rgba(38,38,38,0.8)",
+                    background: t.surface,
+                    border: `1px solid ${t.border}`,
                     borderRadius: 16,
                     padding: 20,
                     marginBottom: 24,
@@ -3477,7 +3481,7 @@ export default function Home() {
                       if (d == null) return null;
                       return (
                         <div key={key} style={{ textAlign: "center", minWidth: 50 }}>
-                          <div style={{ fontSize: 11, color: "#525252", marginBottom: 4, fontWeight: 600 }}>{label}</div>
+                          <div style={{ fontSize: 11, color: t.mut, marginBottom: 4, fontWeight: 600 }}>{label}</div>
                           <div style={{ fontSize: 16, fontWeight: 700, color: deltaColor(key === "technical_complexity" ? -d : d) }}>
                             {deltaArrow(key === "technical_complexity" ? -d : d)} {d > 0 ? "+" : ""}{d.toFixed(1)}
                           </div>
@@ -3501,8 +3505,8 @@ export default function Home() {
                 fontWeight: 600,
                 border: "none",
                 cursor: evalsRemaining <= 0 ? "not-allowed" : "pointer",
-                background: evalsRemaining <= 0 ? "rgba(38,38,38,0.6)" : "rgba(108,99,255,0.12)",
-                color: evalsRemaining <= 0 ? "#525252" : "#a78bfa",
+                background: evalsRemaining <= 0 ? t.surfAlt : "rgba(108,99,255,0.12)",
+                color: evalsRemaining <= 0 ? t.mut : "#a78bfa",
                 marginBottom: 10,
               }}
             >
@@ -3562,9 +3566,9 @@ export default function Home() {
                 borderRadius: 12,
                 fontSize: 14,
                 fontWeight: 600,
-                border: "1px solid rgba(64,64,64,0.6)",
+                border: `1px solid ${t.border}`,
                 background: "transparent",
-                color: "#a3a3a3",
+                color: t.sec,
                 cursor: "pointer",
               }}
             >
@@ -3575,7 +3579,7 @@ export default function Home() {
 
         <footer style={footerStyle}>
           <PageContainer wide>
-            <p style={{ fontSize: 12, color: "#404040", margin: 0 }}>
+            <p style={{ fontSize: 12, color: t.mut, margin: 0 }}>
               IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
             </p>
           </PageContainer>

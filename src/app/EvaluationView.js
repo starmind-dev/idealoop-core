@@ -9,11 +9,15 @@ import {
   PageContainer,
   AuthModal,
   DevModeBadge,
+  getScoreColor,
+  getTcColor,
 } from "./components";
 
 export default function EvaluationView({
   // Screen
   screen,
+  // Theme
+  t,
   // Core data
   analysis,
   entitlements,
@@ -97,12 +101,13 @@ export default function EvaluationView({
   // ==========================================
   if (screen === "results1") {
     return (
-      <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#f5f5f5", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+      <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+        {t.accentBar && <div style={{ height: 3, background: "#eab308", opacity: 0.4 }} />}
         {devModeExplicit && <DevModeBadge mode={devMode} />}
         <header style={headerStyle}>
           <PageContainer wide>
             <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "#525252", margin: 0, cursor: "pointer" }}>
+              <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: t.mut, margin: 0, cursor: "pointer" }}>
                 IdeaLoop Core
               </h1>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -113,32 +118,32 @@ export default function EvaluationView({
                   } else {
                     setCurrentScreen("input");
                   }
-                }} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                }} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
                   {viewingFromSaved ? "← Back to My Ideas" : "← Back to idea"}
                 </button>
                 {!authLoading && (
                   user ? (
                     <>
-                      <span style={{ color: "#262626" }}>|</span>
+                      <span style={{ color: t.divider }}>|</span>
                       {!viewingFromSaved && (
                         <>
-                          <button onClick={goToMyIdeas} style={{ fontSize: 12, color: "#60a5fa", background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>
+                          <button onClick={goToMyIdeas} style={{ fontSize: 12, color: t.link, background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>
                             My Ideas
                           </button>
-                          <span style={{ color: "#262626" }}>|</span>
+                          <span style={{ color: t.divider }}>|</span>
                         </>
                       )}
-                      <span style={{ fontSize: 12, color: "#525252" }}>{user.email}</span>
-                      <button onClick={handleLogout} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                      <span style={{ fontSize: 12, color: t.mut }}>{user.email}</span>
+                      <button onClick={handleLogout} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
                         Log out
                       </button>
                     </>
                   ) : (
                     <>
-                      <span style={{ color: "#262626" }}>|</span>
+                      <span style={{ color: t.divider }}>|</span>
                       <button
                         onClick={() => setShowAuthModal(true)}
-                        style={{ fontSize: 12, color: "#60a5fa", background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}
+                        style={{ fontSize: 12, color: t.link, background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}
                       >
                         Log in to save
                       </button>
@@ -154,10 +159,11 @@ export default function EvaluationView({
           <AuthModal
             onClose={() => setShowAuthModal(false)}
             onAuth={(u) => setUser(u)}
+            t={t}
           />
         )}
 
-        <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} branchMode={viewingFromSaved && isBranchIdea} />
+        <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} branchMode={viewingFromSaved && isBranchIdea} t={t} />
 
         <main style={{ flex: 1, paddingBottom: 64 }}>
           <PageContainer wide>
@@ -200,7 +206,7 @@ export default function EvaluationView({
 
             {/* Competition */}
             <section style={{ marginBottom: 48 }}>
-              <SectionHeader icon="🌐" title="Competition Landscape" subtitle="Similar existing products in the market" />
+              <SectionHeader icon="🌐" title="Competition Landscape" subtitle="Similar existing products in the market" t={t} />
 
               {analysis.competition.data_source === "verified" ? (
                 <div style={{
@@ -214,7 +220,7 @@ export default function EvaluationView({
                   border: "1px solid rgba(16,185,129,0.2)",
                 }}>
                   <span style={{ fontSize: 12, color: "#34d399", fontWeight: 600 }}>Verified Sources</span>
-                  <span style={{ fontSize: 11, color: "#737373" }}>via GitHub & Google</span>
+                  <span style={{ fontSize: 11, color: t.sec }}>via GitHub & Google</span>
                 </div>
               ) : (
                 <div style={{
@@ -228,30 +234,30 @@ export default function EvaluationView({
                   border: "1px solid rgba(245,158,11,0.2)",
                 }}>
                   <span style={{ fontSize: 12, color: "#fbbf24", fontWeight: 600 }}>AI-Generated</span>
-                  <span style={{ fontSize: 11, color: "#737373" }}>use as directional guide</span>
+                  <span style={{ fontSize: 11, color: t.sec }}>use as directional guide</span>
                 </div>
               )}
 
               {(() => {
                 const sourceColors = {
-                  github: { bg: "rgba(110,84,148,0.15)", color: "#a78bfa", border: "rgba(110,84,148,0.3)", label: "GitHub" },
-                  google: { bg: "rgba(59,130,246,0.15)", color: "#60a5fa", border: "rgba(59,130,246,0.3)", label: "Google" },
-                  llm: { bg: "rgba(115,115,115,0.15)", color: "#a3a3a3", border: "rgba(115,115,115,0.3)", label: "AI" },
+                  github: { bg: `${t.srcBadge.github}26`, color: t.srcBadge.github, border: `${t.srcBadge.github}4D`, label: "GitHub" },
+                  google: { bg: `${t.srcBadge.google}26`, color: t.srcBadge.google, border: `${t.srcBadge.google}4D`, label: "Google" },
+                  llm: { bg: `${t.srcBadge.llm}26`, color: t.srcBadge.llm, border: `${t.srcBadge.llm}4D`, label: "AI" },
                 };
                 const typeColors = {
-                  direct: { label: "Direct", color: "#f87171", bg: "rgba(239,68,68,0.10)", border: "rgba(239,68,68,0.25)" },
-                  adjacent: { label: "Adjacent", color: "#fbbf24", bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.25)" },
-                  substitute: { label: "Substitute", color: "#60a5fa", bg: "rgba(59,130,246,0.10)", border: "rgba(59,130,246,0.25)" },
-                  internal_build: { label: "Internal Build", color: "#a78bfa", bg: "rgba(139,92,246,0.10)", border: "rgba(139,92,246,0.25)" },
+                  direct: { label: "Direct", color: t.typeBadge.direct, bg: `${t.typeBadge.direct}1A`, border: `${t.typeBadge.direct}40` },
+                  adjacent: { label: "Adjacent", color: t.typeBadge.adjacent, bg: `${t.typeBadge.adjacent}1A`, border: `${t.typeBadge.adjacent}40` },
+                  substitute: { label: "Substitute", color: t.typeBadge.substitute, bg: `${t.typeBadge.substitute}1A`, border: `${t.typeBadge.substitute}40` },
+                  internal_build: { label: "Internal Build", color: t.srcBadge.github, bg: `${t.srcBadge.github}1A`, border: `${t.srcBadge.github}40` },
                 };
 
                 const renderCompCard = (comp, i) => {
                   const src = sourceColors[comp.source] || sourceColors.llm;
                   const tc = typeColors[comp.competitor_type] || null;
                   return (
-                    <Card key={i} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <Card key={i} style={{ display: "flex", flexDirection: "column", gap: 12 }} t={t}>
                       <div>
-                        <h3 style={{ fontSize: 14, fontWeight: 700, color: "#f5f5f5", margin: "0 0 8px 0", wordBreak: "break-word" }}>{comp.name}</h3>
+                        <h3 style={{ fontSize: 14, fontWeight: 700, color: t.text, margin: "0 0 8px 0", wordBreak: "break-word" }}>{comp.name}</h3>
                         <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                           {tc && (
                             <span style={{
@@ -272,7 +278,7 @@ export default function EvaluationView({
                           <StatusBadge status={comp.status} />
                         </div>
                       </div>
-                      <p style={{ fontSize: 14, color: "#a3a3a3", lineHeight: 1.6, margin: 0, flex: 1 }}>
+                      <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.6, margin: 0, flex: 1 }}>
                         {comp.description}
                       </p>
                       <p style={{ fontSize: 12, color: "#34d399", fontWeight: 600, lineHeight: 1.5, margin: 0 }}>
@@ -280,7 +286,7 @@ export default function EvaluationView({
                       </p>
                       {comp.url && (
                         <a href={comp.url} target="_blank" rel="noopener noreferrer"
-                          style={{ fontSize: 12, color: "#60a5fa", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+                          style={{ fontSize: 12, color: t.link, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, marginTop: 2 }}>
                           Visit →
                         </a>
                       )}
@@ -304,8 +310,8 @@ export default function EvaluationView({
                         <>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, marginTop: 8 }}>
                             <span style={{ fontSize: 15 }}>⚔️</span>
-                            <span style={{ fontSize: 14, fontWeight: 600, color: "#d4d4d4", letterSpacing: "0.01em" }}>Direct Competitors</span>
-                            <span style={{ fontSize: 11, color: "#525252", fontWeight: 500, marginLeft: 2 }}>{directCompetitors.length}</span>
+                            <span style={{ fontSize: 14, fontWeight: 600, color: t.text, letterSpacing: "0.01em" }}>Direct Competitors</span>
+                            <span style={{ fontSize: 11, color: t.mut, fontWeight: 500, marginLeft: 2 }}>{directCompetitors.length}</span>
                           </div>
                           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16, marginBottom: 24 }}>
                             {directCompetitors.map((comp, i) => renderCompCard(comp, `direct-${i}`))}
@@ -316,8 +322,8 @@ export default function EvaluationView({
                         <>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, marginTop: 8 }}>
                             <span style={{ fontSize: 15 }}>🔄</span>
-                            <span style={{ fontSize: 14, fontWeight: 600, color: "#d4d4d4", letterSpacing: "0.01em" }}>Alternatives</span>
-                            <span style={{ fontSize: 11, color: "#525252", fontWeight: 500, marginLeft: 2 }}>{alternatives.length}</span>
+                            <span style={{ fontSize: 14, fontWeight: 600, color: t.text, letterSpacing: "0.01em" }}>Alternatives</span>
+                            <span style={{ fontSize: 11, color: t.mut, fontWeight: 500, marginLeft: 2 }}>{alternatives.length}</span>
                           </div>
                           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16, marginBottom: 16 }}>
                             {alternatives.map((comp, i) => renderCompCard(comp, `alt-${i}`))}
@@ -337,11 +343,11 @@ export default function EvaluationView({
               })()}
 
               {analysis.competition.differentiation && (
-                <Card style={{ background: "rgba(23,23,23,0.4)", marginBottom: 16 }}>
-                  <h3 style={{ fontSize: 14, fontWeight: 700, color: "#e5e5e5", margin: "0 0 8px 0" }}>
+                <Card style={{ background: t.surfAlt, marginBottom: 16 }} t={t}>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, color: t.text, margin: "0 0 8px 0" }}>
                     How your idea compares
                   </h3>
-                  <p style={{ fontSize: 14, color: "#a3a3a3", lineHeight: 1.6, margin: 0 }}>
+                  <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.6, margin: 0 }}>
                     {analysis.competition.differentiation}
                   </p>
                 </Card>
@@ -350,19 +356,19 @@ export default function EvaluationView({
 
             {/* Final Evaluation */}
             <section style={{ marginBottom: 48 }}>
-              <SectionHeader icon="📊" title="Evaluation" subtitle="Scored analysis of your AI product idea" />
+              <SectionHeader icon="📊" title="Evaluation" subtitle="Scored analysis of your AI product idea" t={t} />
 
               {/* Overall score */}
-              <Card style={{ padding: 32, textAlign: "center", marginBottom: 16 }}>
-                <p style={{ fontSize: 12, color: "#737373", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, margin: "0 0 4px 0" }}>
+              <Card style={{ padding: 32, textAlign: "center", marginBottom: 16 }} t={t}>
+                <p style={{ fontSize: 12, color: t.sec, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, margin: "0 0 4px 0" }}>
                   Overall Idea Potential
                 </p>
-                <p style={{ fontSize: 10, color: "#404040", margin: "0 0 12px 0" }}>
+                <p style={{ fontSize: 10, color: t.mut, margin: "0 0 12px 0" }}>
                   Weighted average · Higher is better
                 </p>
-                <p style={{ fontSize: 64, fontWeight: 700, color: "#f5f5f5", margin: 0, lineHeight: 1 }}>
+                <p style={{ fontSize: 64, fontWeight: 700, color: t.text, margin: 0, lineHeight: 1 }}>
                   {analysis.evaluation.overall_score.toFixed(1)}
-                  <span style={{ fontSize: 20, fontWeight: 400, color: "#525252" }}>/10</span>
+                  <span style={{ fontSize: 20, fontWeight: 400, color: t.mut }}>/10</span>
                 </p>
                 <button
                   onClick={() => setShowScoreGuide(true)}
@@ -376,13 +382,13 @@ export default function EvaluationView({
                     gap: 4,
                     padding: "4px 10px",
                     borderRadius: 8,
-                    color: "#525252",
+                    color: t.mut,
                     fontSize: 11,
                     fontWeight: 500,
                     transition: "color 0.2s",
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = "#737373"}
-                  onMouseLeave={(e) => e.currentTarget.style.color = "#525252"}
+                  onMouseEnter={(e) => e.currentTarget.style.color = t.sec}
+                  onMouseLeave={(e) => e.currentTarget.style.color = t.mut}
                 >
                   <span style={{ fontSize: 13 }}>ⓘ</span> What does this score mean?
                 </button>
@@ -410,8 +416,8 @@ export default function EvaluationView({
                   <div
                     onClick={(e) => e.stopPropagation()}
                     style={{
-                      background: "#171717",
-                      border: "1px solid rgba(64,64,64,0.6)",
+                      background: t.modalBg,
+                      border: `1px solid ${t.inputBorder}`,
                       borderRadius: 16,
                       padding: 28,
                       maxWidth: 480,
@@ -421,14 +427,14 @@ export default function EvaluationView({
                     }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                      <h3 style={{ fontSize: 16, fontWeight: 700, color: "#f5f5f5", margin: 0 }}>
+                      <h3 style={{ fontSize: 16, fontWeight: 700, color: t.text, margin: 0 }}>
                         Score Guide
                       </h3>
                       <button
                         onClick={() => setShowScoreGuide(false)}
                         style={{
-                          background: "rgba(38,38,38,0.6)",
-                          border: "1px solid rgba(64,64,64,0.4)",
+                          background: t.surfAlt,
+                          border: `1px solid ${t.border}`,
                           borderRadius: 8,
                           width: 28,
                           height: 28,
@@ -436,7 +442,7 @@ export default function EvaluationView({
                           alignItems: "center",
                           justifyContent: "center",
                           cursor: "pointer",
-                          color: "#737373",
+                          color: t.sec,
                           fontSize: 14,
                         }}
                       >
@@ -444,7 +450,7 @@ export default function EvaluationView({
                       </button>
                     </div>
 
-                    <p style={{ fontSize: 13, color: "#737373", lineHeight: 1.6, margin: "0 0 20px 0" }}>
+                    <p style={{ fontSize: 13, color: t.sec, lineHeight: 1.6, margin: "0 0 20px 0" }}>
                       This evaluator is deliberately rigorous. A 7+ is rare and means a genuinely strong startup opportunity. Most real ideas land between 5–7, and that's normal.
                     </p>
 
@@ -496,8 +502,8 @@ export default function EvaluationView({
                         padding: "12px 14px",
                         marginBottom: 8,
                         borderRadius: 10,
-                        background: "rgba(23,23,23,0.6)",
-                        border: "1px solid rgba(38,38,38,0.6)",
+                        background: t.surface,
+                        border: `1px solid ${t.border}`,
                       }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                           <span style={{
@@ -509,17 +515,17 @@ export default function EvaluationView({
                           }}>
                             {tier.range}
                           </span>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: "#e5e5e5" }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: t.text }}>
                             {tier.title}
                           </span>
                         </div>
-                        <p style={{ fontSize: 12, color: "#737373", lineHeight: 1.5, margin: 0 }}>
+                        <p style={{ fontSize: 12, color: t.sec, lineHeight: 1.5, margin: 0 }}>
                           {tier.desc}
                         </p>
                       </div>
                     ))}
 
-                    <p style={{ fontSize: 11, color: "#404040", lineHeight: 1.5, margin: "16px 0 0 0", textAlign: "center" }}>
+                    <p style={{ fontSize: 11, color: t.mut, lineHeight: 1.5, margin: "16px 0 0 0", textAlign: "center" }}>
                       A score of 5–6 doesn't mean "bad idea" — it means "real challenges to solve."
                     </p>
                   </div>
@@ -546,7 +552,7 @@ export default function EvaluationView({
                   }`,
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: "#737373", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: t.sec, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                       Evaluation Confidence
                     </span>
                     <span style={{
@@ -570,14 +576,14 @@ export default function EvaluationView({
                       {analysis.evaluation.confidence_level.level}
                     </span>
                   </div>
-                  <span style={{ fontSize: 13, color: "#a3a3a3", lineHeight: 1.5 }}>
+                  <span style={{ fontSize: 13, color: t.sec, lineHeight: 1.5 }}>
                     {analysis.evaluation.confidence_level.reason}
                   </span>
                 </div>
               )}
 
               {/* Metrics */}
-              <Card style={{ padding: 32, marginBottom: 16 }}>
+              <Card style={{ padding: 32, marginBottom: 16 }} t={t}>
                 <ScoreBar
                   name="Market Demand"
                   score={analysis.evaluation.market_demand.score}
@@ -587,56 +593,53 @@ export default function EvaluationView({
                     analysis.evaluation.market_demand.geographic_note,
                     analysis.evaluation.market_demand.trajectory_note,
                   ].filter(Boolean)}
+                  t={t}
                 />
                 <ScoreBar
                   name={analysis.evaluation.monetization.label || "Monetization Potential"}
                   score={analysis.evaluation.monetization.score}
                   explanation={analysis.evaluation.monetization.explanation}
                   weight="25%"
+                  t={t}
                 />
                 <ScoreBar
                   name="Originality"
                   score={analysis.evaluation.originality.score}
                   explanation={analysis.evaluation.originality.explanation}
                   weight="25%"
+                  t={t}
                 />
                 <div style={{ marginBottom: 24 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: "#e5e5e5" }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: t.text }}>
                       Technical Complexity
-                      <span style={{ fontSize: 11, fontWeight: 400, color: "#525252", marginLeft: 8 }}>20% · inverted</span>
+                      <span style={{ fontSize: 11, fontWeight: 400, color: t.mut, marginLeft: 8 }}>20% · inverted</span>
                     </span>
                     <span style={{
                       fontSize: 14,
                       fontFamily: "monospace",
                       fontWeight: 600,
-                      color: analysis.evaluation.technical_complexity.score >= 8 ? "#ef4444"
-                        : analysis.evaluation.technical_complexity.score >= 6 ? "#f59e0b"
-                        : analysis.evaluation.technical_complexity.score >= 4 ? "#3b82f6"
-                        : "#10b981",
+                      color: getTcColor(analysis.evaluation.technical_complexity.score),
                     }}>
                       {analysis.evaluation.technical_complexity.score.toFixed(1)}/10
                     </span>
                   </div>
-                  <div style={{ width: "100%", height: 8, background: "#262626", borderRadius: 9999, overflow: "hidden" }}>
+                  <div style={{ width: "100%", height: 8, background: t.barBg, borderRadius: 9999, overflow: "hidden" }}>
                     <div style={{
                       height: "100%",
                       borderRadius: 9999,
-                      background: analysis.evaluation.technical_complexity.score >= 8 ? "#ef4444"
-                        : analysis.evaluation.technical_complexity.score >= 6 ? "#f59e0b"
-                        : analysis.evaluation.technical_complexity.score >= 4 ? "#3b82f6"
-                        : "#10b981",
+                      background: getTcColor(analysis.evaluation.technical_complexity.score),
                       width: `${(analysis.evaluation.technical_complexity.score / 10) * 100}%`,
                       transition: "width 1s ease-out",
                     }} />
                   </div>
-                  <p style={{ fontSize: 12, color: "#737373", marginTop: 8, lineHeight: 1.5 }}>
+                  <p style={{ fontSize: 12, color: t.sec, marginTop: 8, lineHeight: 1.5 }}>
                     {analysis.evaluation.technical_complexity.base_score_explanation}
                     {" "}{analysis.evaluation.technical_complexity.adjustment_explanation}
                     {" "}{analysis.evaluation.technical_complexity.explanation}
                   </p>
                   {analysis.evaluation.technical_complexity.incremental_note && (
-                    <p style={{ fontSize: 11, color: "#525252", marginTop: 4, lineHeight: 1.4, fontStyle: "italic" }}>
+                    <p style={{ fontSize: 11, color: t.mut, marginTop: 4, lineHeight: 1.4, fontStyle: "italic" }}>
                       {analysis.evaluation.technical_complexity.incremental_note}
                     </p>
                   )}
@@ -645,26 +648,26 @@ export default function EvaluationView({
 
               {/* Marketplace Note */}
               {analysis.evaluation.marketplace_note && (
-                <Card style={{ padding: 24, marginBottom: 16, background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.15)" }}>
-                  <p style={{ fontSize: 12, fontWeight: 600, color: "#60a5fa", margin: "0 0 6px 0", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                <Card style={{ padding: 24, marginBottom: 16, background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.15)" }} t={t}>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: t.link, margin: "0 0 6px 0", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                     Marketplace Note
                   </p>
-                  <p style={{ fontSize: 13, color: "#a3a3a3", lineHeight: 1.6, margin: 0 }}>
+                  <p style={{ fontSize: 13, color: t.sec, lineHeight: 1.6, margin: 0 }}>
                     {analysis.evaluation.marketplace_note}
                   </p>
                 </Card>
               )}
 
               {/* Summary */}
-              <Card style={{ padding: 32 }}>
-                <h3 style={{ fontSize: 14, fontWeight: 700, color: "#e5e5e5", margin: "0 0 12px 0" }}>Summary</h3>
-                <p style={{ fontSize: 14, color: "#a3a3a3", lineHeight: 1.7, margin: 0 }}>
+              <Card style={{ padding: 32 }} t={t}>
+                <h3 style={{ fontSize: 14, fontWeight: 700, color: t.text, margin: "0 0 12px 0" }}>Summary</h3>
+                <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.7, margin: 0 }}>
                   {analysis.evaluation.summary}
                 </p>
               </Card>
 
               {/* Disclaimer */}
-              <p style={{ fontSize: 12, color: "#404040", textAlign: "center", margin: "16px 0 24px 0", lineHeight: 1.5 }}>
+              <p style={{ fontSize: 12, color: t.mut, textAlign: "center", margin: "16px 0 24px 0", lineHeight: 1.5 }}>
                 Scores evaluate the idea's potential. Actual outcomes also depend on execution quality, distribution, timing, and market conditions.
               </p>
             </section>
@@ -678,8 +681,8 @@ export default function EvaluationView({
                 fontSize: 14,
                 fontWeight: 600,
                 border: "none",
-                background: "#fff",
-                color: "#0a0a0a",
+                background: t.ctaBg,
+                color: t.ctaText,
                 cursor: "pointer",
               }}
             >
@@ -690,7 +693,7 @@ export default function EvaluationView({
 
         <footer style={footerStyle}>
           <PageContainer wide>
-            <p style={{ fontSize: 12, color: "#404040", margin: 0 }}>
+            <p style={{ fontSize: 12, color: t.mut, margin: 0 }}>
               IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
             </p>
           </PageContainer>
@@ -704,31 +707,32 @@ export default function EvaluationView({
   // ==========================================
   if (screen === "results2") {
     return (
-      <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#f5f5f5", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+      <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+        {t.accentBar && <div style={{ height: 3, background: "#eab308", opacity: 0.4 }} />}
         {devModeExplicit && <DevModeBadge mode={devMode} />}
         <header style={headerStyle}>
           <PageContainer wide>
             <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "#525252", margin: 0, cursor: "pointer" }}>
+              <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: t.mut, margin: 0, cursor: "pointer" }}>
                 IdeaLoop Core
               </h1>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <button onClick={() => setCurrentScreen("results1")} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                <button onClick={() => setCurrentScreen("results1")} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
                   ← Back to analysis
                 </button>
                 {!authLoading && user && (
                   <>
-                    <span style={{ color: "#262626" }}>|</span>
+                    <span style={{ color: t.divider }}>|</span>
                     {!viewingFromSaved && (
                       <>
-                        <button onClick={goToMyIdeas} style={{ fontSize: 12, color: "#60a5fa", background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>
+                        <button onClick={goToMyIdeas} style={{ fontSize: 12, color: t.link, background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>
                           My Ideas
                         </button>
-                        <span style={{ color: "#262626" }}>|</span>
+                        <span style={{ color: t.divider }}>|</span>
                       </>
                     )}
-                    <span style={{ fontSize: 12, color: "#525252" }}>{user.email}</span>
-                    <button onClick={handleLogout} style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}>
+                    <span style={{ fontSize: 12, color: t.mut }}>{user.email}</span>
+                    <button onClick={handleLogout} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
                       Log out
                     </button>
                   </>
@@ -742,35 +746,36 @@ export default function EvaluationView({
           <AuthModal
             onClose={() => setShowAuthModal(false)}
             onAuth={(u) => setUser(u)}
+            t={t}
           />
         )}
 
-        <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} branchMode={viewingFromSaved && isBranchIdea} />
+        <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} branchMode={viewingFromSaved && isBranchIdea} t={t} />
 
         <main style={{ flex: 1, paddingBottom: 64 }}>
           <PageContainer wide>
             {/* Failure Risks */}
             {analysis.evaluation.failure_risks && analysis.evaluation.failure_risks.length > 0 && (
               <section style={{ marginBottom: 48 }}>
-                <SectionHeader icon="⚠️" title="Key Risks" subtitle="Potential challenges to be aware of before building" />
+                <SectionHeader icon="⚠️" title="Key Risks" subtitle="Potential challenges to be aware of before building" t={t} />
                 <Card style={{
                   padding: 24,
                   background: "rgba(239,68,68,0.04)",
                   border: "1px solid rgba(239,68,68,0.15)",
-                }}>
+                }} t={t}>
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     {analysis.evaluation.failure_risks.map((risk, i) => (
                       <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
                         <span style={{
                           fontSize: 12,
                           fontWeight: 700,
-                          color: "#f87171",
+                          color: t.riskNum,
                           flexShrink: 0,
                           marginTop: 1,
                         }}>
                           {i + 1}.
                         </span>
-                        <p style={{ fontSize: 14, color: "#a3a3a3", lineHeight: 1.6, margin: 0 }}>
+                        <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.6, margin: 0 }}>
                           {risk}
                         </p>
                       </div>
@@ -782,7 +787,7 @@ export default function EvaluationView({
 
             {/* Phases */}
             <section style={{ marginBottom: 48 }}>
-              <SectionHeader icon="⚙" title="Execution Phases" subtitle={viewingFromSaved ? "Track your progress across each phase" : "Recommended roadmap for building your idea"} />
+              <SectionHeader icon="⚙" title="Execution Phases" subtitle={viewingFromSaved ? "Track your progress across each phase" : "Recommended roadmap for building your idea"} t={t} />
 
               {/* Progress summary bar — only show for saved ideas */}
               {viewingFromSaved && currentEvaluationId && currentPhases.length > 0 && (
@@ -793,8 +798,8 @@ export default function EvaluationView({
                   marginBottom: 16,
                   padding: "12px 16px",
                   borderRadius: 12,
-                  background: "rgba(38,38,38,0.4)",
-                  border: "1px solid rgba(64,64,64,0.3)",
+                  background: t.surfAlt,
+                  border: `1px solid ${t.border}`,
                 }}>
                   <div style={{
                     display: "flex",
@@ -809,13 +814,13 @@ export default function EvaluationView({
                           flex: 1,
                           height: 6,
                           borderRadius: 3,
-                          background: isCompleted ? "#10b981" : "#262626",
+                          background: isCompleted ? "#10b981" : t.barBg,
                           transition: "background 0.3s",
                         }} />
                       );
                     })}
                   </div>
-                  <span style={{ fontSize: 12, color: "#737373", flexShrink: 0 }}>
+                  <span style={{ fontSize: 12, color: t.sec, flexShrink: 0 }}>
                     {currentPhases.filter((_, idx) => phaseProgress[`phase_${idx + 1}`]?.completed).length}/{currentPhases.length} complete
                   </span>
                 </div>
@@ -839,11 +844,12 @@ export default function EvaluationView({
                   <div
                     key={i}
                     style={{
-                      background: "rgba(23,23,23,0.6)",
-                      border: `1px solid ${isCompleted ? "rgba(16,185,129,0.3)" : "rgba(38,38,38,0.8)"}`,
+                      background: t.surface,
+                      border: `1px solid ${isCompleted ? "rgba(16,185,129,0.3)" : t.border}`,
                       borderRadius: 16,
                       overflow: "hidden",
                       transition: "border-color 0.3s",
+                      boxShadow: t.shadow,
                     }}
                   >
                     <div
@@ -866,14 +872,14 @@ export default function EvaluationView({
                             width: 36,
                             height: 36,
                             borderRadius: "50%",
-                            background: isCompleted ? "rgba(16,185,129,0.2)" : "rgba(59,130,246,0.15)",
-                            border: `2px solid ${isCompleted ? "rgba(16,185,129,0.5)" : "rgba(59,130,246,0.3)"}`,
+                            background: isCompleted ? `${t.stepDone}33` : t.phaseNum.bg,
+                            border: `2px solid ${isCompleted ? `${t.stepDone}80` : t.phaseNum.border}`,
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                             fontSize: isCompleted ? 16 : 14,
                             fontWeight: 700,
-                            color: isCompleted ? "#34d399" : "#60a5fa",
+                            color: isCompleted ? t.stepDone : t.phaseNum.color,
                             flexShrink: 0,
                             cursor: isSaving ? "not-allowed" : "pointer",
                             transition: "all 0.2s",
@@ -888,14 +894,14 @@ export default function EvaluationView({
                           width: 36,
                           height: 36,
                           borderRadius: "50%",
-                          background: "rgba(59,130,246,0.15)",
-                          border: "1px solid rgba(59,130,246,0.3)",
+                          background: t.phaseNum.bg,
+                          border: `1px solid ${t.phaseNum.border}`,
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
                           fontSize: 14,
                           fontWeight: 700,
-                          color: "#60a5fa",
+                          color: t.phaseNum.color,
                           flexShrink: 0,
                         }}>
                           {phase.number}
@@ -909,7 +915,7 @@ export default function EvaluationView({
                         <h3 style={{
                           fontSize: 14,
                           fontWeight: 700,
-                          color: isCompleted ? "#737373" : "#f5f5f5",
+                          color: isCompleted ? t.sec : t.text,
                           margin: 0,
                           textDecoration: isCompleted ? "line-through" : "none",
                           transition: "all 0.2s",
@@ -918,7 +924,7 @@ export default function EvaluationView({
                         </h3>
                         <p style={{
                           fontSize: 14,
-                          color: isCompleted ? "#404040" : "#737373",
+                          color: isCompleted ? t.mut : t.sec,
                           margin: "4px 0 0 0",
                           lineHeight: 1.5,
                         }}>
@@ -928,7 +934,7 @@ export default function EvaluationView({
                       <span
                         onClick={() => togglePhase(i)}
                         style={{
-                          color: "#525252",
+                          color: t.mut,
                           transition: "transform 0.2s",
                           transform: expandedPhases[i] ? "rotate(180deg)" : "rotate(0deg)",
                           flexShrink: 0,
@@ -941,7 +947,7 @@ export default function EvaluationView({
                     </div>
 
                     {expandedPhases[i] && (
-                      <div style={{ padding: "0 24px 24px 24px", borderTop: "1px solid rgba(38,38,38,0.6)" }}>
+                      <div style={{ padding: "0 24px 24px 24px", borderTop: `1px solid ${t.border}` }}>
                         {editingPhase === i ? (
                           <div style={{ paddingTop: 20 }}>
                             <input
@@ -950,12 +956,12 @@ export default function EvaluationView({
                               onChange={(e) => savePhaseEdit(i, "title", e.target.value)}
                               style={{
                                 width: "100%",
-                                background: "rgba(38,38,38,0.6)",
-                                border: "1px solid rgba(64,64,64,0.6)",
+                                background: t.inputBg,
+                                border: `1px solid ${t.inputBorder}`,
                                 borderRadius: 12,
                                 padding: "10px 16px",
                                 fontSize: 14,
-                                color: "#f5f5f5",
+                                color: t.inputText,
                                 outline: "none",
                                 boxSizing: "border-box",
                                 marginBottom: 12,
@@ -967,12 +973,12 @@ export default function EvaluationView({
                               rows={6}
                               style={{
                                 width: "100%",
-                                background: "rgba(38,38,38,0.6)",
-                                border: "1px solid rgba(64,64,64,0.6)",
+                                background: t.inputBg,
+                                border: `1px solid ${t.inputBorder}`,
                                 borderRadius: 12,
                                 padding: "12px 16px",
                                 fontSize: 14,
-                                color: "#f5f5f5",
+                                color: t.inputText,
                                 outline: "none",
                                 resize: "none",
                                 lineHeight: 1.6,
@@ -990,7 +996,7 @@ export default function EvaluationView({
                           </div>
                         ) : (
                           <div style={{ paddingTop: 20 }}>
-                            <p style={{ fontSize: 14, color: "#a3a3a3", lineHeight: 1.7, margin: "0 0 16px 0", whiteSpace: "pre-line" }}>
+                            <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.7, margin: "0 0 16px 0", whiteSpace: "pre-line" }}>
                               {(editedPhases || analysis.phases)[i].details}
                             </p>
 
@@ -1000,11 +1006,11 @@ export default function EvaluationView({
                                 marginTop: 16,
                                 padding: "12px 16px",
                                 borderRadius: 12,
-                                background: "rgba(38,38,38,0.3)",
-                                border: "1px solid rgba(64,64,64,0.3)",
+                                background: t.surfAlt,
+                                border: `1px solid ${t.border}`,
                               }}>
                                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                                  <span style={{ fontSize: 12, fontWeight: 600, color: "#737373", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                  <span style={{ fontSize: 12, fontWeight: 600, color: t.sec, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                                     Notes
                                   </span>
                                   {progress?.note && editingNotePhase !== phaseKey && (
@@ -1013,7 +1019,7 @@ export default function EvaluationView({
                                         setEditingNotePhase(phaseKey);
                                         setNoteText(progress.note);
                                       }}
-                                      style={{ fontSize: 11, color: "#525252", background: "none", border: "none", cursor: "pointer" }}
+                                      style={{ fontSize: 11, color: t.mut, background: "none", border: "none", cursor: "pointer" }}
                                     >
                                       Edit
                                     </button>
@@ -1029,12 +1035,12 @@ export default function EvaluationView({
                                       rows={3}
                                       style={{
                                         width: "100%",
-                                        background: "rgba(23,23,23,0.8)",
-                                        border: "1px solid rgba(64,64,64,0.6)",
+                                        background: t.inputBg,
+                                        border: `1px solid ${t.inputBorder}`,
                                         borderRadius: 8,
                                         padding: "10px 12px",
                                         fontSize: 13,
-                                        color: "#d4d4d4",
+                                        color: t.text,
                                         outline: "none",
                                         resize: "none",
                                         lineHeight: 1.5,
@@ -1065,14 +1071,14 @@ export default function EvaluationView({
                                           setEditingNotePhase(null);
                                           setNoteText("");
                                         }}
-                                        style={{ fontSize: 12, color: "#525252", background: "none", border: "none", cursor: "pointer" }}
+                                        style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}
                                       >
                                         Cancel
                                       </button>
                                     </div>
                                   </div>
                                 ) : progress?.note ? (
-                                  <p style={{ fontSize: 13, color: "#a3a3a3", lineHeight: 1.5, margin: 0, whiteSpace: "pre-line" }}>
+                                  <p style={{ fontSize: 13, color: t.sec, lineHeight: 1.5, margin: 0, whiteSpace: "pre-line" }}>
                                     {progress.note}
                                   </p>
                                 ) : (
@@ -1083,7 +1089,7 @@ export default function EvaluationView({
                                     }}
                                     style={{
                                       fontSize: 12,
-                                      color: "#525252",
+                                      color: t.mut,
                                       background: "none",
                                       border: "none",
                                       cursor: "pointer",
@@ -1099,7 +1105,7 @@ export default function EvaluationView({
                             <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
                               <button
                                 onClick={() => startEditingPhase(i)}
-                                style={{ fontSize: 12, fontWeight: 500, color: "#525252", background: "none", border: "none", cursor: "pointer" }}
+                                style={{ fontSize: 12, fontWeight: 500, color: t.mut, background: "none", border: "none", cursor: "pointer" }}
                               >
                                 Edit this phase
                               </button>
@@ -1127,8 +1133,8 @@ export default function EvaluationView({
                           <div key={group.type}>
                             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, marginTop: 8 }}>
                               <span style={{ fontSize: 15 }}>{group.icon}</span>
-                              <span style={{ fontSize: 14, fontWeight: 600, color: "#d4d4d4", letterSpacing: "0.01em" }}>{group.title}</span>
-                              <span style={{ fontSize: 11, color: "#525252", fontWeight: 500, marginLeft: 2 }}>{groupPhases.length} phases</span>
+                              <span style={{ fontSize: 14, fontWeight: 600, color: t.text, letterSpacing: "0.01em" }}>{group.title}</span>
+                              <span style={{ fontSize: 11, color: t.mut, fontWeight: 500, marginLeft: 2 }}>{groupPhases.length} phases</span>
                             </div>
                             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
                               {groupPhases.map(p => renderPhaseCard(p))}
@@ -1153,11 +1159,11 @@ export default function EvaluationView({
 
             {/* Tools */}
             <section style={{ marginBottom: 48 }}>
-              <SectionHeader icon="🔧" title="Tool Recommendations" subtitle="Platforms and tools to help you build" />
+              <SectionHeader icon="🔧" title="Tool Recommendations" subtitle="Platforms and tools to help you build" t={t} />
 
               {(() => {
                 const toolCategories = ["Validate & Prototype", "Core Tech Stack", "Launch & Grow"];
-                const hasNewCategories = analysis.tools?.some(t => toolCategories.includes(t.category));
+                const hasNewCategories = analysis.tools?.some(tl => toolCategories.includes(tl.category));
 
                 if (hasNewCategories) {
                   const groupIcons = {
@@ -1168,22 +1174,22 @@ export default function EvaluationView({
                   return (
                     <div>
                       {toolCategories.map(category => {
-                        const groupTools = analysis.tools.filter(t => t.category === category);
+                        const groupTools = analysis.tools.filter(tl => tl.category === category);
                         if (groupTools.length === 0) return null;
                         return (
                           <div key={category}>
                             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, marginTop: 8 }}>
                               <span style={{ fontSize: 15 }}>{groupIcons[category]}</span>
-                              <span style={{ fontSize: 14, fontWeight: 600, color: "#d4d4d4", letterSpacing: "0.01em" }}>{category}</span>
-                              <span style={{ fontSize: 11, color: "#525252", fontWeight: 500, marginLeft: 2 }}>{groupTools.length} tools</span>
+                              <span style={{ fontSize: 14, fontWeight: 600, color: t.text, letterSpacing: "0.01em" }}>{category}</span>
+                              <span style={{ fontSize: 11, color: t.mut, fontWeight: 500, marginLeft: 2 }}>{groupTools.length} tools</span>
                             </div>
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12, marginBottom: 24 }}>
                               {groupTools.map((tool, i) => (
-                                <Card key={i} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                <Card key={i} style={{ display: "flex", flexDirection: "column", gap: 8 }} t={t}>
                                   <div>
-                                    <h3 style={{ fontSize: 14, fontWeight: 700, color: "#f5f5f5", margin: 0 }}>{tool.name}</h3>
+                                    <h3 style={{ fontSize: 14, fontWeight: 700, color: t.text, margin: 0 }}>{tool.name}</h3>
                                   </div>
-                                  <p style={{ fontSize: 14, color: "rgba(96,165,250,0.8)", lineHeight: 1.6, margin: 0 }}>
+                                  <p style={{ fontSize: 14, color: t.toolDesc, lineHeight: 1.6, margin: 0 }}>
                                     {tool.description}
                                   </p>
                                 </Card>
@@ -1199,12 +1205,12 @@ export default function EvaluationView({
                   return (
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
                       {analysis.tools.map((tool, i) => (
-                        <Card key={i} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        <Card key={i} style={{ display: "flex", flexDirection: "column", gap: 8 }} t={t}>
                           <div>
-                            <h3 style={{ fontSize: 14, fontWeight: 700, color: "#f5f5f5", margin: 0 }}>{tool.name}</h3>
-                            <p style={{ fontSize: 12, color: "#737373", margin: "4px 0 0 0", fontWeight: 500 }}>{tool.category}</p>
+                            <h3 style={{ fontSize: 14, fontWeight: 700, color: t.text, margin: 0 }}>{tool.name}</h3>
+                            <p style={{ fontSize: 12, color: t.sec, margin: "4px 0 0 0", fontWeight: 500 }}>{tool.category}</p>
                           </div>
-                          <p style={{ fontSize: 14, color: "rgba(96,165,250,0.8)", lineHeight: 1.6, margin: 0 }}>
+                          <p style={{ fontSize: 14, color: t.toolDesc, lineHeight: 1.6, margin: 0 }}>
                             {tool.description}
                           </p>
                         </Card>
@@ -1217,21 +1223,21 @@ export default function EvaluationView({
 
             {/* Time & Difficulty */}
             <section style={{ marginBottom: 48 }}>
-              <SectionHeader icon="⏱" title="Time & Difficulty" subtitle="Calibrated to your experience level" />
+              <SectionHeader icon="⏱" title="Time & Difficulty" subtitle="Calibrated to your experience level" t={t} />
 
-              <Card style={{ padding: 32 }}>
+              <Card style={{ padding: 32 }} t={t}>
                 <div style={{ display: "flex", justifyContent: "space-around", alignItems: "center", marginBottom: 24 }}>
                   <div style={{ textAlign: "center" }}>
-                    <p style={{ fontSize: 12, color: "#737373", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, margin: "0 0 8px 0" }}>
+                    <p style={{ fontSize: 12, color: t.sec, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, margin: "0 0 8px 0" }}>
                       Estimated Duration
                     </p>
-                    <p style={{ fontSize: 24, fontWeight: 700, color: "#f5f5f5", margin: 0 }}>
+                    <p style={{ fontSize: 24, fontWeight: 700, color: t.text, margin: 0 }}>
                       {analysis.estimates.duration}
                     </p>
                   </div>
-                  <div style={{ width: 1, height: 64, background: "#262626" }} />
+                  <div style={{ width: 1, height: 64, background: t.divider }} />
                   <div style={{ textAlign: "center" }}>
-                    <p style={{ fontSize: 12, color: "#737373", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, margin: "0 0 8px 0" }}>
+                    <p style={{ fontSize: 12, color: t.sec, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, margin: "0 0 8px 0" }}>
                       Difficulty Level
                     </p>
                     <span style={{
@@ -1252,7 +1258,7 @@ export default function EvaluationView({
                     </span>
                   </div>
                 </div>
-                <p style={{ fontSize: 14, color: "#a3a3a3", textAlign: "center", lineHeight: 1.6, maxWidth: 560, margin: "0 auto" }}>
+                <p style={{ fontSize: 14, color: t.sec, textAlign: "center", lineHeight: 1.6, maxWidth: 560, margin: "0 auto" }}>
                   {analysis.estimates.explanation}
                 </p>
               </Card>
@@ -1287,7 +1293,7 @@ export default function EvaluationView({
                       <>
                         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
                           <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#a78bfa", flexShrink: 0 }} />
-                          <p style={{ fontSize: 15, fontWeight: 600, color: "#f5f5f5", margin: 0 }}>
+                          <p style={{ fontSize: 15, fontWeight: 600, color: t.text, margin: 0 }}>
                             What do you want to do with this version?
                           </p>
                         </div>
@@ -1295,11 +1301,11 @@ export default function EvaluationView({
                           <div style={{
                             padding: "16px 20px",
                             borderRadius: 12,
-                            background: "rgba(23,23,23,0.6)",
+                            background: t.surface,
                             border: "1px solid rgba(108,99,255,0.3)",
                           }}>
                             {/* Branch name */}
-                            <label style={{ fontSize: 13, fontWeight: 500, color: "#a3a3a3", display: "block", marginBottom: 8 }}>
+                            <label style={{ fontSize: 13, fontWeight: 500, color: t.sec, display: "block", marginBottom: 8 }}>
                               Name this branch
                             </label>
                             <input
@@ -1311,12 +1317,12 @@ export default function EvaluationView({
                               maxLength={80}
                               style={{
                                 width: "100%",
-                                background: "rgba(23,23,23,0.8)",
-                                border: "1px solid rgba(64,64,64,0.6)",
+                                background: t.inputBg,
+                                border: `1px solid ${t.inputBorder}`,
                                 borderRadius: 10,
                                 padding: "10px 14px",
                                 fontSize: 14,
-                                color: "#f5f5f5",
+                                color: t.inputText,
                                 outline: "none",
                                 boxSizing: "border-box",
                                 marginBottom: 14,
@@ -1324,7 +1330,7 @@ export default function EvaluationView({
                             />
 
                             {/* Branch reason */}
-                            <label style={{ fontSize: 13, fontWeight: 500, color: "#a3a3a3", display: "block", marginBottom: 8 }}>
+                            <label style={{ fontSize: 13, fontWeight: 500, color: t.sec, display: "block", marginBottom: 8 }}>
                               Why is this a different direction?
                             </label>
                             <input
@@ -1335,12 +1341,12 @@ export default function EvaluationView({
                               maxLength={200}
                               style={{
                                 width: "100%",
-                                background: "rgba(23,23,23,0.8)",
-                                border: "1px solid rgba(64,64,64,0.6)",
+                                background: t.inputBg,
+                                border: `1px solid ${t.inputBorder}`,
                                 borderRadius: 10,
                                 padding: "10px 14px",
                                 fontSize: 14,
-                                color: "#f5f5f5",
+                                color: t.inputText,
                                 outline: "none",
                                 boxSizing: "border-box",
                                 marginBottom: 14,
@@ -1348,8 +1354,8 @@ export default function EvaluationView({
                             />
 
                             {/* Changed dimensions */}
-                            <label style={{ fontSize: 13, fontWeight: 500, color: "#a3a3a3", display: "block", marginBottom: 8 }}>
-                              What changed? <span style={{ fontWeight: 400, color: "#525252" }}>(select at least one)</span>
+                            <label style={{ fontSize: 13, fontWeight: 500, color: t.sec, display: "block", marginBottom: 8 }}>
+                              What changed? <span style={{ fontWeight: 400, color: t.mut }}>(select at least one)</span>
                             </label>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
                               {[
@@ -1374,9 +1380,9 @@ export default function EvaluationView({
                                       borderRadius: 8,
                                       fontSize: 12,
                                       fontWeight: 500,
-                                      border: selected ? "1px solid rgba(139,92,246,0.5)" : "1px solid rgba(64,64,64,0.4)",
+                                      border: selected ? "1px solid rgba(139,92,246,0.5)" : `1px solid ${t.border}`,
                                       background: selected ? "rgba(139,92,246,0.15)" : "transparent",
-                                      color: selected ? "#a78bfa" : "#737373",
+                                      color: selected ? "#a78bfa" : t.sec,
                                       cursor: "pointer",
                                       transition: "all 0.15s",
                                     }}
@@ -1400,8 +1406,8 @@ export default function EvaluationView({
                                   fontWeight: 600,
                                   border: "none",
                                   cursor: (!ideaName.trim() || !branchReason.trim() || branchDimensions.length === 0) ? "not-allowed" : "pointer",
-                                  background: (!ideaName.trim() || !branchReason.trim() || branchDimensions.length === 0) ? "rgba(38,38,38,0.6)" : "rgba(139,92,246,0.2)",
-                                  color: (!ideaName.trim() || !branchReason.trim() || branchDimensions.length === 0) ? "#525252" : "#a78bfa",
+                                  background: (!ideaName.trim() || !branchReason.trim() || branchDimensions.length === 0) ? t.surfAlt : "rgba(139,92,246,0.2)",
+                                  color: (!ideaName.trim() || !branchReason.trim() || branchDimensions.length === 0) ? t.mut : "#a78bfa",
                                 }}
                               >
                                 Save branch
@@ -1413,9 +1419,9 @@ export default function EvaluationView({
                                   borderRadius: 10,
                                   fontSize: 13,
                                   fontWeight: 500,
-                                  border: "1px solid rgba(64,64,64,0.4)",
+                                  border: `1px solid ${t.border}`,
                                   background: "transparent",
-                                  color: "#525252",
+                                  color: t.mut,
                                   cursor: "pointer",
                                 }}
                               >
@@ -1436,8 +1442,8 @@ export default function EvaluationView({
                                 fontWeight: 600,
                                 border: "1px solid rgba(108,99,255,0.4)",
                                 cursor: saveStatus === "saving" ? "not-allowed" : "pointer",
-                                background: saveStatus === "saving" ? "rgba(38,38,38,0.6)" : "rgba(108,99,255,0.12)",
-                                color: saveStatus === "saving" ? "#525252" : "#a78bfa",
+                                background: saveStatus === "saving" ? t.surfAlt : "rgba(108,99,255,0.12)",
+                                color: saveStatus === "saving" ? t.mut : "#a78bfa",
                                 textAlign: "left",
                                 transition: "all 0.2s",
                               }}
@@ -1446,7 +1452,7 @@ export default function EvaluationView({
                                 <span>{saveStatus === "saving" ? "Saving..." : "Save as branch"}</span>
                                 <span style={{ fontSize: 18, opacity: 0.5 }}>→</span>
                               </div>
-                              <p style={{ fontSize: 12, color: "#737373", margin: "6px 0 0", fontWeight: 400 }}>
+                              <p style={{ fontSize: 12, color: t.sec, margin: "6px 0 0", fontWeight: 400 }}>
                                 Keep this as a new direction linked to the parent idea
                               </p>
                             </button>
@@ -1480,7 +1486,7 @@ export default function EvaluationView({
                                 <span>★ Set as main version</span>
                                 <span style={{ fontSize: 18, opacity: 0.5 }}>→</span>
                               </div>
-                              <p style={{ fontSize: 12, color: "#525252", margin: "6px 0 0", fontWeight: 400 }}>
+                              <p style={{ fontSize: 12, color: t.mut, margin: "6px 0 0", fontWeight: 400 }}>
                                 Save as branch and promote it as your current best direction
                               </p>
                             </button>
@@ -1493,9 +1499,9 @@ export default function EvaluationView({
                                 borderRadius: 12,
                                 fontSize: 14,
                                 fontWeight: 500,
-                                border: "1px solid rgba(64,64,64,0.4)",
+                                border: `1px solid ${t.border}`,
                                 background: "transparent",
-                                color: "#737373",
+                                color: t.sec,
                                 cursor: "pointer",
                                 textAlign: "left",
                                 transition: "all 0.2s",
@@ -1505,7 +1511,7 @@ export default function EvaluationView({
                                 <span>Discard</span>
                                 <span style={{ fontSize: 18, opacity: 0.3 }}>×</span>
                               </div>
-                              <p style={{ fontSize: 12, color: "#525252", margin: "6px 0 0", fontWeight: 400 }}>
+                              <p style={{ fontSize: 12, color: t.mut, margin: "6px 0 0", fontWeight: 400 }}>
                                 This was just a test, don't save
                               </p>
                             </button>
@@ -1554,10 +1560,10 @@ export default function EvaluationView({
                     <div style={{
                       padding: "16px 20px",
                       borderRadius: 12,
-                      background: "rgba(23,23,23,0.6)",
+                      background: t.surface,
                       border: "1px solid rgba(59,130,246,0.3)",
                     }}>
-                      <label style={{ fontSize: 13, fontWeight: 500, color: "#a3a3a3", display: "block", marginBottom: 8 }}>
+                      <label style={{ fontSize: 13, fontWeight: 500, color: t.sec, display: "block", marginBottom: 8 }}>
                         Name this idea
                       </label>
                       <input
@@ -1570,12 +1576,12 @@ export default function EvaluationView({
                         maxLength={80}
                         style={{
                           width: "100%",
-                          background: "rgba(23,23,23,0.8)",
-                          border: "1px solid rgba(64,64,64,0.6)",
+                          background: t.inputBg,
+                          border: `1px solid ${t.inputBorder}`,
                           borderRadius: 10,
                           padding: "10px 14px",
                           fontSize: 14,
-                          color: "#f5f5f5",
+                          color: t.inputText,
                           outline: "none",
                           boxSizing: "border-box",
                           marginBottom: 12,
@@ -1593,8 +1599,8 @@ export default function EvaluationView({
                             fontWeight: 600,
                             border: "none",
                             cursor: !ideaName.trim() ? "not-allowed" : "pointer",
-                            background: !ideaName.trim() ? "rgba(38,38,38,0.6)" : "rgba(59,130,246,0.15)",
-                            color: !ideaName.trim() ? "#525252" : "#60a5fa",
+                            background: !ideaName.trim() ? t.surfAlt : "rgba(59,130,246,0.15)",
+                            color: !ideaName.trim() ? t.mut : t.link,
                           }}
                         >
                           Save {entitlements.isSubscriber ? "" : `(${savedIdeasCount}/${entitlements.saveCap})`}
@@ -1606,9 +1612,9 @@ export default function EvaluationView({
                             borderRadius: 10,
                             fontSize: 13,
                             fontWeight: 500,
-                            border: "1px solid rgba(64,64,64,0.4)",
+                            border: `1px solid ${t.border}`,
                             background: "transparent",
-                            color: "#525252",
+                            color: t.mut,
                             cursor: "pointer",
                           }}
                         >
@@ -1629,8 +1635,8 @@ export default function EvaluationView({
                           fontWeight: 600,
                           border: "1px solid rgba(59,130,246,0.4)",
                           cursor: saveStatus === "saving" ? "not-allowed" : "pointer",
-                          background: saveStatus === "saving" ? "rgba(38,38,38,0.6)" : "rgba(59,130,246,0.12)",
-                          color: saveStatus === "saving" ? "#525252" : "#60a5fa",
+                          background: saveStatus === "saving" ? t.surfAlt : "rgba(59,130,246,0.12)",
+                          color: saveStatus === "saving" ? t.mut : t.link,
                           transition: "all 0.2s",
                         }}
                       >
@@ -1652,9 +1658,9 @@ export default function EvaluationView({
                       borderRadius: 12,
                       fontSize: 14,
                       fontWeight: 500,
-                      border: "1px solid rgba(64,64,64,0.6)",
+                      border: `1px solid ${t.border}`,
                       background: "transparent",
-                      color: "#737373",
+                      color: t.sec,
                       cursor: "pointer",
                       transition: "all 0.2s",
                     }}
@@ -1684,8 +1690,8 @@ export default function EvaluationView({
                             fontWeight: 600,
                             border: "none",
                             cursor: evalsRemaining <= 0 ? "not-allowed" : "pointer",
-                            background: evalsRemaining <= 0 ? "rgba(38,38,38,0.6)" : "rgba(108,99,255,0.12)",
-                            color: evalsRemaining <= 0 ? "#525252" : "#a78bfa",
+                            background: evalsRemaining <= 0 ? t.surfAlt : "rgba(108,99,255,0.12)",
+                            color: evalsRemaining <= 0 ? t.mut : "#a78bfa",
                             marginBottom: 10,
                           }}
                         >
@@ -1719,7 +1725,7 @@ export default function EvaluationView({
                         textAlign: "center",
                       }}>
                         <p style={{ fontSize: 13, color: "#a78bfa", margin: "0 0 4px", fontWeight: 600 }}>Workspace feature</p>
-                        <p style={{ fontSize: 12, color: "#737373", margin: 0 }}>
+                        <p style={{ fontSize: 12, color: t.sec, margin: 0 }}>
                           Subscribe to evolve ideas, see what changed, compare, and track lineage.
                         </p>
                       </div>
@@ -1732,9 +1738,9 @@ export default function EvaluationView({
                         borderRadius: 12,
                         fontSize: 14,
                         fontWeight: 600,
-                        border: "1px solid rgba(64,64,64,0.6)",
+                        border: `1px solid ${t.border}`,
                         background: "transparent",
-                        color: "#a3a3a3",
+                        color: t.sec,
                         cursor: "pointer",
                       }}
                     >
@@ -1756,8 +1762,8 @@ export default function EvaluationView({
                             fontWeight: 600,
                             border: "none",
                             cursor: evalsRemaining <= 0 ? "not-allowed" : "pointer",
-                            background: evalsRemaining <= 0 ? "rgba(38,38,38,0.6)" : "rgba(108,99,255,0.12)",
-                            color: evalsRemaining <= 0 ? "#525252" : "#a78bfa",
+                            background: evalsRemaining <= 0 ? t.surfAlt : "rgba(108,99,255,0.12)",
+                            color: evalsRemaining <= 0 ? t.mut : "#a78bfa",
                             marginBottom: 10,
                           }}
                         >
@@ -1798,7 +1804,7 @@ export default function EvaluationView({
                         textAlign: "center",
                       }}>
                         <p style={{ fontSize: 13, color: "#a78bfa", margin: "0 0 4px", fontWeight: 600 }}>Workspace feature</p>
-                        <p style={{ fontSize: 12, color: "#737373", margin: 0 }}>
+                        <p style={{ fontSize: 12, color: t.sec, margin: 0 }}>
                           Subscribe to evolve ideas, compare versions, and track your decision lineage.
                         </p>
                       </div>
@@ -1811,9 +1817,9 @@ export default function EvaluationView({
                         borderRadius: 12,
                         fontSize: 14,
                         fontWeight: 600,
-                        border: "1px solid rgba(64,64,64,0.6)",
+                        border: `1px solid ${t.border}`,
                         background: "transparent",
-                        color: "#a3a3a3",
+                        color: t.sec,
                         cursor: "pointer",
                       }}
                     >
@@ -1831,9 +1837,9 @@ export default function EvaluationView({
                   borderRadius: 12,
                   fontSize: 14,
                   fontWeight: 600,
-                  border: "1px solid rgba(64,64,64,0.6)",
+                  border: `1px solid ${t.border}`,
                   background: "transparent",
-                  color: "#a3a3a3",
+                  color: t.sec,
                   cursor: "pointer",
                 }}
               >
@@ -1845,7 +1851,7 @@ export default function EvaluationView({
 
         <footer style={footerStyle}>
           <PageContainer wide>
-            <p style={{ fontSize: 12, color: "#404040", margin: 0 }}>
+            <p style={{ fontSize: 12, color: t.mut, margin: 0 }}>
               IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
             </p>
           </PageContainer>
