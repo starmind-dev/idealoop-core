@@ -351,14 +351,33 @@ export default function EvaluationView({
               })()}
 
               {analysis.competition.differentiation && (
-                <Card style={{ background: t.surfAlt, marginBottom: 16 }} t={t}>
-                  <h3 style={{ fontSize: 14, fontWeight: 700, color: t.text, margin: "0 0 8px 0" }}>
-                    How your idea compares
-                  </h3>
-                  <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.6, margin: 0 }}>
-                    {analysis.competition.differentiation}
-                  </p>
-                </Card>
+                <>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 16 }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: 12,
+                      background: t.surfAlt, border: `1px solid ${t.border}`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 18, flexShrink: 0,
+                    }}>🔍</div>
+                    <div>
+                      <h3 style={{ fontSize: 16, fontWeight: 700, color: t.text, margin: 0 }}>How your idea compares</h3>
+                      <p style={{ fontSize: 13, color: t.sec, margin: "2px 0 0 0" }}>Positioning against competitors</p>
+                    </div>
+                  </div>
+                  <div style={{
+                    background: "rgba(37,99,235,0.025)",
+                    border: "1px solid rgba(37,99,235,0.1)",
+                    borderLeft: "3px solid #2563eb",
+                    borderRadius: 14,
+                    padding: "22px 24px",
+                    boxShadow: "0 1px 4px rgba(37,99,235,0.03)",
+                    marginBottom: 16,
+                  }}>
+                    <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.6, margin: 0 }}>
+                      {analysis.competition.differentiation}
+                    </p>
+                  </div>
+                </>
               )}
             </section>
 
