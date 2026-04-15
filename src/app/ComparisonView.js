@@ -100,7 +100,7 @@ function prepareComparisonData(ideaA, ideaB) {
 // ============================================
 const getBarColor = (s, tc) => tc ? (s >= 8 ? "#ef4444" : s >= 6 ? "#f59e0b" : "#3b82f6") : getScoreColor(s);
 const typeColors = { direct: { label: "Direct", color: "#f87171", bg: "rgba(239,68,68,0.10)", border: "rgba(239,68,68,0.25)" }, adjacent: { label: "Adjacent", color: "#fbbf24", bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.25)" }, substitute: { label: "Substitute", color: "#60a5fa", bg: "rgba(59,130,246,0.10)", border: "rgba(59,130,246,0.25)" }, internal_build: { label: "Internal Build", color: "#a78bfa", bg: "rgba(139,92,246,0.10)", border: "rgba(139,92,246,0.25)" } };
-const sourceColors = { github: { bg: "rgba(110,84,148,0.15)", color: "#a78bfa", border: "rgba(110,84,148,0.3)", label: "GitHub" }, google: { bg: "rgba(59,130,246,0.15)", color: "#60a5fa", border: "rgba(59,130,246,0.3)", label: "Google" }, llm: { bg: "rgba(115,115,115,0.15)", color: t.sec, border: "rgba(115,115,115,0.3)", label: "AI" } };
+const sourceColors = { github: { bg: "rgba(110,84,148,0.15)", color: "#a78bfa", border: "rgba(110,84,148,0.3)", label: "GitHub" }, google: { bg: "rgba(59,130,246,0.15)", color: "#60a5fa", border: "rgba(59,130,246,0.3)", label: "Google" }, llm: { bg: "rgba(115,115,115,0.15)", color: "#a3a3a3", border: "rgba(115,115,115,0.3)", label: "AI" } };
 const SCREENS = [{ key: "competitors", label: "Competitors" }, { key: "scores", label: "Scores" }, { key: "risks", label: "Key risks" }, { key: "roadmap", label: "Roadmap" }, { key: "tools", label: "Tools & estimates" }, { key: "tradeoffs", label: "Key tradeoffs" }];
 const shortTitle = (t, max = 24) => t.length > max ? t.substring(0, max - 1) + "…" : t;
 
