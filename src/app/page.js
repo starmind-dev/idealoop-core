@@ -21,7 +21,7 @@ import {
 // ============================================
 // EVALUATION LIMIT HELPERS
 // ============================================
-const EVAL_LIMIT = 3;
+const EVAL_LIMIT = 2;
 const EVAL_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 function getRecentEvals() {
@@ -440,7 +440,7 @@ export default function Home() {
             const resetTime = data.next_reset_time
               ? formatResetTime(data.next_reset_time)
               : "soon";
-            setError(`You've used all ${EVAL_LIMIT} free evaluations this week. Next slot opens in ${resetTime}.`);
+            setError("You've used your free evaluations. Get credits to keep evaluating.");
             return;
           }
         }
@@ -451,7 +451,7 @@ export default function Home() {
     } else {
       const remaining = getEvalsRemaining();
       if (remaining <= 0) {
-        setError(`You've used all ${EVAL_LIMIT} free evaluations this week. Next slot opens in ${getNextResetTime()}.`);
+        setError("You've used your free evaluations. Get credits to keep evaluating.");
         return;
       }
     }
@@ -530,7 +530,7 @@ export default function Home() {
           const resetTime = data.next_reset_time
             ? formatResetTime(data.next_reset_time)
             : "soon";
-          setError(`You've used all ${EVAL_LIMIT} free evaluations this week. Next slot opens in ${resetTime}.`);
+          setError("You've used your free evaluations. Get credits to keep evaluating.");
           return;
         }
       }
@@ -1603,7 +1603,7 @@ export default function Home() {
             )}
 
             {/* DEV TOGGLE: Pro mode — remove before launch */}
-            {user && (
+            {user && !entitlements.isPreviewUser && (
               <div style={{
                 display: "flex",
                 alignItems: "center",
@@ -1681,8 +1681,8 @@ export default function Home() {
                 color: evalsRemaining <= 0 ? "#f87171" : evalsRemaining === 1 ? "#fbbf24" : t.sec,
               }}>
                 {evalsRemaining <= 0
-                  ? `No evaluations remaining this week. Next slot opens in ${user && dbNextResetTime ? formatResetTime(dbNextResetTime) : getNextResetTime()}.`
-                  : `${evalsRemaining} of ${EVAL_LIMIT} free evaluations remaining this week`}
+                  ? "You've used your free evaluations. Get credits to keep going."
+                  : `${evalsRemaining} of ${EVAL_LIMIT} free evaluations remaining`}
               </span>
             </div>
 
@@ -3044,8 +3044,8 @@ export default function Home() {
                 color: evalsRemaining <= 0 ? "#f87171" : evalsRemaining === 1 ? "#fbbf24" : t.sec,
               }}>
                 {evalsRemaining <= 0
-                  ? `No evaluations remaining this week.`
-                  : `${evalsRemaining} of ${EVAL_LIMIT} free evaluations remaining this week`}
+                  ? "You've used your free evaluations. Get credits to keep going."
+                  : `${evalsRemaining} of ${EVAL_LIMIT} free evaluations remaining`}
               </span>
             </div>
 

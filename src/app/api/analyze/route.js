@@ -85,6 +85,9 @@ export async function POST(request) {
             data: { count: githubResults.length },
           });
 
+          // Small delays between rapid-fire events to force Vercel stream buffer flush
+          await new Promise(r => setTimeout(r, 80));
+
           sendEvent({
             step: "serper_done",
             message: serperResults.length > 0
@@ -104,6 +107,8 @@ export async function POST(request) {
             ? "Real competitor data injected into evaluation"
             : "No verified data found — using AI knowledge base";
 
+          await new Promise(r => setTimeout(r, 80));
+
           sendEvent({
             step: "evidence_ready",
             message: dataSourceMsg,
@@ -111,6 +116,8 @@ export async function POST(request) {
           });
 
           // STAGE 4: Run Sonnet evaluation
+          await new Promise(r => setTimeout(r, 80));
+
           sendEvent({ step: "evaluating", message: "Running evaluation with Claude Sonnet..." });
 
           const fullSystemPrompt =
