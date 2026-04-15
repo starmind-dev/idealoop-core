@@ -1270,7 +1270,7 @@ export default function EvaluationView({
 
             {/* Time & Difficulty */}
             <section style={{ marginBottom: 48 }}>
-              <SectionHeader icon="⏱" title="Time & Difficulty" subtitle="Calibrated to your experience level" t={t} />
+              <SectionHeader icon="⏱" title="Execution Reality" subtitle="Calibrated to your background" t={t} />
 
               <Card style={{ padding: 32 }} t={t}>
                 <div style={{ display: "flex", justifyContent: "space-around", alignItems: "center", marginBottom: 24 }}>

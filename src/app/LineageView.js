@@ -1,17 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { getScoreColor } from "./components";
 
 // ============================================
 // HELPERS
 // ============================================
 
-function getScoreColor(s) {
-  if (s >= 8) return "#10b981";
-  if (s >= 6) return "#3b82f6";
-  if (s >= 4) return "#f59e0b";
-  return "#ef4444";
-}
+// getScoreColor imported from ./components
 
 function getScoreBg(s) {
   if (s >= 8) return "rgba(16,185,129,0.15)";
@@ -23,7 +19,7 @@ function getScoreBg(s) {
 const STATUS_CONFIG = {
   exploring: { label: "Exploring", color: "#60a5fa", bg: "rgba(59,130,246,0.12)", border: "rgba(59,130,246,0.25)" },
   lead:      { label: "Lead",      color: "#34d399", bg: "rgba(16,185,129,0.12)", border: "rgba(16,185,129,0.25)" },
-  parked:    { label: "Parked",    color: "#a3a3a3", bg: "rgba(115,115,115,0.12)", border: "rgba(115,115,115,0.25)" },
+  parked:    { label: "Parked",    color: t.sec, bg: "rgba(115,115,115,0.12)", border: "rgba(115,115,115,0.25)" },
   killed:    { label: "Killed",    color: "#f87171", bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.25)" },
 };
 const STATUS_OPTIONS = ["exploring", "lead", "parked", "killed"];
@@ -65,7 +61,7 @@ function buildTree(ideas, rootId) {
 // ============================================
 // STATUS DROPDOWN
 // ============================================
-function StatusDropdown({ currentStatus, onSelect, onClose }) {
+function StatusDropdown({ currentStatus, onSelect, onClose, t }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -84,8 +80,8 @@ function StatusDropdown({ currentStatus, onSelect, onClose }) {
         top: "100%",
         left: 0,
         marginTop: 4,
-        background: "#1a1a1a",
-        border: "1px solid rgba(64,64,64,0.6)",
+        background: t.modalBg,
+        border: `1px solid ${t.border}`,
         borderRadius: 8,
         padding: 4,
         zIndex: 20,
@@ -109,11 +105,11 @@ function StatusDropdown({ currentStatus, onSelect, onClose }) {
               cursor: "pointer",
               fontSize: 11,
               fontWeight: isActive ? 600 : 400,
-              color: isActive ? cfg.color : "#a3a3a3",
+              color: isActive ? cfg.color : t.sec,
               background: isActive ? cfg.bg : "transparent",
               transition: "background 0.15s",
             }}
-            onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = "rgba(38,38,38,0.6)"; }}
+            onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = t.surfAlt; }}
             onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
           >
             {cfg.label}
@@ -127,7 +123,7 @@ function StatusDropdown({ currentStatus, onSelect, onClose }) {
 // ============================================
 // NODE CARD
 // ============================================
-function NodeCard({ idea, isRoot, isSelected, comparing, onToggleSelect, onClickNode, onUpdateIdea, isLoading }) {
+function NodeCard({ idea, isRoot, isSelected, comparing, onToggleSelect, onClickNode, onUpdateIdea, isLoading, t }) {
   const evals = idea.evaluations || [];
   const latestEval = evals.length > 0 ? evals[0] : null; // sorted desc by list route
   const score = latestEval?.weighted_overall_score || 0;
@@ -167,12 +163,12 @@ function NodeCard({ idea, isRoot, isSelected, comparing, onToggleSelect, onClick
   return (
     <div
       style={{
-        background: "rgba(23,23,23,0.8)",
+        background: t.surface,
         border: isLoading
           ? "1px solid rgba(234,179,8,0.6)"
           : isSelected
           ? "1px solid rgba(59,130,246,0.6)"
-          : "1px solid rgba(38,38,38,0.8)",
+          : `1px solid ${t.border}`,
         borderRadius: 12,
         padding: "12px 16px",
         minWidth: 160,
@@ -229,7 +225,7 @@ function NodeCard({ idea, isRoot, isSelected, comparing, onToggleSelect, onClick
             borderRadius: 5,
             border: isSelected
               ? "2px solid #60a5fa"
-              : "2px solid rgba(64,64,64,0.6)",
+              : `2px solid ${t.border}`,
             background: isSelected ? "rgba(59,130,246,0.2)" : "transparent",
             display: "flex",
             alignItems: "center",
@@ -286,9 +282,9 @@ function NodeCard({ idea, isRoot, isSelected, comparing, onToggleSelect, onClick
               style={{
                 fontSize: 13,
                 fontWeight: 600,
-                color: "#e5e5e5",
-                background: "rgba(38,38,38,0.8)",
-                border: "1px solid rgba(59,130,246,0.4)",
+                color: t.text,
+                background: t.surfAlt,
+                border: `1px solid rgba(59,130,246,0.4)`,
                 borderRadius: 6,
                 padding: "2px 6px",
                 outline: "none",
@@ -302,7 +298,7 @@ function NodeCard({ idea, isRoot, isSelected, comparing, onToggleSelect, onClick
                 style={{
                   fontSize: 13,
                   fontWeight: 600,
-                  color: "#e5e5e5",
+                  color: t.text,
                   margin: 0,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
@@ -374,6 +370,7 @@ function NodeCard({ idea, isRoot, isSelected, comparing, onToggleSelect, onClick
               currentStatus={statusKey}
               onSelect={handleStatusChange}
               onClose={() => setStatusOpen(false)}
+              t={t}
             />
           )}
         </div>
@@ -417,9 +414,9 @@ function NodeCard({ idea, isRoot, isSelected, comparing, onToggleSelect, onClick
               fontWeight: 500,
               padding: "2px 7px",
               borderRadius: 9999,
-              background: "rgba(64,64,64,0.3)",
-              color: "#a3a3a3",
-              border: "1px solid rgba(64,64,64,0.4)",
+              background: t.surfAlt,
+              color: t.sec,
+              border: `1px solid ${t.border}`,
               maxWidth: 140,
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -437,7 +434,7 @@ function NodeCard({ idea, isRoot, isSelected, comparing, onToggleSelect, onClick
 // ============================================
 // TREE NODE (recursive with connectors)
 // ============================================
-function TreeNode({ node, isRoot, selected, comparing, onToggleSelect, onClickNode, onUpdateIdea, loadingIdeaId }) {
+function TreeNode({ node, isRoot, selected, comparing, onToggleSelect, onClickNode, onUpdateIdea, loadingIdeaId, t }) {
   const { idea, children } = node;
   const isSelected = selected.some((s) => s.ideaId === idea.id);
 
@@ -458,6 +455,7 @@ function TreeNode({ node, isRoot, selected, comparing, onToggleSelect, onClickNo
         onClickNode={onClickNode}
         onUpdateIdea={onUpdateIdea}
         isLoading={idea.id === loadingIdeaId}
+        t={t}
       />
 
       {children.length > 0 && (
@@ -467,7 +465,7 @@ function TreeNode({ node, isRoot, selected, comparing, onToggleSelect, onClickNo
             style={{
               width: 2,
               height: 24,
-              background: "rgba(64,64,64,0.6)",
+              background: t.border,
             }}
           />
 
@@ -497,7 +495,7 @@ function TreeNode({ node, isRoot, selected, comparing, onToggleSelect, onClickNo
                       flex: 1,
                       borderTop:
                         i > 0
-                          ? "2px solid rgba(64,64,64,0.6)"
+                          ? `2px solid ${t.border}`
                           : "none",
                       height: "100%",
                     }}
@@ -507,7 +505,7 @@ function TreeNode({ node, isRoot, selected, comparing, onToggleSelect, onClickNo
                     style={{
                       width: 2,
                       height: "100%",
-                      background: "rgba(64,64,64,0.6)",
+                      background: t.border,
                     }}
                   />
                   {/* Right half */}
@@ -516,7 +514,7 @@ function TreeNode({ node, isRoot, selected, comparing, onToggleSelect, onClickNo
                       flex: 1,
                       borderTop:
                         i < children.length - 1
-                          ? "2px solid rgba(64,64,64,0.6)"
+                          ? `2px solid ${t.border}`
                           : "none",
                       height: "100%",
                     }}
@@ -533,6 +531,7 @@ function TreeNode({ node, isRoot, selected, comparing, onToggleSelect, onClickNo
                   onClickNode={onClickNode}
                   onUpdateIdea={onUpdateIdea}
                   loadingIdeaId={loadingIdeaId}
+                  t={t}
                 />
               </div>
             ))}
@@ -554,6 +553,7 @@ export default function LineageView({
   onStartComparison,
   onUpdateIdea,
   loadingIdeaId,
+  t,
 }) {
   const [selected, setSelected] = useState([]);
   const [comparing, setComparing] = useState(false);
@@ -601,15 +601,15 @@ export default function LineageView({
   if (!tree) {
     return (
       <div style={{ padding: 40, textAlign: "center" }}>
-        <p style={{ color: "#737373" }}>Could not load lineage data.</p>
+        <p style={{ color: t.mut }}>Could not load lineage data.</p>
         <button
           onClick={onBack}
           style={{
             marginTop: 16,
             fontSize: 13,
-            color: "#a3a3a3",
+            color: t.sec,
             background: "none",
-            border: "1px solid rgba(64,64,64,0.5)",
+            border: `1px solid ${t.border}`,
             borderRadius: 8,
             padding: "8px 20px",
             cursor: "pointer",
@@ -641,7 +641,7 @@ export default function LineageView({
             style={{
               fontSize: 22,
               fontWeight: 700,
-              color: "#f5f5f5",
+              color: t.text,
               margin: 0,
             }}
           >
@@ -650,7 +650,7 @@ export default function LineageView({
           <p
             style={{
               fontSize: 13,
-              color: "#737373",
+              color: t.mut,
               margin: "6px 0 0",
             }}
           >
@@ -662,9 +662,9 @@ export default function LineageView({
           onClick={onBack}
           style={{
             fontSize: 13,
-            color: "#a3a3a3",
+            color: t.sec,
             background: "none",
-            border: "1px solid rgba(64,64,64,0.5)",
+            border: `1px solid ${t.border}`,
             borderRadius: 8,
             padding: "8px 20px",
             cursor: "pointer",
@@ -699,6 +699,7 @@ export default function LineageView({
             onClickNode={(ideaId) => onViewIdea(ideaId)}
             onUpdateIdea={onUpdateIdea}
             loadingIdeaId={loadingIdeaId}
+            t={t}
           />
         </div>
       </div>
@@ -718,8 +719,8 @@ export default function LineageView({
       >
         <div
           style={{
-            background: "rgba(23,23,23,0.95)",
-            border: "1px solid rgba(38,38,38,0.8)",
+            background: t.surface,
+            border: `1px solid ${t.border}`,
             borderRadius: 12,
             padding: "12px 24px",
             display: "flex",
@@ -747,7 +748,7 @@ export default function LineageView({
             </button>
           ) : (
             <>
-              <span style={{ fontSize: 13, color: "#a3a3a3" }}>
+              <span style={{ fontSize: 13, color: t.sec }}>
                 {selected.length === 0
                   ? "Select 2 nodes to compare"
                   : selected.length === 1
@@ -764,8 +765,8 @@ export default function LineageView({
                   borderRadius: 8,
                   border: "none",
                   cursor: selected.length === 2 ? "pointer" : "not-allowed",
-                  background: selected.length === 2 ? "#60a5fa" : "rgba(38,38,38,0.6)",
-                  color: selected.length === 2 ? "#fff" : "#525252",
+                  background: selected.length === 2 ? "#60a5fa" : t.surfAlt,
+                  color: selected.length === 2 ? "#fff" : t.mut,
                   transition: "all 0.2s",
                 }}
               >
@@ -775,7 +776,7 @@ export default function LineageView({
                 onClick={() => { setComparing(false); setSelected([]); }}
                 style={{
                   fontSize: 12,
-                  color: "#737373",
+                  color: t.mut,
                   background: "none",
                   border: "none",
                   cursor: "pointer",

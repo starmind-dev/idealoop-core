@@ -1807,6 +1807,7 @@ export default function Home() {
               ideaA={compareData.ideaA}
               ideaB={compareData.ideaB}
               authToken={compareData.authToken}
+              t={t}
               onBack={() => {
                 setCompareMode(false);
                 setCompareSelecting(false);
@@ -1856,6 +1857,7 @@ export default function Home() {
             <LineageView
               myIdeas={myIdeas}
               targetIdeaId={lineageTargetId}
+              t={t}
               onBack={() => {
                 setLineageMode(false);
                 setLineageTargetId(null);
