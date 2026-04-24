@@ -143,6 +143,31 @@ USER'S AI PRODUCT IDEA:
 ${idea}
 `;
 
+          // V4S28 P0.5 Task 2 (2026-04-24) — IMPORTANT DESIGN NOTE:
+          //
+          // Sampler hardening (top_k=1, top_p=0.1) was tested here and reverted.
+          // Rationale: the parallel change worked on Pro's isolated Stage 1 call
+          // (commit 12f7a49), but on Standard's single-merged call it destabilized
+          // TC scoring — MAT2 TC spread 2.0pt, MAT3 spread 1.0pt — exceeding the
+          // 1.0pt ship-blocker gate in run-stage1-stability.js.
+          //
+          // Standard had no evidence of synthesis instability before the change
+          // (Phase 0 never variance-tested Standard). Copy-paste from Pro's
+          // architecturally-different chained pipeline created a problem rather
+          // than solving one. Standard remains at temp=0 alone on this call —
+          // its pre-V4S28 state, which we have no evidence is broken.
+          //
+          // Canonical naming rules (Fix #4 in prompt-stage1.js on Pro) were also
+          // tested in prompt.js and reverted in the same rollback. They appeared
+          // to contribute to the TC drift, possibly via context-length shift in
+          // the single merged call.
+          //
+          // CONDITIONAL REVISIT: If user-visible competitor-label drift on
+          // Standard becomes a real concern, consider porting Fix #4 (naming
+          // conventions only, NOT Fix #3 sampler hardening) to prompt.js as a
+          // separate validated workstream. Required: fresh harness run with
+          // that change alone, confirming it doesn't perturb scoring. Don't
+          // bundle with sampler changes; don't copy-paste from Pro.
           const message = await client.messages.create({
             model: "claude-sonnet-4-20250514",
             max_tokens: 4096,
