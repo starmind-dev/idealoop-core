@@ -106,12 +106,14 @@ export async function POST(request) {
           const githubResults = dedup([...githubResults1, ...githubResults2]).slice(0, 7);
           const serperResults = dedup([...serperResults1, ...serperResults2]).slice(0, 7);
 
+          // V4S28 P0: emit raw `results` arrays alongside `count` so variance
+          // diagnostic can localize cascade source (retrieval vs Stage 1 synthesis).
           sendEvent({
             step: "github_done",
             message: githubResults.length > 0
               ? `GitHub: found ${githubResults.length} repositories`
               : "GitHub: no matching repositories found",
-            data: { count: githubResults.length },
+            data: { count: githubResults.length, results: githubResults },
           });
 
           sendEvent({
@@ -119,7 +121,7 @@ export async function POST(request) {
             message: serperResults.length > 0
               ? `Google: found ${serperResults.length} results`
               : "Google: no matching results found",
-            data: { count: serperResults.length },
+            data: { count: serperResults.length, results: serperResults },
           });
 
           // Build competitor context for injection

@@ -77,12 +77,14 @@ export async function POST(request) {
           const serperResults = dedup([...serperResults1, ...serperResults2]).slice(0, 7);
 
           // Send individual search results
+          // V4S28 P0: emit raw `results` arrays alongside `count` so variance
+          // diagnostic can localize cascade source (retrieval vs Stage 1 synthesis).
           sendEvent({
             step: "github_done",
             message: githubResults.length > 0
               ? `GitHub: found ${githubResults.length} repositories`
               : "GitHub: no matching repositories found",
-            data: { count: githubResults.length },
+            data: { count: githubResults.length, results: githubResults },
           });
 
           // Small delays between rapid-fire events to force Vercel stream buffer flush
@@ -93,7 +95,7 @@ export async function POST(request) {
             message: serperResults.length > 0
               ? `Google: found ${serperResults.length} results`
               : "Google: no matching results found",
-            data: { count: serperResults.length },
+            data: { count: serperResults.length, results: serperResults },
           });
 
           // STAGE 3: Build the prompt with real competitor data
