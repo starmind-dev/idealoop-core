@@ -87,6 +87,22 @@ IMPORTANT RULES:
 - Include substitute competitors when they genuinely represent how users solve the problem today. Do not force a substitute entry when none is relevant.
 - SPARSE RETRIEVAL IS A SIGNAL OF UNCERTAINTY, not evidence of either an open or crowded market. Note the retrieval quality honestly. Do not fill gaps with invented competition, but do not assume absence of evidence is evidence of absence.
 
+=== NAMING CONVENTIONS ===
+The "name" field must be the shortest canonical form. Put descriptive details in "description", not "name". Apply these conventions regardless of how source snippets label a company.
+
+For real companies and products: brand or product name only, with no appended descriptors or parentheticals.
+- "Clio" not "Clio Inc." or "Clio (Legal practice management)"
+- "IMA360" not "IMA360 Medical Device Pricing Software"
+- "Woodpecker" not "Woodpecker (Ares Legal)"
+- Use parenthetical disambiguation only when two genuinely different companies share a brand name (e.g., "Apollo (Salesforce)" vs "Apollo (Harvey)"). Prefer the unambiguous name when available.
+
+For substitute competitors, use these canonical label patterns:
+- Manual workflows: "Manual [noun] workflow" — e.g., "Manual template workflow", "Manual procurement workflow", "Manual claim processing workflow". Not "Manual Template Process", not "Manual procurement and individual negotiations".
+- Professional services: the profession or role name only — e.g., "Healthcare procurement consultants", "Insurance brokers", "Paralegals", "Claims consultants". Not "Traditional Claims Consultants".
+- Existing habits or tools: the tool or habit name — e.g., "Spreadsheets", "WhatsApp groups", "Email", "Phone calls".
+
+For internal_build competitors: always use exactly "Internal build". Put technology stack, team composition, and approach details in "description", not in "name". Not "Internal Development", not "Internal Build with LLM APIs", not "Internal Procurement Analytics".
+
 === JSON STRUCTURE ===
 
 {

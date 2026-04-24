@@ -76,6 +76,14 @@ export async function POST(request) {
           const githubResults = dedup([...githubResults1, ...githubResults2]).slice(0, 7);
           const serperResults = dedup([...serperResults1, ...serperResults2]).slice(0, 7);
 
+          // V4S28 P0.5 Stage 1 Fix #1: sort retrieved items by URL before injection
+          // Eliminates retrieval ordering as a source of Stage 1 synthesis non-determinism.
+          // Phase 0 observed Serper Jaccard 0.40-0.75 across reruns — Google's ranking
+          // fluctuates on identical queries. Sorting gives Stage 1 a stable input order
+          // so observed competitor-list drift is attributable to synthesis, not input.
+          githubResults.sort((a, b) => (a.url || "").localeCompare(b.url || ""));
+          serperResults.sort((a, b) => (a.url || "").localeCompare(b.url || ""));
+
           // Send individual search results
           // V4S28 P0: emit raw `results` arrays alongside `count` so variance
           // diagnostic can localize cascade source (retrieval vs Stage 1 synthesis).

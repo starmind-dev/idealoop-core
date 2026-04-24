@@ -106,6 +106,14 @@ export async function POST(request) {
           const githubResults = dedup([...githubResults1, ...githubResults2]).slice(0, 7);
           const serperResults = dedup([...serperResults1, ...serperResults2]).slice(0, 7);
 
+          // V4S28 P0.5 Stage 1 Fix #1: sort retrieved items by URL before injection
+          // Eliminates retrieval ordering as a source of Stage 1 synthesis non-determinism.
+          // Phase 0 observed Serper Jaccard 0.40-0.75 across reruns — Google's ranking
+          // fluctuates on identical queries. Sorting gives Stage 1 a stable input order
+          // so observed competitor-list drift is attributable to synthesis, not input.
+          githubResults.sort((a, b) => (a.url || "").localeCompare(b.url || ""));
+          serperResults.sort((a, b) => (a.url || "").localeCompare(b.url || ""));
+
           // V4S28 P0: emit raw `results` arrays alongside `count` so variance
           // diagnostic can localize cascade source (retrieval vs Stage 1 synthesis).
           sendEvent({
@@ -165,6 +173,18 @@ ${idea}`;
             model: "claude-sonnet-4-20250514",
             max_tokens: 3000,
             temperature: 0,
+            // V4S28 P0.5 Stage 1 Fix #3: sampler-level hardening.
+            // Phase 0.5 Fix #1 (sort items) confirmed Stage 1 non-determinism
+            // is NOT input-ordering sensitive — MAT3-insider with Serper URL
+            // Jaccard 1.00 still produced competitor-list Jaccard 0.38 across
+            // reruns. Anthropic docs acknowledge temp=0 alone is not fully
+            // deterministic. top_k=1 forces greedy single-token selection at
+            // each step; top_p=0.1 constrains nucleus to top 10% probability
+            // mass as belt-and-suspenders against distribution flattening.
+            // Sonnet 4 (claude-sonnet-4-20250514) accepts both alongside
+            // temperature (the either/or restriction is Sonnet 4.5+ only).
+            top_k: 1,
+            top_p: 0.1,
             system: stage1SystemPrompt,
             messages: [{ role: "user", content: stage1UserMessage }],
           });
