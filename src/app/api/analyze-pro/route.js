@@ -7,6 +7,7 @@ import { buildCompetitorContext, buildCompetitorInstructions } from "../../../li
 import { STAGE1_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage1";
 import { STAGE2A_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage2a";
 import { STAGE2B_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage2b";
+import { STAGE2C_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage2c";
 import { STAGE_TC_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage-tc";
 import { STAGE3_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage3";
 import { calculateOverallScore } from "../../../lib/services/scoring";
@@ -14,7 +15,24 @@ import { calculateOverallScore } from "../../../lib/services/scoring";
 // ============================================
 // MAIN API HANDLER — PAID TIER CHAINED PIPELINE
 // ============================================
-// Orchestrates: Keywords → Search → Stage 1 (Discover) → [Stage 2a + Stage TC in parallel] → Stage 2b (Score MD/MO/OR) → Stage 3 (Act) → Assembly
+// Orchestrates: Keywords → Search → Stage 1 (Discover) → [Stage 2a + Stage TC in parallel] → Stage 2b (Score MD/MO/OR) → Stage 2c (Synthesis) → Stage 3 (Act) → Assembly
+//
+// V4S28 S1+S2+S3 (Bundle B1):
+// Stage 2c (NEW) sits between Stage 2b and Stage 3, sequential. It synthesizes
+// summary + failure_risks from idea + profile + Stage 1 output + Stage 2a
+// packets + Stage 2b scores + confidence_level. Stage 2b no longer outputs
+// summary or failure_risks — those moved to Stage 2c. Stage 3 reads
+// failure_risks from the merged evaluation object (mutated in-place after
+// Stage 2c completes), preserving Roadmap's risk-mitigation behavior.
+//
+// Sequencing rationale: 2c||3 parallel was rejected because Stage 3 reads
+// failure_risks as input — under parallel design Stage 3 would lose this input.
+// Sequential 2c → 3 protects Roadmap quality (the strongest section in the
+// audit) at a cost of ~5-8s latency. See execution-plan.md S3.
+//
+// Graceful degradation: if Stage 2c parse fails, summary + failure_risks are
+// set empty, Stage 3 proceeds without failure_risks input. Evaluation still
+// produces scores + roadmap.
 //
 // Stage TC runs in PARALLEL with Stage 2a — it receives ONLY idea + profile,
 // never sees Stage 1 output. This physically prevents TC from correlating with
@@ -22,6 +40,7 @@ import { calculateOverallScore } from "../../../lib/services/scoring";
 //
 // Stage 2a extracts 3 evidence packets (MD, MO, OR) — no TC packet.
 // Stage 2b scores 3 metrics from those packets.
+// Stage 2c synthesizes interpretive output (summary + failure_risks).
 // TC score is merged in during assembly.
 //
 // Output schema is identical to the free tier route — the frontend renders both the same way.
@@ -333,12 +352,83 @@ ${JSON.stringify(stage2aResult)}`;
           ev.technical_complexity = stageTcResult.technical_complexity;
 
           // ============================
+          // STAGE 2c: SYNTHESIS
+          // Generate summary + failure_risks from idea + profile + Stage 1 +
+          // Stage 2a packets + Stage 2b scores + confidence_level.
+          //
+          // V4S28 S1+S2+S3 architectural change: summary + failure_risks moved
+          // out of Stage 2b to prevent profile-aware Risk 3 contaminating the
+          // profile-blind MD/MO/OR scoring (V4S7-S11 pattern). Stage 2c is
+          // post-scoring interpretive — it does not change scores.
+          // ============================
+
+          sendEvent({ step: "stage2c_start", message: "Stage 2c: Synthesizing summary and failure risks..." });
+
+          const stage2cUserMessage = `${userProfile}
+
+USER'S AI PRODUCT IDEA:
+${idea}
+
+=== STAGE 1 RESULTS: COMPETITION ANALYSIS ===
+${JSON.stringify(stage1Result)}
+
+=== STAGE 2a EVIDENCE PACKETS ===
+${JSON.stringify(stage2aResult)}
+
+=== STAGE 2b SCORES + CONFIDENCE ===
+${JSON.stringify({
+            market_demand: ev.market_demand,
+            monetization: ev.monetization,
+            originality: ev.originality,
+            technical_complexity: ev.technical_complexity,
+            confidence_level: ev.confidence_level,
+            marketplace_note: ev.marketplace_note,
+          })}`;
+
+          const stage2cResponse = await client.messages.create({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 2500,
+            temperature: 0,
+            system: STAGE2C_SYSTEM_PROMPT,
+            messages: [{ role: "user", content: stage2cUserMessage }],
+          });
+
+          const stage2cText = stage2cResponse.content[0].text;
+
+          // Graceful degradation per S3 lock: if Stage 2c parse fails, set
+          // summary + failure_risks empty and proceed to Stage 3 with empty
+          // failure_risks input. Evaluation still produces scores + roadmap.
+          try {
+            const stage2cResult = JSON.parse(cleanJsonResponse(stage2cText));
+            ev.summary = stage2cResult.summary || "";
+            ev.failure_risks = Array.isArray(stage2cResult.failure_risks)
+              ? stage2cResult.failure_risks
+              : [];
+            sendEvent({
+              step: "stage2c_done",
+              message: "Stage 2c complete: Summary and failure risks generated",
+            });
+          } catch (parseError) {
+            console.error("Stage 2c parse failed (graceful degradation engaged):", stage2cText);
+            ev.summary = "";
+            ev.failure_risks = [];
+            sendEvent({
+              step: "stage2c_done",
+              message: "Stage 2c synthesis incomplete; proceeding with scores only",
+            });
+          }
+
+          // ============================
           // STAGE 3: ACT
-          // Generate roadmap informed by Stage 1 + combined scores
+          // Generate roadmap informed by Stage 1 + combined scores + failure_risks
           // ============================
 
           sendEvent({ step: "stage3_start", message: "Stage 3: Building adaptive roadmap..." });
 
+          // Stage 3 reads stage2bResult (now mutated to include TC, summary,
+          // and failure_risks from Stage 2c). The Stage 3 prompt expects
+          // failure_risks to be present in the Stage 2 results — this is
+          // satisfied by the in-place mutation above.
           const stage3UserMessage = `${userProfile}
 
 USER'S AI PRODUCT IDEA:
