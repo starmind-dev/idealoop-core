@@ -50,7 +50,7 @@ function prepareComparisonData(ideaA, ideaB) {
   else if (overallB > overallA) { overallSummary = `${nameB} is stronger if you prioritize ${bWins.join(" and ") || "overall balance"}.`; if (aWins.length > 0) overallSummary += ` ${nameA} is stronger if ${aWins.join(" and ")} matter${aWins.length === 1 ? "s" : ""} more to you.`; }
   else { overallSummary = `Both score identically. ${nameA} leads on ${aWins.join(", ") || "nothing specific"}, ${nameB} leads on ${bWins.join(", ") || "nothing specific"}.`; }
 
-  const extractRisks = (an) => { const r = an.evaluation?.failure_risks || an.failure_risks || an.risks || []; if (!Array.isArray(r)) return []; return r.map(x => typeof x === "string" ? x : x.description || x.risk || x.title || ""); };
+  const extractRisks = (an) => { const r = an.evaluation?.failure_risks || an.failure_risks || an.risks || []; if (!Array.isArray(r)) return []; return r.map(x => typeof x === "string" ? x : (x.text || x.description || x.risk || x.title || "")); };
 
   const risksA = extractRisks(a), risksB = extractRisks(b);
   const phasesA = a.phases || [], phasesB = b.phases || [];
@@ -650,7 +650,7 @@ function buildTradeoffsPayload(ideaA, ideaB, data) {
   const extractRisks = (analysis) => {
     const r = analysis.evaluation?.failure_risks || analysis.failure_risks || analysis.risks || [];
     if (!Array.isArray(r)) return [];
-    return r.map(x => typeof x === "string" ? x : x.description || x.risk || x.title || "").filter(Boolean);
+    return r.map(x => typeof x === "string" ? x : (x.text || x.description || x.risk || x.title || "")).filter(Boolean);
   };
 
   const aE = ideaA.analysis.evaluation, bE = ideaB.analysis.evaluation;

@@ -817,7 +817,7 @@ export default function EvaluationView({
                           {i + 1}.
                         </span>
                         <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.6, margin: 0 }}>
-                          {risk}
+                          {typeof risk === "string" ? risk : (risk?.text || "")}
                         </p>
                       </div>
                     ))}
