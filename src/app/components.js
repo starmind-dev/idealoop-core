@@ -8,6 +8,7 @@ import { supabase } from "../lib/supabase";
 // ============================================
 export const T = {
   light: {
+    mode: "light",
     bg: "#f4f2ef", surface: "#faf9f7", surfAlt: "#eceae5",
     border: "rgba(80,75,65,0.1)", text: "#171919", sec: "#4d5258", mut: "#8c9196",
     shadow: "0 2px 8px rgba(50,55,60,0.06), 0 1px 2px rgba(50,55,60,0.03)",
@@ -40,6 +41,7 @@ export const T = {
     streamShadow: "0 24px 64px rgba(50,55,60,0.1), 0 0 0 1px rgba(80,75,65,0.06)",
   },
   dark: {
+    mode: "dark",
     bg: "#0a0a0a", surface: "rgba(20,20,20,0.95)", surfAlt: "rgba(30,30,30,0.8)",
     border: "rgba(55,55,55,0.4)", text: "#f0f0f0", sec: "#a0a0a0", mut: "#666666",
     shadow: "0 2px 8px rgba(0,0,0,0.4)",
@@ -91,6 +93,73 @@ export const getTcColor = (s) => {
   if (s >= 4) return "#3b82f6";
   return "#10b981";
 };
+
+// ============================================
+// MAIN BOTTLENECK COLOR TAXONOMY (V4S28 B3 — Section 4)
+// ============================================
+// 8 enum values mapped to categorical colors. Both themes.
+// Selected to NOT collide with existing severity colors (red / amber / blue /
+// green are reserved for Difficulty pills, score colors, TC inverted colors,
+// step indicators). The taxonomy is purely categorical — Trust/credibility is
+// not "worse than" Buyer access, etc.
+//
+// Final mapping (locked April 26, 2026):
+//   Technical build      → indigo
+//   Buyer access         → purple
+//   Trust/credibility    → teal
+//   Compliance           → slate (cool, institutional)
+//   Distribution         → pink
+//   Data acquisition     → cyan
+//   Category maturation  → sage  (gray-green; muted, "weathered/considered")
+//   Specification        → stone (warm gray; muted edge state for sparse input)
+//
+// Each entry returns {bg, color, border} for the chip rendering.
+export const MAIN_BOTTLENECK_COLORS = {
+  "Technical build": {
+    dark:  { bg: "rgba(99,102,241,0.14)",  color: "#a5b4fc", border: "rgba(99,102,241,0.32)" },
+    light: { bg: "rgba(99,102,241,0.10)",  color: "#4338ca", border: "rgba(99,102,241,0.28)" },
+  },
+  "Buyer access": {
+    dark:  { bg: "rgba(139,92,246,0.14)",  color: "#c4b5fd", border: "rgba(139,92,246,0.32)" },
+    light: { bg: "rgba(139,92,246,0.10)",  color: "#6d28d9", border: "rgba(139,92,246,0.28)" },
+  },
+  "Trust/credibility": {
+    dark:  { bg: "rgba(20,184,166,0.14)",  color: "#5eead4", border: "rgba(20,184,166,0.32)" },
+    light: { bg: "rgba(20,184,166,0.10)",  color: "#0f766e", border: "rgba(20,184,166,0.28)" },
+  },
+  "Compliance": {
+    dark:  { bg: "rgba(100,116,139,0.18)", color: "#cbd5e1", border: "rgba(100,116,139,0.36)" },
+    light: { bg: "rgba(100,116,139,0.10)", color: "#334155", border: "rgba(100,116,139,0.28)" },
+  },
+  "Distribution": {
+    dark:  { bg: "rgba(236,72,153,0.14)",  color: "#f9a8d4", border: "rgba(236,72,153,0.32)" },
+    light: { bg: "rgba(236,72,153,0.10)",  color: "#be185d", border: "rgba(236,72,153,0.28)" },
+  },
+  "Data acquisition": {
+    dark:  { bg: "rgba(6,182,212,0.14)",   color: "#67e8f9", border: "rgba(6,182,212,0.32)" },
+    light: { bg: "rgba(6,182,212,0.10)",   color: "#0e7490", border: "rgba(6,182,212,0.28)" },
+  },
+  "Category maturation": {
+    dark:  { bg: "rgba(132,169,140,0.16)", color: "#b8d4be", border: "rgba(132,169,140,0.36)" },
+    light: { bg: "rgba(132,169,140,0.12)", color: "#4d6b53", border: "rgba(132,169,140,0.32)" },
+  },
+  "Specification": {
+    dark:  { bg: "rgba(168,162,158,0.14)", color: "#d6d3d1", border: "rgba(168,162,158,0.32)" },
+    light: { bg: "rgba(168,162,158,0.10)", color: "#57534e", border: "rgba(168,162,158,0.28)" },
+  },
+};
+
+// Returns {bg, color, border} for a Main Bottleneck chip given its enum value
+// and the current theme's mode ("light" | "dark"). Falls back to Specification
+// stone-gray for unknown / null values (older saved evaluations from before B3).
+export function getMainBottleneckColor(value, themeMode) {
+  const mode = themeMode === "light" ? "light" : "dark";
+  const palette = MAIN_BOTTLENECK_COLORS[value];
+  if (!palette) {
+    return MAIN_BOTTLENECK_COLORS["Specification"][mode];
+  }
+  return palette[mode];
+}
 
 // ============================================
 // STEP PROGRESS BAR

@@ -11,6 +11,7 @@ import {
   DevModeBadge,
   getScoreColor,
   getTcColor,
+  getMainBottleneckColor,
   GateCTA,
   BlurGate,
   PreviewBanner,
@@ -1268,43 +1269,75 @@ export default function EvaluationView({
               })()}
             </section>
 
-            {/* Time & Difficulty */}
+            {/* Time & Difficulty + Main Bottleneck (V4S28 B3) */}
             <section style={{ marginBottom: 48 }}>
               <SectionHeader icon="⏱" title="Execution Reality" subtitle="Calibrated to your background" t={t} />
 
               <Card style={{ padding: 32 }} t={t}>
-                <div style={{ display: "flex", justifyContent: "space-around", alignItems: "center", marginBottom: 24 }}>
-                  <div style={{ textAlign: "center" }}>
-                    <p style={{ fontSize: 12, color: t.sec, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, margin: "0 0 8px 0" }}>
-                      Estimated Duration
-                    </p>
-                    <p style={{ fontSize: 24, fontWeight: 700, color: t.text, margin: 0 }}>
-                      {analysis.estimates.duration}
-                    </p>
-                  </div>
-                  <div style={{ width: 1, height: 64, background: t.divider }} />
-                  <div style={{ textAlign: "center" }}>
-                    <p style={{ fontSize: 12, color: t.sec, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, margin: "0 0 8px 0" }}>
-                      Difficulty Level
-                    </p>
-                    <span style={{
-                      display: "inline-block",
-                      fontSize: 14,
-                      fontWeight: 700,
-                      padding: "6px 16px",
-                      borderRadius: 9999,
-                      ...(analysis.estimates.difficulty === "Very Hard"
-                        ? { background: "rgba(239,68,68,0.15)", color: "#f87171", border: "1px solid rgba(239,68,68,0.3)" }
-                        : analysis.estimates.difficulty === "Hard"
-                        ? { background: "rgba(245,158,11,0.15)", color: "#fbbf24", border: "1px solid rgba(245,158,11,0.3)" }
-                        : analysis.estimates.difficulty === "Moderate"
-                        ? { background: "rgba(59,130,246,0.15)", color: "#60a5fa", border: "1px solid rgba(59,130,246,0.3)" }
-                        : { background: "rgba(16,185,129,0.15)", color: "#34d399", border: "1px solid rgba(16,185,129,0.3)" }),
-                    }}>
-                      {analysis.estimates.difficulty}
-                    </span>
-                  </div>
-                </div>
+                {(() => {
+                  const isSparse = analysis.estimates.main_bottleneck === "Specification";
+                  const mb = analysis.estimates.main_bottleneck;
+                  const mbColor = mb ? getMainBottleneckColor(mb, t.mode) : null;
+                  return (
+                    <div style={{ display: "flex", justifyContent: "space-around", alignItems: "center", marginBottom: 24, gap: 12 }}>
+                      <div style={{ textAlign: "center", flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 12, color: t.sec, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, margin: "0 0 8px 0" }}>
+                          Estimated Duration
+                        </p>
+                        <p style={{ fontSize: isSparse ? 14 : 22, fontWeight: 700, color: t.text, margin: 0, lineHeight: 1.35 }}>
+                          {analysis.estimates.duration}
+                        </p>
+                      </div>
+                      <div style={{ width: 1, height: 64, background: t.divider, flexShrink: 0 }} />
+                      <div style={{ textAlign: "center", flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 12, color: t.sec, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, margin: "0 0 8px 0" }}>
+                          Difficulty Level
+                        </p>
+                        <span style={{
+                          display: "inline-block",
+                          fontSize: 14,
+                          fontWeight: 700,
+                          padding: "6px 16px",
+                          borderRadius: 9999,
+                          ...(analysis.estimates.difficulty === "Very Hard"
+                            ? { background: "rgba(239,68,68,0.15)", color: "#f87171", border: "1px solid rgba(239,68,68,0.3)" }
+                            : analysis.estimates.difficulty === "Hard"
+                            ? { background: "rgba(245,158,11,0.15)", color: "#fbbf24", border: "1px solid rgba(245,158,11,0.3)" }
+                            : analysis.estimates.difficulty === "Moderate"
+                            ? { background: "rgba(59,130,246,0.15)", color: "#60a5fa", border: "1px solid rgba(59,130,246,0.3)" }
+                            : analysis.estimates.difficulty === "Easy"
+                            ? { background: "rgba(16,185,129,0.15)", color: "#34d399", border: "1px solid rgba(16,185,129,0.3)" }
+                            : { background: "rgba(160,160,160,0.10)", color: t.sec, border: `1px solid ${t.border}` }),
+                        }}>
+                          {analysis.estimates.difficulty || "—"}
+                        </span>
+                      </div>
+                      <div style={{ width: 1, height: 64, background: t.divider, flexShrink: 0 }} />
+                      <div style={{ textAlign: "center", flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 12, color: t.sec, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, margin: "0 0 8px 0" }}>
+                          Main Bottleneck
+                        </p>
+                        {mb && mbColor ? (
+                          <span style={{
+                            display: "inline-block",
+                            fontSize: 14,
+                            fontWeight: 700,
+                            padding: "6px 14px",
+                            borderRadius: 9999,
+                            background: mbColor.bg,
+                            color: mbColor.color,
+                            border: `1px solid ${mbColor.border}`,
+                            whiteSpace: "nowrap",
+                          }}>
+                            {mb}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 14, fontWeight: 700, color: t.sec }}>—</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
                 <BlurGate isGated={isGated} text={analysis.estimates.explanation} t={t} />
               </Card>
               {isGated && (

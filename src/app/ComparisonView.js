@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getScoreColor } from "./components";
+import { getScoreColor, getMainBottleneckColor } from "./components";
 
 // ============================================
 // DATA PREPARATION
@@ -366,18 +366,44 @@ function ToolsScreen({ data, isMobile, activeTab, t }) {
     </div>
   );
 
-  const renderEstimates = (estimates) => (
-    <div style={{ display: "flex", gap: 10, height: "100%" }}>
-      <div style={{ flex: 1, background: t.surfAlt, borderRadius: 10, padding: "10px 12px" }}>
-        <p style={{ fontSize: 10, color: t.mut, margin: 0, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Duration</p>
-        <p style={{ fontSize: 15, fontWeight: 700, color: t.text, margin: "4px 0 0 0" }}>{estimates.duration || "N/A"}</p>
+  const renderEstimates = (estimates) => {
+    const mb = estimates.main_bottleneck;
+    const mbColor = mb ? getMainBottleneckColor(mb, t.mode) : null;
+    const isSparse = mb === "Specification";
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
+        <div style={{ background: t.surfAlt, borderRadius: 10, padding: "10px 12px" }}>
+          <p style={{ fontSize: 10, color: t.mut, margin: 0, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Duration</p>
+          <p style={{ fontSize: isSparse ? 12 : 15, fontWeight: 700, color: t.text, margin: "4px 0 0 0", lineHeight: 1.35 }}>{estimates.duration || "N/A"}</p>
+        </div>
+        <div style={{ background: t.surfAlt, borderRadius: 10, padding: "10px 12px" }}>
+          <p style={{ fontSize: 10, color: t.mut, margin: 0, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Difficulty</p>
+          <p style={{ fontSize: 15, fontWeight: 700, margin: "4px 0 0 0", color: estimates.difficulty === "Very Hard" ? "#f87171" : estimates.difficulty === "Hard" ? "#fbbf24" : estimates.difficulty === "Moderate" ? "#60a5fa" : estimates.difficulty === "Easy" ? "#34d399" : t.sec }}>{estimates.difficulty || "N/A"}</p>
+        </div>
+        <div style={{ background: t.surfAlt, borderRadius: 10, padding: "10px 12px" }}>
+          <p style={{ fontSize: 10, color: t.mut, margin: 0, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Main Bottleneck</p>
+          {mb && mbColor ? (
+            <span style={{
+              display: "inline-block",
+              marginTop: 6,
+              fontSize: 12,
+              fontWeight: 700,
+              padding: "4px 10px",
+              borderRadius: 9999,
+              background: mbColor.bg,
+              color: mbColor.color,
+              border: `1px solid ${mbColor.border}`,
+              whiteSpace: "nowrap",
+            }}>
+              {mb}
+            </span>
+          ) : (
+            <p style={{ fontSize: 13, fontWeight: 700, color: t.sec, margin: "4px 0 0 0" }}>—</p>
+          )}
+        </div>
       </div>
-      <div style={{ flex: 1, background: t.surfAlt, borderRadius: 10, padding: "10px 12px" }}>
-        <p style={{ fontSize: 10, color: t.mut, margin: 0, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Difficulty</p>
-        <p style={{ fontSize: 15, fontWeight: 700, margin: "4px 0 0 0", color: estimates.difficulty === "Very Hard" ? "#f87171" : estimates.difficulty === "Hard" ? "#fbbf24" : estimates.difficulty === "Moderate" ? "#60a5fa" : "#34d399" }}>{estimates.difficulty || "N/A"}</p>
-      </div>
-    </div>
-  );
+    );
+  };
 
   if (isMobile) {
     const tools = activeTab === "a" ? data.toolsA : data.toolsB;
