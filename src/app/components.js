@@ -749,3 +749,90 @@ export function PreviewBanner({ t, evalsRemaining }) {
     </div>
   );
 }
+
+// ============================================
+// SPECIFICITY GATE (V4S28 B7)
+// ============================================
+// Renders the inline panel shown when the Haiku layer determines the input
+// is too underspecified to evaluate honestly. Sits between the textarea and
+// the Evaluate button on the input screen. The textarea above and Evaluate
+// button below are owned by the parent; this component only renders the
+// missing-element cards.
+//
+// Locked design: execution-plan-v4-3-4.md Section 13 / Item 7.
+// `missing_elements` is a coarse 3-value enum: target_user / workflow / core_feature.
+// Unknown values are filtered. Empty array falls back to all three cards.
+//
+// Per-slot accent colors (1.5px top border) signal the dimension each card
+// represents — Pink (audience), Teal (process), Purple (mechanism).
+// Light-mode hex = ramp 600 stop, dark-mode hex = ramp 200 stop, per the
+// design system's "light = 600 stroke, dark = 200 stroke" convention.
+const MISSING_ELEMENT_CARDS = {
+  target_user: {
+    title: "Who is it for?",
+    example: "solo professionals · small clinics · enterprise teams",
+    accent: { light: "#993556", dark: "#ED93B1" }, // Pink 600 / 200
+  },
+  workflow: {
+    title: "What workflow?",
+    example: "scheduling · drafting documents · summarizing meetings",
+    accent: { light: "#0F6E56", dark: "#5DCAA5" }, // Teal 600 / 200
+  },
+  core_feature: {
+    title: "What does it do?",
+    example: "automates reminders · turns chat into tasks · drafts from templates",
+    accent: { light: "#534AB7", dark: "#AFA9EC" }, // Purple 600 / 200
+  },
+};
+
+export function SpecificityGate({ gate, t }) {
+  if (!gate) return null;
+
+  // Filter to known missing_elements; fall back to all three if empty/unknown
+  const validKeys = ["target_user", "workflow", "core_feature"];
+  const requested = Array.isArray(gate.missing_elements) ? gate.missing_elements : [];
+  const filtered = requested.filter((k) => validKeys.includes(k));
+  const cardsToShow = filtered.length > 0 ? filtered : validKeys;
+
+  const themeMode = t?.mode === "dark" ? "dark" : "light";
+
+  return (
+    <div style={{
+      display: "grid",
+      gridTemplateColumns: `repeat(${cardsToShow.length}, 1fr)`,
+      gap: 10,
+      marginBottom: 24,
+    }}>
+      {cardsToShow.map((key) => {
+        const card = MISSING_ELEMENT_CARDS[key];
+        const accentColor = card.accent[themeMode];
+        return (
+          <div key={key} style={{
+            background: t.surface,
+            border: `1px solid ${t.border}`,
+            borderTop: `1.5px solid ${accentColor}`,
+            borderRadius: 8,
+            padding: "12px 14px",
+          }}>
+            <div style={{
+              fontSize: 12,
+              fontWeight: 500,
+              color: t.text,
+              marginBottom: 6,
+            }}>
+              {card.title}
+            </div>
+            <div style={{
+              fontSize: 11,
+              color: t.sec,
+              lineHeight: 1.5,
+              fontStyle: "italic",
+            }}>
+              {card.example}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}

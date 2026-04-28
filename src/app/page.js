@@ -14,6 +14,7 @@ import {
   PageContainer,
   AuthModal,
   DevModeBadge,
+  SpecificityGate,
   getTheme,
   getScoreColor,
 } from "./components";
@@ -147,6 +148,11 @@ export default function Home() {
   // SSE streaming state
   const [streamSteps, setStreamSteps] = useState([]); // array of { step, message, done }
   const streamRef = useRef(null); // ref to track if stream should be aborted
+
+  // V4S28 B7 — Specificity gate state. Set to { missing_elements, message,
+  // trigger_type } when Haiku short-circuits the pipeline; null otherwise.
+  // Cleared when user starts editing the textarea or clicks Evaluate again.
+  const [specificityGate, setSpecificityGate] = useState(null);
 
   // Pro mode (dev toggle — uses chained pipeline)
   const [proMode, setProMode] = useState(false);
@@ -416,6 +422,22 @@ export default function Home() {
       prev.map((s) => (s.done ? s : { ...s, done: true }))
     );
 
+    // V4S28 B7 — Specificity gate check (mirror ethics_blocked pattern).
+    // Haiku short-circuits the pipeline on underspecified inputs; route emits
+    // a `complete` event with specificity_insufficient: true in the data.
+    // No credit charged (parallel to ethics-blocked treatment) — handler
+    // returns early without recording eval usage.
+    if (finalAnalysis.specificity_insufficient) {
+      return {
+        specificityInsufficient: true,
+        gate: {
+          missing_elements: finalAnalysis.missing_elements || [],
+          message: finalAnalysis.message || "",
+          trigger_type: finalAnalysis.trigger_type || null,
+        },
+      };
+    }
+
     // Check for ethics block
     if (finalAnalysis.ethics_blocked) {
       return { ethicsBlocked: true, message: finalAnalysis.ethics_message };
@@ -469,9 +491,18 @@ export default function Home() {
     setViewingFromSaved(false);
     setIsReEvalResult(false);
     setReEvalRevisionNotes(null);
+    // V4S28 B7 — clear any previous gate result before retry
+    setSpecificityGate(null);
     try {
       const endpoint = proMode ? "/api/analyze-pro" : "/api/analyze";
       const result = await analyzeWithStream(idea, profile, endpoint);
+
+      // V4S28 B7 — Specificity gate check (before ethics, before usage recording).
+      // No credit charged on gate fire; user stays on input screen with panel shown.
+      if (result.specificityInsufficient) {
+        setSpecificityGate(result.gate);
+        return;
+      }
 
       if (result.ethicsBlocked) {
         setError(result.message);
@@ -568,6 +599,14 @@ export default function Home() {
       // Use SSE streaming
       const reEvalEndpoint = proMode ? "/api/analyze-pro" : "/api/analyze";
       const result = await analyzeWithStream(modifiedIdea, profile, reEvalEndpoint);
+
+      // V4S28 B7 — Specificity gate on re-eval: simple error string for now.
+      // Full inline panel UI is deferred to B8 (frontend polish bundle).
+      // No credit charged (early return before usage recording).
+      if (result.specificityInsufficient) {
+        setError("This revision needs more specificity to evaluate honestly. Edit the description to include what the product does, who uses it, and the specific workflow it helps with — then try again.");
+        return;
+      }
 
       if (result.ethicsBlocked) {
         setError(result.message);
@@ -1565,19 +1604,36 @@ export default function Home() {
         <main style={{ flex: 1, paddingBottom: 48 }}>
           <PageContainer>
             <div style={{ marginBottom: 32 }}>
-              <h2 style={{ fontSize: 30, fontWeight: 600, margin: "0 0 12px 0" }}>
-                Describe your AI product idea
-              </h2>
-              <p style={{ fontSize: 16, color: t.sec, lineHeight: 1.6, margin: 0 }}>
-                Include what it does, who would use it, and what problem it solves.
-                Specific ideas get sharper evaluations.
-              </p>
+              {specificityGate ? (
+                <>
+                  <h2 style={{ fontSize: 22, fontWeight: 500, margin: "0 0 6px 0", lineHeight: 1.3 }}>
+                    Let&apos;s sharpen this before we evaluate.
+                  </h2>
+                  <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.6, margin: 0 }}>
+                    An evaluation needs a specific product to be honest — yours could point to several different ones.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2 style={{ fontSize: 30, fontWeight: 600, margin: "0 0 12px 0" }}>
+                    Describe your AI product idea
+                  </h2>
+                  <p style={{ fontSize: 16, color: t.sec, lineHeight: 1.6, margin: 0 }}>
+                    Include what it does, who would use it, and what problem it solves.
+                    Specific ideas get sharper evaluations.
+                  </p>
+                </>
+              )}
             </div>
 
             <Card style={{ padding: 6, marginBottom: 24 }} t={t}>
               <textarea
                 value={idea}
-                onChange={(e) => setIdea(e.target.value)}
+                onChange={(e) => {
+                  setIdea(e.target.value);
+                  // V4S28 B7 — clear stale gate panel as soon as user starts editing
+                  if (specificityGate) setSpecificityGate(null);
+                }}
                 placeholder="Example: An AI-powered idea evaluation workflow that scores startup ideas against real competitor data from GitHub and Google. It's for founders and ambitious builders who waste weeks on ideas without knowing if there's real demand. The problem is that most people either ask friends who say 'great idea!' or use ChatGPT which gives generic encouragement instead of structured, honest analysis..."
                 rows={8}
                 style={{
@@ -1595,6 +1651,11 @@ export default function Home() {
                 }}
               />
             </Card>
+
+            {/* V4S28 B7 — Specificity gate panel: appears between textarea and Analyze button */}
+            {specificityGate && (
+              <SpecificityGate gate={specificityGate} t={t} />
+            )}
 
             {error && (
               <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 12, padding: "12px 20px", marginBottom: 24 }}>
@@ -1685,6 +1746,20 @@ export default function Home() {
                   : `${evalsRemaining} of ${EVAL_LIMIT} free evaluations remaining`}
               </span>
             </div>
+
+            {/* V4S28 B7 — No-credit reassurance, only shown while gate panel is active */}
+            {specificityGate && (
+              <div style={{
+                textAlign: "center",
+                fontSize: 13,
+                color: t.sec,
+                fontStyle: "italic",
+                marginBottom: 24,
+                marginTop: -8,
+              }}>
+                No credit used — evaluations only start once the idea is specific enough.
+              </div>
+            )}
 
             {isAnalyzing && (
               <div style={{

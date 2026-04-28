@@ -89,8 +89,26 @@ export async function POST(request) {
 
           sendEvent({ step: "keywords_start", message: "Extracting keywords..." });
 
-          const { keywords, githubQuery1, githubQuery2, serperQuery1, serperQuery2 } =
-            await extractKeywords(idea);
+          const keywordsResult = await extractKeywords(idea);
+
+          // V4S28 B7 — Specificity gate. If Haiku determines input is
+          // underspecified, halt the pipeline upstream of search/Stage 1/etc.
+          // No credit charged (frontend returns early before usage recording,
+          // mirroring ethics-blocked treatment). Section 13 / Item 7 lock.
+          if (keywordsResult.specificity_insufficient) {
+            sendEvent({
+              step: "complete",
+              data: {
+                specificity_insufficient: true,
+                missing_elements: keywordsResult.missing_elements || [],
+                message: keywordsResult.message || "",
+              },
+            });
+            controller.close();
+            return;
+          }
+
+          const { keywords, githubQuery1, githubQuery2, serperQuery1, serperQuery2 } = keywordsResult;
 
           sendEvent({
             step: "keywords_done",
@@ -183,9 +201,11 @@ USER PROFILE:
 
           const stage1SystemPrompt = STAGE1_SYSTEM_PROMPT + competitorContext + competitorInstructions;
 
-          const stage1UserMessage = `${userProfile}
-
-USER'S AI PRODUCT IDEA:
+          // V4S28 B6 P12-S1: Stage 1 is profile-blind. Profile is NOT injected
+          // into Stage 1 input. Profile-aware judgments live downstream in TC,
+          // Stage 2c synthesis, and Stage 3 roadmap. See prompt-stage1.js
+          // PROFILE-BLINDNESS section for prompt-level contract.
+          const stage1UserMessage = `USER'S AI PRODUCT IDEA:
 ${idea}`;
 
           const stage1Response = await client.messages.create({
@@ -242,9 +262,11 @@ ${idea}`;
 
           sendEvent({ step: "stage2a_start", message: "Stage 2a: Extracting evidence + scoring technical complexity..." });
 
-          const stage2aUserMessage = `${userProfile}
-
-USER'S AI PRODUCT IDEA:
+          // V4S28 B6 (Path A — found during route audit): Stage 2a is profile-blind
+          // per V4S9 architectural quarantine and NarrativeContract V3 §3.10.
+          // Profile is NOT injected. Sparse-input discipline operates from idea
+          // text + Stage 1 evidence only.
+          const stage2aUserMessage = `USER'S AI PRODUCT IDEA:
 ${idea}
 
 === STAGE 1 RESULTS: COMPETITION ANALYSIS ===
@@ -310,9 +332,10 @@ ${idea}`;
 
           // CRITICAL: Stage 2b receives idea + evidence packets ONLY.
           // No raw Stage 1 output. No TC data. No user profile (not needed for MD/MO/OR).
-          const stage2bUserMessage = `${userProfile}
-
-USER'S AI PRODUCT IDEA:
+          // V4S28 B6 (B4 Change 4 fold-in): profile injection removed — code now
+          // matches comment + B5 NarrativeContract V3 §3.9 (Evidence Strength
+          // is profile-blind) + V4S9 quarantine principle.
+          const stage2bUserMessage = `USER'S AI PRODUCT IDEA:
 ${idea}
 
 === EVIDENCE PACKETS FROM STAGE 2a ===

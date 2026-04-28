@@ -39,8 +39,26 @@ export async function POST(request) {
           // STAGE 1: Extract keywords
           sendEvent({ step: "keywords_start", message: "Extracting keywords..." });
 
-          const { keywords, githubQuery1, githubQuery2, serperQuery1, serperQuery2 } =
-            await extractKeywords(idea);
+          const keywordsResult = await extractKeywords(idea);
+
+          // V4S28 B7 — Specificity gate. If Haiku determines input is
+          // underspecified, halt the pipeline upstream of search/Sonnet.
+          // No credit charged (frontend returns early before usage recording,
+          // mirroring ethics-blocked treatment). Section 13 / Item 7 lock.
+          if (keywordsResult.specificity_insufficient) {
+            sendEvent({
+              step: "complete",
+              data: {
+                specificity_insufficient: true,
+                missing_elements: keywordsResult.missing_elements || [],
+                message: keywordsResult.message || "",
+              },
+            });
+            controller.close();
+            return;
+          }
+
+          const { keywords, githubQuery1, githubQuery2, serperQuery1, serperQuery2 } = keywordsResult;
 
           sendEvent({
             step: "keywords_done",
