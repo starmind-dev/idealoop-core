@@ -501,7 +501,12 @@ ${JSON.stringify(stage2bResult)}`;
 
           const stage3Response = await client.messages.create({
             model: "claude-sonnet-4-20250514",
-            max_tokens: 4096,
+            // V4S28 B8 hotfix (May 1, 2026): bumped from 4096 → 8192. Stage 3
+            // generates roadmap (5-7 phases × ~400 words) + tools (6-10 entries)
+            // + estimates. Elaborate inputs (~5000 char idea text) consistently
+            // produced 5500-6500 tokens of output, hitting the old ceiling and
+            // causing mid-string JSON truncation in estimates.explanation.
+            max_tokens: 8192,
             temperature: 0,
             system: STAGE3_SYSTEM_PROMPT,
             messages: [{ role: "user", content: stage3UserMessage }],
