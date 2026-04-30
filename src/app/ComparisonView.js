@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getScoreColor, getMainBottleneckColor } from "./components";
+import { getScoreColor, getTcColor, getMainBottleneckColor } from "./components";
 
 // ============================================
 // DATA PREPARATION
@@ -98,7 +98,11 @@ function prepareComparisonData(ideaA, ideaB) {
 // ============================================
 // HELPERS
 // ============================================
-const getBarColor = (s, tc) => tc ? (s >= 8 ? "#ef4444" : s >= 6 ? "#f59e0b" : "#3b82f6") : getScoreColor(s);
+// V4S28 B8 (April 30, 2026): local getBarColor removed. Previously used a
+// hardcoded TC threshold formula (s>=8 red, s>=6 amber, else blue) that did
+// not match the canonical getTcColor in components.js. Now imports getTcColor
+// directly so any future boundary update propagates to the comparison view.
+const getBarColor = (s, tc) => tc ? getTcColor(s) : getScoreColor(s);
 const typeColors = { direct: { label: "Direct", color: "#f87171", bg: "rgba(239,68,68,0.10)", border: "rgba(239,68,68,0.25)" }, adjacent: { label: "Adjacent", color: "#fbbf24", bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.25)" }, substitute: { label: "Substitute", color: "#60a5fa", bg: "rgba(59,130,246,0.10)", border: "rgba(59,130,246,0.25)" }, internal_build: { label: "Internal Build", color: "#a78bfa", bg: "rgba(139,92,246,0.10)", border: "rgba(139,92,246,0.25)" } };
 const sourceColors = { github: { bg: "rgba(110,84,148,0.15)", color: "#a78bfa", border: "rgba(110,84,148,0.3)", label: "GitHub" }, google: { bg: "rgba(59,130,246,0.15)", color: "#60a5fa", border: "rgba(59,130,246,0.3)", label: "Google" }, llm: { bg: "rgba(115,115,115,0.15)", color: "#a3a3a3", border: "rgba(115,115,115,0.3)", label: "AI" } };
 const SCREENS = [{ key: "competitors", label: "Competitors" }, { key: "scores", label: "Scores" }, { key: "risks", label: "Key risks" }, { key: "roadmap", label: "Roadmap" }, { key: "tools", label: "Tools & estimates" }, { key: "tradeoffs", label: "Key tradeoffs" }];
@@ -187,7 +191,7 @@ function ScoresScreen({ data, isMobile, activeTab, t }) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
           <span style={{ fontSize: 14, fontWeight: 600, color: t.text }}>{m.label}</span>
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span style={{ fontSize: 15, fontWeight: 600, fontFamily: "monospace", color: getScoreColor(score) }}>{score.toFixed(1)}</span>
+            <span style={{ fontSize: 15, fontWeight: 600, fontFamily: "monospace", color: getBarColor(score, m.isTC) }}>{score.toFixed(1)}</span>
             {arrow}
           </div>
         </div>

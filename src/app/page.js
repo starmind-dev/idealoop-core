@@ -17,6 +17,7 @@ import {
   SpecificityGate,
   getTheme,
   getScoreColor,
+  getTcColor,
 } from "./components";
 
 // ============================================
@@ -2164,8 +2165,9 @@ export default function Home() {
                                 <div style={{
                                   width: "100%",
                                   height: `${((m.score || 0) / 10) * 100}%`,
+                                  // V4S28 B8: TC uses inverted+shifted boundaries via getTcColor
                                   background: i === 3
-                                    ? (m.score >= 8 ? "#ef4444" : m.score >= 6 ? "#f59e0b" : "#3b82f6")
+                                    ? getTcColor(m.score || 0)
                                     : getScoreColor(m.score || 0),
                                   borderRadius: 2,
                                 }} />
@@ -2588,8 +2590,9 @@ export default function Home() {
                                 <div style={{
                                   width: "100%",
                                   height: `${((m.score || 0) / 10) * 100}%`,
+                                  // V4S28 B8: TC uses inverted+shifted boundaries via getTcColor
                                   background: i === 3
-                                    ? (m.score >= 8 ? "#ef4444" : m.score >= 6 ? "#f59e0b" : "#3b82f6")
+                                    ? getTcColor(m.score || 0)
                                     : getScoreColor(m.score || 0),
                                   borderRadius: 3,
                                 }} />
@@ -2835,8 +2838,9 @@ export default function Home() {
                     { label: "TC", score: reEvalContextSnapshot.tc, isTC: true },
                   ].map((m, i) => {
                     const s = m.score || 0;
+                    // V4S28 B8: TC uses inverted+shifted boundaries via getTcColor
                     const color = m.isTC
-                      ? (s >= 8 ? "#ef4444" : s >= 6 ? "#f59e0b" : "#3b82f6")
+                      ? getTcColor(s)
                       : getScoreColor(s);
                     return (
                       <div key={i} style={{ flex: 1 }}>

@@ -387,41 +387,408 @@ export default function EvaluationView({
             <section style={{ marginBottom: 48 }}>
               <SectionHeader icon="📊" title="Evaluation" subtitle="Scored analysis of your AI product idea" t={t} />
 
-              {/* Overall score */}
-              <Card style={{ padding: 32, textAlign: "center", marginBottom: 16 }} t={t}>
-                <p style={{ fontSize: 12, color: t.sec, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, margin: "0 0 4px 0" }}>
-                  Overall Idea Potential
-                </p>
-                <p style={{ fontSize: 10, color: t.mut, margin: "0 0 12px 0" }}>
-                  Weighted average · Higher is better
-                </p>
-                <p style={{ fontSize: 64, fontWeight: 700, color: t.text, margin: 0, lineHeight: 1 }}>
-                  {analysis.evaluation.overall_score.toFixed(1)}
-                  <span style={{ fontSize: 20, fontWeight: 400, color: t.mut }}>/10</span>
-                </p>
-                <button
-                  onClick={() => setShowScoreGuide(true)}
-                  style={{
-                    marginTop: 12,
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 4,
-                    padding: "4px 10px",
-                    borderRadius: 8,
-                    color: t.mut,
-                    fontSize: 11,
-                    fontWeight: 500,
-                    transition: "color 0.2s",
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = t.sec}
-                  onMouseLeave={(e) => e.currentTarget.style.color = t.mut}
-                >
-                  <span style={{ fontSize: 13 }}>ⓘ</span> What does this score mean?
-                </button>
-              </Card>
+              {/*
+                ============================================================
+                V4S28 B8 — C-2 LAYOUT (April 30, 2026)
+                ============================================================
+                Two-card structure replacing the old "big number" Overall card
+                and standalone Evidence Strength card:
+
+                  [Summary card]
+                    - EVALUATION label (left)  ·  OVERALL X.X /10 (right)
+                      → header chip changes to "EARLY READ" when LOW
+                    - Horizontal-bar chart for MD / MO / OR
+                    - Internal divider rule
+                    - TC bar (inverted color logic via getTcColor)
+                    - MEDIUM/LOW callout panel below the bars (when applicable)
+
+                  [Prose card]
+                    - Pill-headed prose section per metric (MD, MO, OR)
+                    - "EXECUTION CONTEXT · NOT IN THE OVERALL" centered divider
+                    - Floating tinted container for TC pill-headed prose
+
+                Color logic uses Mix B palette via getScoreColor / getTcColor.
+                Weights shown on the bars: 37.5% / 31.25% / 31.25% (V4S28 B8 α
+                formula change — TC removed from Overall, see scoring.js).
+                ============================================================
+              */}
+
+              {(() => {
+                const ev = analysis.evaluation;
+                const es = ev.evidence_strength;
+                const isLow = es && es.level === "LOW";
+                const isMedium = es && es.level === "MEDIUM";
+
+                // Static prompts mapped to the 3-value Haiku-aligned enum.
+                // Used for the LOW callout bullets when thin_dimensions is
+                // present in the response payload.
+                const THIN_DIMENSION_PROMPTS = {
+                  target_user: {
+                    title: "Who exactly is this for?",
+                    body: "Name the user role, buyer, or situation.",
+                  },
+                  workflow: {
+                    title: "What workflow or pain point does it handle?",
+                    body: "Name the specific job, not just the category.",
+                  },
+                  core_feature: {
+                    title: "What does the product actually do first?",
+                    body: "Name the concrete feature or mechanism.",
+                  },
+                };
+
+                // Build the LOW bullets list. Prefer thin_dimensions when present;
+                // fall back to all three prompts if missing or empty (defensive
+                // fallback for evaluations where Stage 2b didn't emit the array).
+                const lowBullets = (() => {
+                  if (!isLow) return [];
+                  const arr = Array.isArray(es.thin_dimensions) ? es.thin_dimensions : [];
+                  const filtered = arr.filter((d) => THIN_DIMENSION_PROMPTS[d]);
+                  if (filtered.length > 0) return filtered;
+                  // Fallback: render all three prompts
+                  return ["target_user", "workflow", "core_feature"];
+                })();
+
+                // Helper: render a single horizontal-bar metric row in the
+                // summary card. Used for MD/MO/OR (with getScoreColor) and TC
+                // (with getTcColor — passed in via colorFn argument).
+                const renderBarRow = ({ label, weightLabel, score, colorFn, subLabel = null }) => {
+                  const color = colorFn(score);
+                  const pct = (score / 10) * 100;
+                  return (
+                    <>
+                      <div style={{ fontSize: 13, color: t.sec, display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
+                        {subLabel ? (
+                          <span style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                            <span>{label}</span>
+                            <span style={{ fontSize: 10, color: t.mut }}>{subLabel}</span>
+                          </span>
+                        ) : (
+                          <>
+                            <span>{label}</span>
+                            {weightLabel && <span style={{ fontSize: 10, color: t.mut }}>{weightLabel}</span>}
+                          </>
+                        )}
+                      </div>
+                      <div style={{ position: "relative", height: 22, background: t.barBg, borderRadius: 4, overflow: "hidden" }}>
+                        <div style={{
+                          width: `${pct}%`,
+                          height: "100%",
+                          background: `linear-gradient(90deg, ${color}26, ${color})`,
+                          borderRadius: 4,
+                          transition: "width 1s ease-out",
+                        }} />
+                      </div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color, textAlign: "right", fontFamily: "monospace" }}>
+                        {score.toFixed(1)}
+                      </div>
+                    </>
+                  );
+                };
+
+                // Helper: render a pill-headed prose section in the prose card.
+                // Used for MD/MO/OR/TC (with appropriate colorFn).
+                const renderProseSection = ({ name, score, weight, explanation, notes, colorFn, subLabel = null }) => {
+                  const color = colorFn(score);
+                  return (
+                    <>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
+                        <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0, color: t.text }}>{name}</h3>
+                        <span style={{
+                          padding: "2px 8px",
+                          background: `${color}1A`,
+                          borderRadius: 100,
+                          fontSize: 11,
+                          color,
+                          fontWeight: 600,
+                          fontFamily: "monospace",
+                        }}>
+                          {score.toFixed(1)}/10
+                        </span>
+                        {weight && <span style={{ fontSize: 11, color: t.mut }}>{weight}</span>}
+                        {subLabel && <span style={{ fontSize: 11, color: t.mut }}>{subLabel}</span>}
+                      </div>
+                      <p style={{ fontSize: 13, color: t.sec, lineHeight: 1.65, margin: 0 }}>
+                        {explanation}
+                      </p>
+                      {notes && notes.length > 0 && notes.map((note, i) => (
+                        <p key={i} style={{ fontSize: 12, color: t.mut, marginTop: 4, lineHeight: 1.4, fontStyle: "italic" }}>
+                          {note}
+                        </p>
+                      ))}
+                    </>
+                  );
+                };
+
+                const headerChipLabel = isLow ? "EARLY READ" : "OVERALL";
+
+                return (
+                  <>
+                    {/* ===== SUMMARY CARD ===== */}
+                    <Card style={{ padding: "28px 32px", marginBottom: 14 }} t={t}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 22 }}>
+                        <div style={{ fontSize: 11, color: t.mut, letterSpacing: "1.5px", fontWeight: 600 }}>EVALUATION</div>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                          <span style={{ fontSize: 11, color: t.mut, letterSpacing: "0.5px", fontWeight: 600 }}>{headerChipLabel}</span>
+                          <span style={{ fontSize: 20, fontWeight: 600, color: t.text }}>
+                            {ev.overall_score.toFixed(1)}
+                          </span>
+                          <span style={{ fontSize: 12, color: t.mut }}>/10</span>
+                          <button
+                            onClick={() => setShowScoreGuide(true)}
+                            style={{
+                              marginLeft: 6,
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              color: t.mut,
+                              fontSize: 13,
+                              padding: "0 4px",
+                            }}
+                            aria-label="What does this score mean?"
+                            title="What does this score mean?"
+                            onMouseEnter={(e) => e.currentTarget.style.color = t.sec}
+                            onMouseLeave={(e) => e.currentTarget.style.color = t.mut}
+                          >
+                            ⓘ
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Bar grid: MD/MO/OR + internal divider + TC */}
+                      <div style={{ display: "grid", gridTemplateColumns: "130px 1fr 50px", gap: "14px 18px", alignItems: "center" }}>
+                        {renderBarRow({
+                          label: "Market Demand",
+                          weightLabel: "37.5%",
+                          score: ev.market_demand.score,
+                          colorFn: getScoreColor,
+                        })}
+                        {renderBarRow({
+                          label: ev.monetization.label || "Monetization",
+                          weightLabel: "31.25%",
+                          score: ev.monetization.score,
+                          colorFn: getScoreColor,
+                        })}
+                        {renderBarRow({
+                          label: "Originality",
+                          weightLabel: "31.25%",
+                          score: ev.originality.score,
+                          colorFn: getScoreColor,
+                        })}
+
+                        {/* Internal divider separating contributors from TC */}
+                        <div style={{ gridColumn: "1 / -1", height: "0.5px", background: t.divider, margin: "6px 0" }} />
+
+                        {renderBarRow({
+                          label: "Tech. Complexity",
+                          subLabel: "build difficulty",
+                          score: ev.technical_complexity.score,
+                          colorFn: getTcColor,
+                        })}
+                      </div>
+
+                      {/* MEDIUM evidence callout — uses evidence_strength.reason */}
+                      {isMedium && (
+                        <div style={{
+                          marginTop: 22,
+                          background: "rgba(59,130,246,0.06)",
+                          border: "1px solid rgba(59,130,246,0.22)",
+                          borderRadius: 8,
+                          padding: "16px 18px",
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 12,
+                        }}>
+                          <span style={{ color: "#3b82f6", fontSize: 14, flexShrink: 0, marginTop: 1 }}>→</span>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: t.text, marginBottom: 4 }}>
+                              This score could be sharper
+                            </div>
+                            <p style={{ fontSize: 12, color: t.sec, lineHeight: 1.55, margin: 0 }}>
+                              {es.reason}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* LOW evidence callout — partnered framing with dynamic bullets */}
+                      {isLow && (
+                        <div style={{
+                          marginTop: 22,
+                          background: "rgba(59,130,246,0.06)",
+                          border: "1px solid rgba(59,130,246,0.22)",
+                          borderRadius: 8,
+                          padding: "18px 20px",
+                        }}>
+                          <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
+                            <span style={{ color: "#3b82f6", fontSize: 14, flexShrink: 0, marginTop: 1 }}>→</span>
+                            <div>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: t.text, marginBottom: 4 }}>
+                                Want a real read on this idea?
+                              </div>
+                              <p style={{ fontSize: 12, color: t.sec, lineHeight: 1.55, margin: 0 }}>
+                                Right now this is an early read — your input describes the space but not the specific product. The scores above reflect category baselines, not your actual idea.
+                                {lowBullets.length === 1 ? " One thing would change that:" : `\u00a0${lowBullets.length === 2 ? "Two" : "These"} things would change that:`}
+                              </p>
+                            </div>
+                          </div>
+                          <div style={{ marginLeft: 26, display: "flex", flexDirection: "column", gap: 7 }}>
+                            {lowBullets.map((dim) => {
+                              const prompt = THIN_DIMENSION_PROMPTS[dim];
+                              return (
+                                <div key={dim} style={{ display: "flex", gap: 10, fontSize: 12, color: t.sec, lineHeight: 1.5 }}>
+                                  <span style={{ color: t.mut, flexShrink: 0 }}>·</span>
+                                  <span>
+                                    <strong style={{ color: t.text, fontWeight: 600 }}>{prompt.title}</strong> {prompt.body}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </Card>
+
+                    {/* ===== PROSE CARD ===== */}
+                    <Card style={{ padding: "32px 32px 24px", marginBottom: 16 }} t={t}>
+                      {/* MD prose */}
+                      <div style={{ marginBottom: 26 }}>
+                        {renderProseSection({
+                          name: "Market Demand",
+                          score: ev.market_demand.score,
+                          weight: "37.5% weight",
+                          explanation: ev.market_demand.explanation,
+                          notes: [
+                            ev.market_demand.geographic_note,
+                            ev.market_demand.trajectory_note,
+                          ].filter(Boolean),
+                          colorFn: getScoreColor,
+                        })}
+                      </div>
+
+                      {/* MO prose */}
+                      <div style={{ marginBottom: 26 }}>
+                        {!isGated ? (
+                          renderProseSection({
+                            name: ev.monetization.label || "Monetization Potential",
+                            score: ev.monetization.score,
+                            weight: "31.25% weight",
+                            explanation: ev.monetization.explanation,
+                            colorFn: getScoreColor,
+                          })
+                        ) : (
+                          // Gated free-preview: pill header only, no explanation
+                          <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+                            <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0, color: t.text }}>
+                              {ev.monetization.label || "Monetization Potential"}
+                            </h3>
+                            <span style={{
+                              padding: "2px 8px",
+                              background: `${getScoreColor(ev.monetization.score)}1A`,
+                              borderRadius: 100,
+                              fontSize: 11,
+                              color: getScoreColor(ev.monetization.score),
+                              fontWeight: 600,
+                              fontFamily: "monospace",
+                            }}>
+                              {ev.monetization.score.toFixed(1)}/10
+                            </span>
+                            <span style={{ fontSize: 11, color: t.mut }}>31.25% weight</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* OR prose */}
+                      <div style={{ marginBottom: 0 }}>
+                        {!isGated ? (
+                          renderProseSection({
+                            name: "Originality",
+                            score: ev.originality.score,
+                            weight: "31.25% weight",
+                            explanation: ev.originality.explanation,
+                            colorFn: getScoreColor,
+                          })
+                        ) : (
+                          <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+                            <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0, color: t.text }}>Originality</h3>
+                            <span style={{
+                              padding: "2px 8px",
+                              background: `${getScoreColor(ev.originality.score)}1A`,
+                              borderRadius: 100,
+                              fontSize: 11,
+                              color: getScoreColor(ev.originality.score),
+                              fontWeight: 600,
+                              fontFamily: "monospace",
+                            }}>
+                              {ev.originality.score.toFixed(1)}/10
+                            </span>
+                            <span style={{ fontSize: 11, color: t.mut }}>31.25% weight</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* EXECUTION CONTEXT divider */}
+                      <div style={{ margin: "36px 0 24px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                          <div style={{ height: "0.5px", flex: 1, background: t.divider }} />
+                          <div style={{ fontSize: 9, color: t.mut, letterSpacing: "1.2px", fontWeight: 600 }}>
+                            EXECUTION CONTEXT · NOT IN THE OVERALL
+                          </div>
+                          <div style={{ height: "0.5px", flex: 1, background: t.divider }} />
+                        </div>
+                      </div>
+
+                      {/* TC floating tinted container — extends past prose edges
+                          via negative margins; content stays aligned with metric
+                          headings above via internal padding. */}
+                      <div style={{
+                        background: t.surfAlt,
+                        borderRadius: 8,
+                        padding: "22px 16px",
+                        margin: "0 -16px",
+                      }}>
+                        <div style={{ padding: "0 16px" }}>
+                          {!isGated ? (
+                            renderProseSection({
+                              name: "Technical Complexity",
+                              score: ev.technical_complexity.score,
+                              subLabel: "build difficulty",
+                              explanation: [
+                                ev.technical_complexity.base_score_explanation,
+                                ev.technical_complexity.adjustment_explanation,
+                                ev.technical_complexity.explanation,
+                              ].filter(Boolean).join(" "),
+                              notes: ev.technical_complexity.incremental_note
+                                ? [ev.technical_complexity.incremental_note]
+                                : null,
+                              colorFn: getTcColor,
+                            })
+                          ) : (
+                            <>
+                              <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+                                <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0, color: t.text }}>Technical Complexity</h3>
+                                <span style={{
+                                  padding: "2px 8px",
+                                  background: `${getTcColor(ev.technical_complexity.score)}1A`,
+                                  borderRadius: 100,
+                                  fontSize: 11,
+                                  color: getTcColor(ev.technical_complexity.score),
+                                  fontWeight: 600,
+                                  fontFamily: "monospace",
+                                }}>
+                                  {ev.technical_complexity.score.toFixed(1)}/10
+                                </span>
+                                <span style={{ fontSize: 11, color: t.mut }}>build difficulty</span>
+                              </div>
+                              <GateCTA text="Unlock full metric analysis — including your personalized technical assessment" t={t} />
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  </>
+                );
+              })()}
 
               {/* Score Guide Popup */}
               {showScoreGuide && (

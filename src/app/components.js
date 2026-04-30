@@ -80,18 +80,44 @@ export function getTheme(mode) {
 }
 
 // Shared functional colors — same in both themes
+//
+// V4S28 B8 (April 30, 2026): Updated palette + boundaries to "Mix B" lock.
+// Existing amber and blue preserved verbatim from prior product UI; red and
+// green updated to vivid signal-bearing values matching their saturation.
+//
+// MD / MO / OR boundaries (rubric measures HOW GOOD):
+//   < 3.0          → red    (#ef4444) — rare, real warning
+//   3.0 to 4.5     → amber  (#f59e0b) — middling, common
+//   > 4.5 to < 6.5 → blue   (#3b82f6) — viable, most common
+//   >= 6.5         → green  (#10b981) — strong, rare
+//
+// Boundaries are exclusive at the upper end (4.5 → amber, NOT blue;
+// 5.0/5.5/6.0 → blue; 6.5 → green) to give amber its proper share of the
+// middling zone and reserve green for genuinely strong outcomes.
+//
+// TC uses inverted direction + shifted boundaries because TC distribution is
+// shifted high (most builds land 6.0-8.0 — see audit findings, V4S28 B8 design).
+// Same color semantic across all four metrics: green/blue = good, amber/red =
+// signal of difficulty. Only the threshold + direction change.
+//
+// TC boundaries (rubric measures HOW HARD; inverted color direction):
+//   1 to < 4       → green  (#10b981) — easy build, when this fires it's real
+//   4 to < 6.5     → blue   (#3b82f6) — moderate build
+//   6.5 to < 8     → amber  (#f59e0b) — hard build, worth understanding
+//   >= 8           → red    (#ef4444) — very hard build, rare
+
 export const getScoreColor = (s) => {
-  if (s >= 8) return "#10b981";
-  if (s >= 6) return "#3b82f6";
-  if (s >= 4) return "#f59e0b";
-  return "#ef4444";
+  if (s >= 6.5) return "#10b981";  // green
+  if (s > 4.5) return "#3b82f6";   // blue
+  if (s >= 3) return "#f59e0b";    // amber
+  return "#ef4444";                // red
 };
 
 export const getTcColor = (s) => {
-  if (s >= 8) return "#ef4444";
-  if (s >= 6) return "#f59e0b";
-  if (s >= 4) return "#3b82f6";
-  return "#10b981";
+  if (s >= 8) return "#ef4444";    // red — very hard
+  if (s >= 6.5) return "#f59e0b";  // amber — hard
+  if (s >= 4) return "#3b82f6";    // blue — moderate
+  return "#10b981";                // green — easy
 };
 
 // ============================================

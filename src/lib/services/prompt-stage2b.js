@@ -219,6 +219,21 @@ If the evidence base is solid and no specific gap requires flagging, use HIGH. I
 
 Provide a one-sentence reason. Be specific.
 
+=== THIN DIMENSIONS (LOW only — UI metadata field) ===
+This field is OPTIONAL UI metadata — it must NOT affect any score, rubric level, or explanation. Generate it ONLY when evidence_strength.level is LOW.
+
+When LOW: after all scores, explanations, and the evidence_strength.reason are complete, identify which conceptual dimensions of the input are missing. Use ONLY values from this exact 3-value enum:
+
+- "target_user" — the user role, buyer, or specific situation is not named
+- "workflow" — the specific workflow or pain point is not named (only the category)
+- "core_feature" — the concrete feature, mechanism, or what the product actually does first is not named
+
+Include only the dimensions that are genuinely missing for THIS input. Do NOT invent finer taxonomies. Do NOT include monetization, market_demand, originality, technical_complexity, buyer_urgency, pricing, or any other label — only the three enum values above.
+
+Do NOT generate this field when level is HIGH or MEDIUM. Omit the field entirely in those cases.
+
+This field is generated LAST — after all scores, explanations, and reason are complete. It must not influence any prior field.
+
 === EXPLANATION QUALITY ===
 Write explanations that are specific, causally clear, and proportionate to the evidence in each packet. Avoid overstated conclusions or judgments stronger than the data supports. Every claim in an explanation should be traceable to a fact in the corresponding evidence packet or the idea description.
 
@@ -228,7 +243,8 @@ Write explanations that are specific, causally clear, and proportionate to the e
   "evaluation": {
     "evidence_strength": {
       "level": "HIGH | MEDIUM | LOW",
-      "reason": "One sentence explaining what drives the evidence strength assessment"
+      "reason": "One sentence explaining what drives the evidence strength assessment",
+      "thin_dimensions": ["target_user", "workflow", "core_feature"]
     },
     "market_demand": {
       "score": 6.5,
@@ -248,6 +264,8 @@ Write explanations that are specific, causally clear, and proportionate to the e
     "marketplace_note": null
   }
 }
+
+NOTE on thin_dimensions: The field is shown above for schema reference. Include it ONLY when evidence_strength.level is LOW (per the THIN DIMENSIONS section above). When level is HIGH or MEDIUM, omit the thin_dimensions field entirely from your response. Generate the field LAST, after scores/explanations/reason are complete.
 
 Additional rules:
 - For social impact ideas, set monetization label to "Sustainability Potential".

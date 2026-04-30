@@ -375,6 +375,42 @@ ${JSON.stringify(stage2aResult)}`;
           ev.technical_complexity = stageTcResult.technical_complexity;
 
           // ============================
+          // V4S28 B8 — THIN_DIMENSIONS DOWNSTREAM FILTER
+          // Extract thin_dimensions (UI-only metadata, generated when LOW)
+          // and strip it from ev.evidence_strength BEFORE Stage 2c and
+          // Stage 3 see it. They receive only { level, reason }.
+          //
+          // Stage 2c and Stage 3 already have locked LOW-handling behavior
+          // (sparse summary + Specification cascade) driven by .level alone.
+          // thin_dimensions is purely a frontend-rendering signal for the
+          // partnered EARLY READ callout — must not influence downstream
+          // synthesis or roadmap generation.
+          //
+          // Restored to ev.evidence_strength at final assembly time below
+          // so the frontend payload includes the array.
+          // ============================
+
+          let preservedThinDimensions = null;
+          if (
+            ev.evidence_strength &&
+            ev.evidence_strength.level === "LOW" &&
+            Array.isArray(ev.evidence_strength.thin_dimensions)
+          ) {
+            const validEnum = ["target_user", "workflow", "core_feature"];
+            preservedThinDimensions = ev.evidence_strength.thin_dimensions.filter(
+              (d) => typeof d === "string" && validEnum.includes(d)
+            );
+            // Defensive: if model returned the field on HIGH/MEDIUM, also strip
+            delete ev.evidence_strength.thin_dimensions;
+          } else if (
+            ev.evidence_strength &&
+            ev.evidence_strength.thin_dimensions !== undefined
+          ) {
+            // Model returned thin_dimensions on a non-LOW level — strip silently
+            delete ev.evidence_strength.thin_dimensions;
+          }
+
+          // ============================
           // STAGE 2c: SYNTHESIS
           // Generate summary + failure_risks from idea + profile + Stage 1 +
           // Stage 2a packets + Stage 2b scores + evidence_strength.
@@ -496,6 +532,13 @@ ${JSON.stringify(stage2bResult)}`;
           sendEvent({ step: "scoring", message: "Calculating final scores..." });
 
           ev.overall_score = calculateOverallScore(ev);
+
+          // V4S28 B8 — restore thin_dimensions for frontend rendering
+          // (was stripped before Stage 2c/3 to prevent downstream contamination;
+          // now safe to attach back since all Sonnet calls are complete).
+          if (preservedThinDimensions !== null) {
+            ev.evidence_strength.thin_dimensions = preservedThinDimensions;
+          }
 
           // SANITY CHECK: Flag score-explanation contradictions
           const sanityWarnings = [];
