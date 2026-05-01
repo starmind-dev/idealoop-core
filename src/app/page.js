@@ -1605,16 +1605,44 @@ export default function Home() {
         <main style={{ flex: 1, paddingBottom: 48 }}>
           <PageContainer>
             <div style={{ marginBottom: 32 }}>
-              {specificityGate ? (
-                <>
-                  <h2 style={{ fontSize: 22, fontWeight: 500, margin: "0 0 6px 0", lineHeight: 1.3 }}>
-                    Let&apos;s sharpen this before we evaluate.
-                  </h2>
-                  <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.6, margin: 0 }}>
-                    An evaluation needs a specific product to be honest — yours could point to several different ones.
-                  </p>
-                </>
-              ) : (
+              {specificityGate ? (() => {
+                // V4S28 B9 — Progress-aware gate header. Slot count drives copy:
+                //   3 missing → first-fire framing
+                //   2 missing → "getting closer" warmth
+                //   1 missing → "almost there" warmth
+                // Subhead is shared across re-fire states (1 or 2 missing) and
+                // reframed on first-fire to focus on evaluation integrity.
+                const validKeys = ["target_user", "workflow", "core_feature"];
+                const missingCount = Array.isArray(specificityGate.missing_elements)
+                  ? specificityGate.missing_elements.filter((k) => validKeys.includes(k)).length
+                  : 3;
+
+                let headerText;
+                let subheadText;
+                if (missingCount >= 3 || missingCount === 0) {
+                  // missingCount === 0 is defensive (gate fired with empty array);
+                  // treat as first-fire framing per fallback in SpecificityGate.
+                  headerText = "Let's sharpen this before we evaluate.";
+                  subheadText = "To evaluate honestly, we need enough detail to know which product you mean.";
+                } else if (missingCount === 2) {
+                  headerText = "Getting closer — two more pieces, then we can evaluate this clearly.";
+                  subheadText = "Each piece helps us ground the analysis in the product you actually mean.";
+                } else {
+                  headerText = "Almost there — one more piece, then we can evaluate this clearly.";
+                  subheadText = "Each piece helps us ground the analysis in the product you actually mean.";
+                }
+
+                return (
+                  <>
+                    <h2 style={{ fontSize: 22, fontWeight: 500, margin: "0 0 6px 0", lineHeight: 1.3 }}>
+                      {headerText}
+                    </h2>
+                    <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.6, margin: 0 }}>
+                      {subheadText}
+                    </p>
+                  </>
+                );
+              })() : (
                 <>
                   <h2 style={{ fontSize: 30, fontWeight: 600, margin: "0 0 12px 0" }}>
                     Describe your AI product idea
@@ -1632,8 +1660,11 @@ export default function Home() {
                 value={idea}
                 onChange={(e) => {
                   setIdea(e.target.value);
-                  // V4S28 B7 — clear stale gate panel as soon as user starts editing
-                  if (specificityGate) setSpecificityGate(null);
+                  // V4S28 B9 — Gate state persists across keystrokes (was clearing
+                  // mid-keystroke in B7, which made the suggestion vanish exactly
+                  // when the user was acting on it). Gate only updates when a new
+                  // gate result returns (Analyze press): replaces if FAIL with
+                  // different missing slots, clears if PASS.
                 }}
                 placeholder="Example: An AI-powered idea evaluation workflow that scores startup ideas against real competitor data from GitHub and Google. It's for founders and ambitious builders who waste weeks on ideas without knowing if there's real demand. The problem is that most people either ask friends who say 'great idea!' or use ChatGPT which gives generic encouragement instead of structured, honest analysis..."
                 rows={8}
@@ -1758,7 +1789,7 @@ export default function Home() {
                 marginBottom: 24,
                 marginTop: -8,
               }}>
-                No credit used — evaluations only start once the idea is specific enough.
+                No credit used — analysis only starts once we can evaluate the idea clearly.
               </div>
             )}
 

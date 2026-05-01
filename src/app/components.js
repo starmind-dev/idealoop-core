@@ -777,7 +777,7 @@ export function PreviewBanner({ t, evalsRemaining }) {
 }
 
 // ============================================
-// SPECIFICITY GATE (V4S28 B7)
+// SPECIFICITY GATE (V4S28 B7 → B9)
 // ============================================
 // Renders the inline panel shown when the Haiku layer determines the input
 // is too underspecified to evaluate honestly. Sits between the textarea and
@@ -785,80 +785,148 @@ export function PreviewBanner({ t, evalsRemaining }) {
 // button below are owned by the parent; this component only renders the
 // missing-element cards.
 //
+// V4S28 B9 redesign (May 2026):
+// - Always show all 3 slots with state (passed = green check / muted; missing
+//   = colored top border + suggestion). Removes the "moving goalposts" feel
+//   of the prior B7 design which only rendered missing slots.
+// - Complete-example footer below the cards (D2 reversed — parts first,
+//   assembled example last).
+//
 // Locked design: execution-plan-v4-3-4.md Section 13 / Item 7.
 // `missing_elements` is a coarse 3-value enum: target_user / workflow / core_feature.
-// Unknown values are filtered. Empty array falls back to all three cards.
+// Unknown values are filtered. Empty array falls back to "all 3 missing"
+// (defensive — should not happen if gate fired correctly).
 //
 // Per-slot accent colors (1.5px top border) signal the dimension each card
 // represents — Pink (audience), Teal (process), Purple (mechanism).
 // Light-mode hex = ramp 600 stop, dark-mode hex = ramp 200 stop, per the
 // design system's "light = 600 stroke, dark = 200 stroke" convention.
+const SLOT_ORDER = ["target_user", "workflow", "core_feature"];
+
 const MISSING_ELEMENT_CARDS = {
   target_user: {
     title: "Who is it for?",
+    passedTitle: "Target user",
     example: "solo professionals · small clinics · enterprise teams",
     accent: { light: "#993556", dark: "#ED93B1" }, // Pink 600 / 200
   },
   workflow: {
     title: "What workflow?",
+    passedTitle: "Workflow",
     example: "scheduling · drafting documents · summarizing meetings",
     accent: { light: "#0F6E56", dark: "#5DCAA5" }, // Teal 600 / 200
   },
   core_feature: {
     title: "What does it do?",
+    passedTitle: "Core feature",
     example: "automates reminders · turns chat into tasks · drafts from templates",
     accent: { light: "#534AB7", dark: "#AFA9EC" }, // Purple 600 / 200
   },
 };
 
+// Locked B8 palette green (also used by getScoreColor). Single source of truth
+// for the "passed slot" affordance — a green check mark + green top border.
+const PASSED_GREEN = "#10b981";
+
+// Complete-example footer text — shows the full assembled shape of a good
+// input below the parts. Locked copy (D2 reversed).
+const COMPLETE_EXAMPLE =
+  "AI scheduling assistant for dental receptionists that drafts patient follow-ups.";
+
 export function SpecificityGate({ gate, t }) {
   if (!gate) return null;
 
-  // Filter to known missing_elements; fall back to all three if empty/unknown
-  const validKeys = ["target_user", "workflow", "core_feature"];
+  // Filter to known missing_elements; empty array falls back to "all 3 missing"
+  const validKeys = SLOT_ORDER;
   const requested = Array.isArray(gate.missing_elements) ? gate.missing_elements : [];
-  const filtered = requested.filter((k) => validKeys.includes(k));
-  const cardsToShow = filtered.length > 0 ? filtered : validKeys;
+  const missingSet = new Set(requested.filter((k) => validKeys.includes(k)));
+  // Defensive fallback — if gate fired but missing_elements is empty/garbage,
+  // treat all 3 as missing rather than rendering an empty grid.
+  const effectiveMissing = missingSet.size > 0 ? missingSet : new Set(validKeys);
 
   const themeMode = t?.mode === "dark" ? "dark" : "light";
 
   return (
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: `repeat(${cardsToShow.length}, 1fr)`,
-      gap: 10,
-      marginBottom: 24,
-    }}>
-      {cardsToShow.map((key) => {
-        const card = MISSING_ELEMENT_CARDS[key];
-        const accentColor = card.accent[themeMode];
-        return (
-          <div key={key} style={{
-            background: t.surface,
-            border: `1px solid ${t.border}`,
-            borderTop: `1.5px solid ${accentColor}`,
-            borderRadius: 8,
-            padding: "12px 14px",
-          }}>
-            <div style={{
-              fontSize: 12,
-              fontWeight: 500,
-              color: t.text,
-              marginBottom: 6,
+    <div style={{ marginBottom: 24 }}>
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(3, 1fr)",
+        gap: 10,
+        marginBottom: 14,
+      }}>
+        {SLOT_ORDER.map((key) => {
+          const card = MISSING_ELEMENT_CARDS[key];
+          const isMissing = effectiveMissing.has(key);
+          const accentColor = isMissing ? card.accent[themeMode] : PASSED_GREEN;
+
+          return (
+            <div key={key} style={{
+              background: t.surface,
+              border: `1px solid ${t.border}`,
+              borderTop: `1.5px solid ${accentColor}`,
+              borderRadius: 8,
+              padding: "12px 14px",
+              opacity: isMissing ? 1 : 0.65,
+              transition: "opacity 200ms ease",
             }}>
-              {card.title}
+              {isMissing ? (
+                <>
+                  <div style={{
+                    fontSize: 12,
+                    fontWeight: 500,
+                    color: t.text,
+                    marginBottom: 6,
+                  }}>
+                    {card.title}
+                  </div>
+                  <div style={{
+                    fontSize: 11,
+                    color: t.sec,
+                    lineHeight: 1.5,
+                    fontStyle: "italic",
+                  }}>
+                    {card.example}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{
+                    fontSize: 12,
+                    fontWeight: 500,
+                    color: t.text,
+                    marginBottom: 6,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}>
+                    <span style={{ color: PASSED_GREEN, fontSize: 13, lineHeight: 1 }}>✓</span>
+                    {card.passedTitle}
+                  </div>
+                  <div style={{
+                    fontSize: 11,
+                    color: t.sec,
+                    lineHeight: 1.5,
+                    fontStyle: "italic",
+                  }}>
+                    Covered
+                  </div>
+                </>
+              )}
             </div>
-            <div style={{
-              fontSize: 11,
-              color: t.sec,
-              lineHeight: 1.5,
-              fontStyle: "italic",
-            }}>
-              {card.example}
-            </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
+
+      {/* Complete-example footer (D2 reversed — parts first, assembled example last) */}
+      <div style={{
+        fontSize: 12,
+        color: t.sec,
+        lineHeight: 1.5,
+        padding: "10px 4px 0 4px",
+      }}>
+        <span style={{ fontWeight: 500, color: t.text }}>Example: </span>
+        <span style={{ fontStyle: "italic" }}>{COMPLETE_EXAMPLE}</span>
+      </div>
     </div>
   );
 }
