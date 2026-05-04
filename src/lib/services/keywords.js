@@ -102,6 +102,33 @@ CALIBRATION DISCIPLINE — DEFAULT TO PASS WHEN SLOTS ARE PRESENT:
 - PASS when the buyer is a free user, consumer, or non-payer adoption unit — "students," "patients," "hobbyists" all count.
 - FAIL only when the input cannot anchor a target_user / use_case / mechanism reading. Imaginability ≠ specificity. The model picking a plausible interpretation does not satisfy the slot — the user must have named it.
 
+THE COLLAPSE PRINCIPLE — when ONE phrase satisfies BOTH use_case AND mechanism:
+
+When the input states "tool/app/platform/system for [target_user] to [verb] [object]," the verb-object phrase typically carries BOTH slots simultaneously and BOTH should be marked present:
+- "schedule patient appointments" — use_case (the task) AND mechanism (how the product intervenes: scheduling)
+- "manage client invoices" — use_case AND mechanism (managing them is the intervention)
+- "track client progress" — use_case AND mechanism (tracking is the intervention)
+- "handle rent collection" — use_case AND mechanism (handling is the intervention)
+- "coordinate vendor bookings" — use_case AND mechanism (coordination is the intervention)
+- "tracks competitor prices and suggests adjustments" — use_case AND mechanism (tracking + suggesting are the interventions)
+
+DO NOT require separate distinct vocabulary for use_case and mechanism. When the verb-object phrase is operationally concrete enough to anchor evaluation, both slots are satisfied. Marking mechanism as missing because there isn't a *second* distinct phrase explaining how is a calibration error — the verb IS the mechanism.
+
+Mechanism is genuinely missing only when the input names target_user and a category/domain but no concrete verb-object action ("AI assistant for teachers" — no verb-object; "tool for dentists to save time" — verb-object is generic-benefit, not concrete).
+
+THE BUYER-CATEGORY PRINCIPLE — multi-buyer is not scattered when buyers share a coherent category:
+
+Multiple buyer types listed together PASS target_user when they share a coherent operational category:
+- "restaurants and gyms and salons" — service SMBs with appointment/customer-loyalty needs (coherent category)
+- "freelancers" — work-on-multiple-client professionals (coherent category, even if broad)
+- "small clinics, dental offices, and physical therapy practices" — small healthcare practitioners (coherent category)
+
+Multiple buyer types FAIL target_user only when they cannot be unified under a coherent operational frame:
+- "clinics, hospitals, wellness users, and maybe patients" — provider/consumer mix with no coherent operational frame
+- "for both healthcare providers (for documentation) and SMB owners (for payroll)" — two unrelated products with two unrelated buyer-product pairs
+
+When in doubt, prefer PASS — Stage 2b will surface "target segment too broad" as MEDIUM evidence_strength downstream if needed. The gate's job is to confirm a buyer is named, not to enforce a buyer is narrow.
+
 PASS/FAIL EXAMPLES — these calibrate the threshold:
 
 | Input | Decision | Why |
@@ -113,6 +140,11 @@ PASS/FAIL EXAMPLES — these calibrate the threshold:
 | "AI quiz generator for high-school biology teachers" | PASS | target_user (high-school biology teachers — adoption unit, not literal payer), use_case (quiz creation), mechanism (AI generator) all named. |
 | "AI workflow tool for SMB accountants" | PASS | target_user (SMB accountants), use_case (accounting workflow), mechanism (AI workflow tool) — sparse but specific. |
 | "A tool for freelance designers to manage their client invoices." | PASS | target_user (freelance designers), use_case ≈ mechanism (manage client invoices — verb-object concrete enough that one phrase carries both slots). |
+| "A platform for small clinics to schedule patient appointments." | PASS | target_user (small clinics), use_case ≈ mechanism (schedule patient appointments — collapse case; scheduling IS the intervention, no separate mechanism phrase needed). |
+| "An app for personal trainers to track client progress." | PASS | target_user (personal trainers), use_case ≈ mechanism (track client progress — collapse case; tracking IS the mechanism). |
+| "A system for landlords to handle rent collection." | PASS | target_user (landlords), use_case ≈ mechanism (handle rent collection — collapse case; handling IS the mechanism). |
+| "Slack bot for engineering managers to schedule 1:1s" | PASS | target_user (engineering managers), use_case ≈ mechanism (schedule 1:1s — collapse case; the named platform Slack does NOT consume the mechanism slot, scheduling does). |
+| "a platform for restaurants and gyms and salons to handle bookings and reminders and loyalty programs" | PASS | target_user (service SMBs — restaurants/gyms/salons share coherent operational category, NOT scattered), use_case (bookings, reminders, loyalty — three concrete tasks), mechanism (platform that handles these). Multi-buyer under a coherent category is PASS, not scatter. |
 | "Independent gym owners manage member follow-ups, cancellations, and renewal reminders manually across WhatsApp and spreadsheets. I want to help them organize this and prevent churn." | PASS | target_user (independent gym owners), use_case (follow-ups, cancellations, renewals — concrete tasks), mechanism (organize manual coordination across WhatsApp + spreadsheets) all named — problem-first framing. |
 | "I want to build something for freelance writers that helps them keep track of pitches they've sent and which editors haven't replied yet." | PASS | target_user (freelance writers), use_case (pitch tracking), mechanism (track sent pitches and editor reply status) — conversational tone, all three slots named. |
 | "I've been a doctor for ten years and I've watched patient outcomes get worse and I want to build something using AI that helps fix this." | FAIL | target_user partial (doctors? patients?); use_case absent (no concrete task); mechanism absent ("something using AI"). Long but non-product narrative. |
