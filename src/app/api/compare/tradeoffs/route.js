@@ -9,6 +9,33 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+// V4S28 B9 thin_dimensions hygiene (per Narrative Contract V7 §3.9a):
+// thin_dimensions is UI-only metadata. It MUST NOT propagate to any LLM call
+// beyond the Stage 2b call that emits it. The frontend-built comparisonData
+// payload may carry thin_dimensions on either idea's evidence_strength
+// (because the persisted evaluation correctly carries it). This route is
+// where the LLM boundary is enforced — strip thin_dimensions from both
+// ideas' evidence_strength before JSON.stringify into the Sonnet message.
+//
+// Non-mutating destructure-rest pattern: returns a new comparisonData object
+// without mutating the client-provided one. Defensive: handles missing
+// idea_a / idea_b / evidence_strength shapes gracefully.
+function sanitizeComparisonData(comparisonData) {
+  if (!comparisonData) return comparisonData;
+
+  const stripFromIdea = (idea) => {
+    if (!idea || !idea.evidence_strength) return idea;
+    const { thin_dimensions, ...cleanEvidenceStrength } = idea.evidence_strength;
+    return { ...idea, evidence_strength: cleanEvidenceStrength };
+  };
+
+  return {
+    ...comparisonData,
+    idea_a: stripFromIdea(comparisonData.idea_a),
+    idea_b: stripFromIdea(comparisonData.idea_b),
+  };
+}
+
 export async function POST(request) {
   try {
     // Auth check
@@ -35,6 +62,10 @@ export async function POST(request) {
       );
     }
 
+    // V4S28 B9: strip thin_dimensions from both ideas' evidence_strength
+    // before passing the payload to Sonnet. UI-only metadata invariant.
+    const sanitizedData = sanitizeComparisonData(comparisonData);
+
     // Call Sonnet with the tradeoffs prompt
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
@@ -44,7 +75,7 @@ export async function POST(request) {
       messages: [
         {
           role: "user",
-          content: `Analyze the following comparison data and produce a tradeoff synthesis:\n\n${JSON.stringify(comparisonData, null, 2)}`,
+          content: `Analyze the following comparison data and produce a tradeoff synthesis:\n\n${JSON.stringify(sanitizedData, null, 2)}`,
         },
       ],
     });

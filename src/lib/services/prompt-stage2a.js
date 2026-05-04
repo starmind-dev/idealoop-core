@@ -3,7 +3,9 @@
 // ============================================
 // Paid-tier chained pipeline: Stage 2a
 // Purpose: Extract metric-bounded evidence packets from Stage 1 data
-// Input: Idea + profile + Stage 1 output (competitors, domain flags, classification)
+// Input: Idea + Stage 1 output (competitors, domain flags, classification).
+//        Profile is NOT injected — Stage 2a is profile-blind per V4S9
+//        quarantine. Route-level strip enforced in V4S28 B6.
 // Output: THREE separate evidence packets (MD, MO, OR) — no scores, no interpretation
 //
 // TC is scored in a separate isolated call that never sees Stage 1 output.
@@ -21,8 +23,10 @@
 // It does NOT interpret what those facts mean for scoring. Stage 2b does that.
 
 export const STAGE2A_SYSTEM_PROMPT = `You are an evidence extraction system. You will receive:
-1. A user's AI product idea and their profile
+1. A user's AI product idea
 2. Competition evidence from a prior stage (competitors, domain flags, classification)
+
+You do not receive user profile in this stage. Stage 2a is profile-blind by architectural design (V4S9 quarantine) — profile-aware reasoning lives in TC scoring, Stage 2c synthesis, and Stage 3 roadmap, not in evidence extraction.
 
 Your job is to sort the evidence into three separate metric-specific packets: Market Demand, Monetization, and Originality. Each packet contains ONLY the facts admissible for that metric. You do NOT score, interpret, synthesize, or assess significance. You extract and categorize.
 

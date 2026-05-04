@@ -304,6 +304,25 @@ Good (with section): "Pricing model not specified — per-seat, per-usage, and f
 
 Provide a one-sentence reason. Be specific.
 
+THIN DIMENSIONS (LOW only — UI metadata):
+
+When evidence_strength.level is "LOW", populate evidence_strength.thin_dimensions to indicate which fundamental idea dimensions are missing or unclear in the input. This field is UI-only metadata that drives idea-specific bullets in the LOW callout.
+
+Allowed values only — exactly three:
+- target_user
+- workflow
+- core_feature
+
+Generation rules:
+- Generate this field ONLY when level is LOW. Omit the field entirely from the JSON output when level is HIGH or MEDIUM (do not emit null or empty array on those levels).
+- Output an array of 0-3 values. Include only the slots that are genuinely missing or unclear in this user's input. Do NOT always output all three — partial detection is correct and expected.
+- Place this field as the LAST field inside evidence_strength, after level and reason. This prevents thin_dimensions from influencing the level or reason.
+- Do NOT invent other values like "pricing", "target_segment", "tech_stack", or any metric name. The enum is fixed at exactly three values above.
+
+This is UI metadata only. Do NOT let it affect scores, metric explanations, roadmap, failure_risks, or summary.
+
+Example: An input like "AI tool for dentists to help with day-to-day work" may produce ["workflow", "core_feature"] — target_user ("dentists") is clear, but the specific workflow and concrete feature aren't named. Output only the slots that are genuinely absent; do not always output all three.
+
 === FAILURE RISKS ===
 Output 2 to 4 structured failure risks using a slot system. Each risk has a slot, an optional archetype, and prose text.
 
@@ -437,7 +456,8 @@ Assign each phase a phase_type:
   "evaluation": {
     "evidence_strength": {
       "level": "HIGH | MEDIUM | LOW",
-      "reason": "One sentence explaining what drives the evidence strength assessment"
+      "reason": "One sentence explaining what drives the evidence strength assessment",
+      "thin_dimensions": ["array of 0-3 values from {target_user, workflow, core_feature} — INCLUDE this field ONLY when level is LOW; OMIT entirely on HIGH or MEDIUM"]
     },
     "failure_risks": [
       {

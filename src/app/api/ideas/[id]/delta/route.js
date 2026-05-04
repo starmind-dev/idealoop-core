@@ -45,10 +45,23 @@ function extractRisks(evaluation) {
   return sj.failure_risks || [];
 }
 
-// Helper: extract evidence_strength from scoring_json
+// Helper: extract evidence_strength from scoring_json.
+//
+// V4S28 B9 thin_dimensions hygiene (per Narrative Contract V7 §3.9a):
+// thin_dimensions is UI-only metadata. It MUST NOT propagate to any LLM call
+// beyond the Stage 2b call that emits it. This Delta route is a post-pipeline
+// LLM call that reads the persisted evaluation, which (correctly) carries
+// thin_dimensions. Strip it here before the value enters the deltaInput
+// payload sent to Sonnet. Non-mutating destructure-rest pattern preserves
+// the persisted source object.
 function extractEvidenceStrength(evaluation) {
   const sj = evaluation.scoring_json || {};
-  return sj.evidence_strength || null;
+  const es = sj.evidence_strength;
+  if (!es) return null;
+  // Strip thin_dimensions before returning. If absent (HIGH/MEDIUM), the rest
+  // pattern produces an identical-shape object minus the property.
+  const { thin_dimensions, ...cleanEvidenceStrength } = es;
+  return cleanEvidenceStrength;
 }
 
 // Helper: extract competitor names
@@ -184,6 +197,7 @@ export async function POST(request, { params }) {
     const changedFields = childMeta.changed_fields || null;
 
     // Build the structured input for Sonnet
+    // Note: extractEvidenceStrength() strips thin_dimensions per V4S28 B9 hygiene.
     const deltaInput = {
       parent_evaluation: {
         title: parentIdea?.title || "Parent idea",
