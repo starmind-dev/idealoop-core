@@ -144,6 +144,170 @@ Example PASS output for "An AI app that analyzes food photos and gives personali
 
 Return ONLY the JSON object. No prose before or after.`;
 
+// ============================================
+// COLLAPSE-PATTERN RESCUE LAYER
+// ============================================
+// V4S28 PRE-B10A SECOND-PASS (May 4, 2026) — narrow deterministic override for
+// a known Haiku blindspot.
+//
+// Problem (surfaced by run-haiku-calibration.js v1 results):
+//   Haiku consistently FAILs concise "for X to verb-object" inputs by flagging
+//   `mechanism` as missing, even when the verb-object phrase semantically
+//   carries both use_case and mechanism. Block D went 1/6 in the v1 runner;
+//   adjacent blocks (E4, E6, F4, F6, K1) leaked the same pattern.
+//
+// Why this is a rescue layer, not a prompt edit:
+//   v2 attempted to fix the blindspot via prompt-level permissive teaching
+//   ("When in doubt, prefer PASS" + collapse principle block). That changed
+//   Haiku's decision posture globally — Block B (sparse-FAIL floor) collapsed
+//   8/8 → 0/8 in the v2 runner. Reverted via git revert.
+//
+//   The blindspot is a narrow structural model-behavior bug, not a calibration
+//   imbalance. Narrow bugs get narrow fixes. Deterministic post-FAIL override
+//   for a specific structural pattern is the right architectural layer; broad
+//   prompt language is the wrong layer.
+//
+// Conditions for rescue (all five must hold):
+//   1. Haiku returned specificity_insufficient: true
+//   2. missing_elements contains use_case OR mechanism (or both)
+//   3. missing_elements does NOT contain target_user (hard condition — if
+//      buyer is missing, never rescue; that's a real failure, not a blindspot)
+//   4. Input matches "for [target_user] to [verb] [object]" pattern with a
+//      concrete noun-object after the verb (verb alone is not sufficient)
+//   5. The captured action phrase is NOT in the generic-benefit blocklist
+//
+// Pattern coverage (intentionally narrow — fail closed):
+//   - Matches: "for X to verb object" (canonical SaaS-pitch shape)
+//   - Does NOT match: "for X that verb object" or "for X which verb object"
+//     (those forms can match too many vague inputs like "for startups that
+//     want to grow faster" — defer until runner shows real-user need)
+//
+// Generic-benefit blocklist (conservative, explicit):
+//   Phrases that match the structural pattern but offer no concrete operation.
+//   When in doubt about whether to add a phrase, leave it out — let the gate
+//   FAIL stand. Fail closed.
+
+const GENERIC_BENEFIT_BLOCKLIST = [
+  "save time",
+  "make work easier",
+  "make life easier",
+  "improve productivity",
+  "be more productive",
+  "help people",
+  "help businesses",
+  "grow faster",
+  "scale faster",
+  "improve workflow",
+  "transform workflows",
+  "disrupt industry",
+  "unlock potential",
+  "increase efficiency",
+  "be more efficient",
+];
+
+// Returns the captured action phrase (verb + object) if the input matches the
+// "for [target_user] to [verb] [object]" pattern with a concrete object;
+// returns null otherwise. Fail-closed: any ambiguity in matching → null.
+function hasConcreteForToVerbObject(input) {
+  if (typeof input !== "string") return null;
+
+  // Pattern: "for [target_user] to [verb] [object]"
+  // - target_user: 1-6 words (handles "small clinics", "high-school biology
+  //   teachers", "freelance designers", etc.)
+  // - verb: a single word (transitive verb expected)
+  // - object: at least one word; can extend (multi-word objects like
+  //   "patient appointments", "client invoices", "rent collection")
+  //
+  // Stops at sentence-ending punctuation (period/question/exclamation) or
+  // conjunctions that would indicate a new clause.
+  //
+  // Capture group 1: the [verb] [object] phrase (lowercased downstream)
+  const pattern =
+    /\bfor\s+[\w\-]+(?:\s+[\w\-]+){0,5}?\s+to\s+([\w\-]+\s+[\w\-]+(?:\s+[\w\-]+){0,4})/i;
+
+  const match = input.match(pattern);
+  if (!match) return null;
+
+  const actionPhrase = match[1].trim().toLowerCase();
+
+  // Must contain at least one space (verb + at least one object word).
+  // The regex above already enforces this, but defensive check anyway.
+  if (!actionPhrase.includes(" ")) return null;
+
+  return actionPhrase;
+}
+
+// Returns true if the captured action phrase is a known generic-benefit
+// pattern. Substring match (case-insensitive) — phrases like "to save time
+// and improve productivity" match both "save time" AND "improve productivity"
+// from the blocklist, either is sufficient to block the rescue.
+function isGenericBenefitPhrase(actionPhrase) {
+  if (typeof actionPhrase !== "string") return true; // fail closed
+  const normalized = actionPhrase.toLowerCase();
+  return GENERIC_BENEFIT_BLOCKLIST.some((phrase) => normalized.includes(phrase));
+}
+
+// Top-level rescue check. Returns true if all five conditions hold and the
+// FAIL should be overridden to PASS. Returns false if any condition fails
+// (Haiku's FAIL stands).
+function shouldOverrideCollapseFalseReject(input, missingElements) {
+  if (!Array.isArray(missingElements)) return false;
+
+  // Condition 2: missing must include use_case or mechanism
+  const flagsMechanismOrUseCase =
+    missingElements.includes("use_case") || missingElements.includes("mechanism");
+  if (!flagsMechanismOrUseCase) return false;
+
+  // Condition 3: missing must NOT include target_user (hard condition)
+  if (missingElements.includes("target_user")) return false;
+
+  // Condition 4: input must match the structural pattern with concrete object
+  const actionPhrase = hasConcreteForToVerbObject(input);
+  if (!actionPhrase) return false;
+
+  // Condition 5: action phrase must not be generic-benefit language
+  if (isGenericBenefitPhrase(actionPhrase)) return false;
+
+  return true;
+}
+
+// Build crude keywords from the input when the rescue fires. The Haiku call
+// already returned (FAIL path), so we don't have model-extracted keywords —
+// we synthesize a reasonable set from the input itself for the search stage.
+// Matches the shape of the fallback path's keyword extraction.
+function buildRescueKeywords(input) {
+  const words = input
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 4)
+    .filter((w) => !["build", "create", "tool", "platform", "system", "would", "could", "should", "their", "would", "thing", "something", "things"].includes(w));
+
+  // De-duplicate while preserving order
+  const seen = new Set();
+  const unique = [];
+  for (const w of words) {
+    if (!seen.has(w)) {
+      seen.add(w);
+      unique.push(w);
+    }
+    if (unique.length >= 5) break;
+  }
+
+  // Pad if we don't have 5 (shouldn't happen for inputs that matched the
+  // structural pattern — they're inherently word-rich enough — but defensive)
+  while (unique.length < 5) unique.push("software");
+
+  const keywords = unique.slice(0, 5);
+  return {
+    keywords,
+    githubQuery1: keywords.slice(0, 3).join(" "),
+    githubQuery2: keywords.slice(2, 5).join(" "),
+    serperQuery1: keywords.slice(0, 3).join(" ") + " app OR startup",
+    serperQuery2: keywords.slice(1, 4).join(" ") + " software OR product",
+  };
+}
+
 export async function extractKeywords(ideaText) {
   try {
     const response = await client.messages.create({
@@ -181,6 +345,16 @@ export async function extractKeywords(ideaText) {
       const missingElements = Array.isArray(parsed.missing_elements)
         ? parsed.missing_elements.filter((s) => validSlots.includes(s))
         : [];
+
+      // V4S28 PRE-B10A SECOND-PASS — Collapse-pattern rescue layer.
+      // Narrow deterministic override for Haiku's known blindspot on
+      // "for X to verb-object" inputs. See helpers above for full conditions.
+      if (shouldOverrideCollapseFalseReject(ideaText, missingElements)) {
+        // Override to PASS shape. Synthesize keywords from input since Haiku
+        // didn't return any (it hit the FAIL branch).
+        return buildRescueKeywords(ideaText);
+      }
+
       return {
         specificity_insufficient: true,
         missing_elements: missingElements,
