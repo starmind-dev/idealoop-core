@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# F1 diagnostic transient state
+runners/.f1-fixtures/
+runners/f1-phase-*-checkpoint.json
+runners/f1-phase-*-preflight-failure.json

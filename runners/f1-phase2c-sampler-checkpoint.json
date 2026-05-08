@@ -1,0 +1,965 @@
+{
+  "runs": [
+    {
+      "caseId": "AUDIT-H4",
+      "runIndex": 1,
+      "status": "success",
+      "scores": {
+        "md": 6.5,
+        "mo": 6,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 10498
+    },
+    {
+      "caseId": "AUDIT-H4",
+      "runIndex": 2,
+      "status": "success",
+      "scores": {
+        "md": 6.5,
+        "mo": 6,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 10784
+    },
+    {
+      "caseId": "AUDIT-H4",
+      "runIndex": 3,
+      "status": "success",
+      "scores": {
+        "md": 6.5,
+        "mo": 6,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 10814
+    },
+    {
+      "caseId": "AUDIT-H4",
+      "runIndex": 4,
+      "status": "success",
+      "scores": {
+        "md": 6.5,
+        "mo": 6,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 11652
+    },
+    {
+      "caseId": "AUDIT-H4",
+      "runIndex": 5,
+      "status": "success",
+      "scores": {
+        "md": 6.5,
+        "mo": 6,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 10706
+    },
+    {
+      "caseId": "AUDIT-H4",
+      "runIndex": 6,
+      "status": "success",
+      "scores": {
+        "md": 6.5,
+        "mo": 6,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 11045
+    },
+    {
+      "caseId": "AUDIT-H4",
+      "runIndex": 7,
+      "status": "success",
+      "scores": {
+        "md": 6.5,
+        "mo": 6,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 10319
+    },
+    {
+      "caseId": "AUDIT-H4",
+      "runIndex": 8,
+      "status": "success",
+      "scores": {
+        "md": 6.5,
+        "mo": 6,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 10219
+    },
+    {
+      "caseId": "AUDIT-H4",
+      "runIndex": 9,
+      "status": "success",
+      "scores": {
+        "md": 6.5,
+        "mo": 6,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 10284
+    },
+    {
+      "caseId": "AUDIT-H4",
+      "runIndex": 10,
+      "status": "success",
+      "scores": {
+        "md": 6.5,
+        "mo": 6,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 11373
+    },
+    {
+      "caseId": "AUDIT-MAT2-beginner",
+      "runIndex": 1,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5.5,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 11104
+    },
+    {
+      "caseId": "AUDIT-MAT2-beginner",
+      "runIndex": 2,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5.5,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 16439
+    },
+    {
+      "caseId": "AUDIT-MAT2-beginner",
+      "runIndex": 3,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5.5,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 12086
+    },
+    {
+      "caseId": "AUDIT-MAT2-beginner",
+      "runIndex": 4,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5.5,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 12699
+    },
+    {
+      "caseId": "AUDIT-MAT2-beginner",
+      "runIndex": 5,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5.5,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 11602
+    },
+    {
+      "caseId": "AUDIT-MAT2-beginner",
+      "runIndex": 6,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5.5,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 11334
+    },
+    {
+      "caseId": "AUDIT-MAT2-beginner",
+      "runIndex": 7,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5.5,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 11630
+    },
+    {
+      "caseId": "AUDIT-MAT2-beginner",
+      "runIndex": 8,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 4.5,
+        "or": 5.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 11506
+    },
+    {
+      "caseId": "AUDIT-MAT2-beginner",
+      "runIndex": 9,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5.5,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 11389
+    },
+    {
+      "caseId": "AUDIT-MAT2-beginner",
+      "runIndex": 10,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5.5,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 11547
+    },
+    {
+      "caseId": "ARC-D2",
+      "runIndex": 1,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4.5,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 11855
+    },
+    {
+      "caseId": "ARC-D2",
+      "runIndex": 2,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4.5,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 12770
+    },
+    {
+      "caseId": "ARC-D2",
+      "runIndex": 3,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4.5,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 12133
+    },
+    {
+      "caseId": "ARC-D2",
+      "runIndex": 4,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4.5,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 12610
+    },
+    {
+      "caseId": "ARC-D2",
+      "runIndex": 5,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4.5,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 12626
+    },
+    {
+      "caseId": "ARC-D2",
+      "runIndex": 6,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4.5,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 11715
+    },
+    {
+      "caseId": "ARC-D2",
+      "runIndex": 7,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4.5,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 12340
+    },
+    {
+      "caseId": "ARC-D2",
+      "runIndex": 8,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4.5,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 12554
+    },
+    {
+      "caseId": "ARC-D2",
+      "runIndex": 9,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4.5,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 12423
+    },
+    {
+      "caseId": "ARC-D2",
+      "runIndex": 10,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4.5,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 12681
+    },
+    {
+      "caseId": "AUDIT-L2",
+      "runIndex": 1,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 6,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 12384
+    },
+    {
+      "caseId": "AUDIT-L2",
+      "runIndex": 2,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4.5,
+        "or": 4
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 11640
+    },
+    {
+      "caseId": "AUDIT-L2",
+      "runIndex": 3,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 6,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 12233
+    },
+    {
+      "caseId": "AUDIT-L2",
+      "runIndex": 4,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4.5,
+        "or": 4
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 12895
+    },
+    {
+      "caseId": "AUDIT-L2",
+      "runIndex": 5,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4.5,
+        "or": 4
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 11752
+    },
+    {
+      "caseId": "AUDIT-L2",
+      "runIndex": 6,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 6,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 12082
+    },
+    {
+      "caseId": "AUDIT-L2",
+      "runIndex": 7,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 6,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 15161
+    },
+    {
+      "caseId": "AUDIT-L2",
+      "runIndex": 8,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 6,
+        "or": 4.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 12010
+    },
+    {
+      "caseId": "AUDIT-L2",
+      "runIndex": 9,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 5,
+        "or": 4
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 12051
+    },
+    {
+      "caseId": "AUDIT-L2",
+      "runIndex": 10,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4.5,
+        "or": 4
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 11645
+    },
+    {
+      "caseId": "AUDIT-MD1",
+      "runIndex": 1,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 12512
+    },
+    {
+      "caseId": "AUDIT-MD1",
+      "runIndex": 2,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 12018
+    },
+    {
+      "caseId": "AUDIT-MD1",
+      "runIndex": 3,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 11595
+    },
+    {
+      "caseId": "AUDIT-MD1",
+      "runIndex": 4,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 12098
+    },
+    {
+      "caseId": "AUDIT-MD1",
+      "runIndex": 5,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 12311
+    },
+    {
+      "caseId": "AUDIT-MD1",
+      "runIndex": 6,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 12412
+    },
+    {
+      "caseId": "AUDIT-MD1",
+      "runIndex": 7,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 12467
+    },
+    {
+      "caseId": "AUDIT-MD1",
+      "runIndex": 8,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 12117
+    },
+    {
+      "caseId": "AUDIT-MD1",
+      "runIndex": 9,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 11946
+    },
+    {
+      "caseId": "AUDIT-MD1",
+      "runIndex": 10,
+      "status": "success",
+      "scores": {
+        "md": 5.5,
+        "mo": 4,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 12013
+    },
+    {
+      "caseId": "AUDIT-MAT1-intermediate",
+      "runIndex": 1,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5.5,
+        "or": 4
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 12659
+    },
+    {
+      "caseId": "AUDIT-MAT1-intermediate",
+      "runIndex": 2,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5.5,
+        "or": 4
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 12083
+    },
+    {
+      "caseId": "AUDIT-MAT1-intermediate",
+      "runIndex": 3,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5.5,
+        "or": 4
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 15097
+    },
+    {
+      "caseId": "AUDIT-MAT1-intermediate",
+      "runIndex": 4,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5.5,
+        "or": 4
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 12036
+    },
+    {
+      "caseId": "AUDIT-MAT1-intermediate",
+      "runIndex": 5,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5.5,
+        "or": 4
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 12541
+    },
+    {
+      "caseId": "AUDIT-MAT1-intermediate",
+      "runIndex": 6,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5.5,
+        "or": 4
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 11221
+    },
+    {
+      "caseId": "AUDIT-MAT1-intermediate",
+      "runIndex": 7,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5.5,
+        "or": 4
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 12897
+    },
+    {
+      "caseId": "AUDIT-MAT1-intermediate",
+      "runIndex": 8,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5.5,
+        "or": 4
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 12795
+    },
+    {
+      "caseId": "AUDIT-MAT1-intermediate",
+      "runIndex": 9,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5.5,
+        "or": 4
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 11482
+    },
+    {
+      "caseId": "AUDIT-MAT1-intermediate",
+      "runIndex": 10,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5.5,
+        "or": 4
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 13198
+    },
+    {
+      "caseId": "AUDIT-M3",
+      "runIndex": 1,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5,
+        "or": 6.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 11444
+    },
+    {
+      "caseId": "AUDIT-M3",
+      "runIndex": 2,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5,
+        "or": 6.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 10810
+    },
+    {
+      "caseId": "AUDIT-M3",
+      "runIndex": 3,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5,
+        "or": 6.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 10105
+    },
+    {
+      "caseId": "AUDIT-M3",
+      "runIndex": 4,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5,
+        "or": 6.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 9952
+    },
+    {
+      "caseId": "AUDIT-M3",
+      "runIndex": 5,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5,
+        "or": 6.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 9619
+    },
+    {
+      "caseId": "AUDIT-M3",
+      "runIndex": 6,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5,
+        "or": 6.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 9298
+    },
+    {
+      "caseId": "AUDIT-M3",
+      "runIndex": 7,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5,
+        "or": 6.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 10339
+    },
+    {
+      "caseId": "AUDIT-M3",
+      "runIndex": 8,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5,
+        "or": 6.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 13208
+    },
+    {
+      "caseId": "AUDIT-M3",
+      "runIndex": 9,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5,
+        "or": 6.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 10037
+    },
+    {
+      "caseId": "AUDIT-M3",
+      "runIndex": 10,
+      "status": "success",
+      "scores": {
+        "md": 6,
+        "mo": 5,
+        "or": 6.5
+      },
+      "evidenceLevel": "HIGH",
+      "elapsedMs": 10404
+    },
+    {
+      "caseId": "AUDIT-A2",
+      "runIndex": 1,
+      "status": "success",
+      "scores": {
+        "md": 4.5,
+        "mo": 5,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 13653
+    },
+    {
+      "caseId": "AUDIT-A2",
+      "runIndex": 2,
+      "status": "success",
+      "scores": {
+        "md": 4.5,
+        "mo": 5,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 13523
+    },
+    {
+      "caseId": "AUDIT-A2",
+      "runIndex": 3,
+      "status": "success",
+      "scores": {
+        "md": 4.5,
+        "mo": 5,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 13818
+    },
+    {
+      "caseId": "AUDIT-A2",
+      "runIndex": 4,
+      "status": "success",
+      "scores": {
+        "md": 4.5,
+        "mo": 5,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 13178
+    },
+    {
+      "caseId": "AUDIT-A2",
+      "runIndex": 5,
+      "status": "success",
+      "scores": {
+        "md": 4.5,
+        "mo": 5,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 13416
+    },
+    {
+      "caseId": "AUDIT-A2",
+      "runIndex": 6,
+      "status": "success",
+      "scores": {
+        "md": 4.5,
+        "mo": 5,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 12354
+    },
+    {
+      "caseId": "AUDIT-A2",
+      "runIndex": 7,
+      "status": "success",
+      "scores": {
+        "md": 4.5,
+        "mo": 5,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 12069
+    },
+    {
+      "caseId": "AUDIT-A2",
+      "runIndex": 8,
+      "status": "success",
+      "scores": {
+        "md": 4.5,
+        "mo": 5,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 11861
+    },
+    {
+      "caseId": "AUDIT-A2",
+      "runIndex": 9,
+      "status": "success",
+      "scores": {
+        "md": 4.5,
+        "mo": 5,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 11714
+    },
+    {
+      "caseId": "AUDIT-A2",
+      "runIndex": 10,
+      "status": "success",
+      "scores": {
+        "md": 4.5,
+        "mo": 5,
+        "or": 3.5
+      },
+      "evidenceLevel": "MEDIUM",
+      "elapsedMs": 13867
+    }
+  ],
+  "startedAt": "2026-05-08T15:47:45.550Z"
+}

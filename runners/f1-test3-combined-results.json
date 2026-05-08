@@ -1,0 +1,857 @@
+{
+  "cases": {
+    "AUDIT-H4": {
+      "runs": 10,
+      "scores": {
+        "md": [
+          6.5,
+          6.5,
+          6.5,
+          6.5,
+          6.5,
+          6.5,
+          6.5,
+          6.5,
+          6.5,
+          6.5
+        ],
+        "mo": [
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6
+        ],
+        "or": [
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5
+        ]
+      },
+      "stddev": {
+        "md": 0,
+        "mo": 0,
+        "or": 0
+      },
+      "spearman": {
+        "mdMo": 0,
+        "mdOr": 0,
+        "moOr": 0
+      },
+      "explanations": [
+        {
+          "md": "Score 6.5, rubric level 5-6. Clear target audience with demonstrated need - subcontractors spend 4-8 hours per bid in a recurring 3-10 weekly workflow, indicating genuine time burden. Trust barriers exist since bidding accuracy affects business survival, creating manageable but real adoption friction. The recurring high-frequency usage pattern supports sustainable demand.",
+          "mo": "Score 6.0, rubric level 5-6. Identifiable buyer (subcontractors) with clear usage-based revenue mechanism generating $150-500 weekly per customer. However, ChatGPT provides immediate free substitute for basic RFP analysis, creating structural pricing pressure. The $50/bid pricing must deliver significant value beyond what free LLM tools provide to justify the cost versus current manual processes.",
+          "or": "Score 4.5, rubric level 3-4. ConWize already offers integrated procurement and bidding workflows with predictive analytics, covering core functionality. While trade-specific focus differentiates from general contractor tools, the core bidding workflow automation is replicable by existing construction software platforms. Building exclusive partnerships with electrical/HVAC/plumbing distributors for real-time pricing feeds would create a data moat competitors couldn't replicate without similar distributor relationships."
+        },
+        {
+          "md": "Score 6.5, rubric level 5-6. Clear target audience with demonstrated need - subcontractors spend 4-8 hours per bid in a recurring 3-10 weekly workflow, indicating genuine time burden. Trust barriers exist since bidding accuracy affects business survival, creating manageable but real adoption friction. The recurring high-frequency usage pattern supports sustainable demand.",
+          "mo": "Score 6.0, rubric level 5-6. Identifiable buyer (subcontractors) with clear usage-based revenue mechanism generating $150-500 weekly per customer. However, ChatGPT provides immediate free substitute for basic RFP analysis, creating structural pricing pressure. The $50/bid pricing must deliver significant value beyond what free LLM tools provide to justify the cost versus current manual processes.",
+          "or": "Score 4.5, rubric level 3-4. ConWize already offers integrated procurement and bidding workflows with predictive analytics, covering core functionality. While trade-specific focus differentiates from general contractor tools, the core bidding workflow automation is replicable by existing construction software platforms. Building a comprehensive database of real-time distributor pricing across electrical/HVAC/plumbing suppliers would create a data moat competitors couldn't replicate without 12+ months of supplier relationship development."
+        },
+        {
+          "md": "Score 6.5, rubric level 5-6. Clear target audience with demonstrated need - subcontractors spend 4-8 hours per bid in a recurring 3-10 weekly workflow, indicating genuine time burden. Trust barriers exist since bidding accuracy affects business survival, creating manageable but real adoption friction. The recurring high-frequency usage pattern supports sustainable demand.",
+          "mo": "Score 6.0, rubric level 5-6. Identifiable buyer (subcontractors) with clear usage-based revenue mechanism generating $150-500 weekly per customer. However, ChatGPT provides immediate free substitute for basic RFP analysis, creating structural pricing pressure. The $50/bid pricing must deliver significant value beyond what free LLM tools provide to justify the cost versus current manual processes.",
+          "or": "Score 4.5, rubric level 3-4. ConWize already offers integrated procurement and bidding workflows with predictive analytics, covering core functionality. While trade-specific focus differentiates from general contractor tools, the core bidding workflow automation is replicable. Building exclusive partnerships with electrical/HVAC/plumbing distributors for real-time pricing feeds would create a data moat competitors couldn't replicate without similar distributor relationships."
+        },
+        {
+          "md": "Score 6.5, rubric level 5-6. Clear target audience with demonstrated need - subcontractors spend 4-8 hours per bid in a recurring 3-10 weekly workflow, indicating genuine time burden. Trust barriers exist since bidding accuracy affects business survival, creating manageable but real adoption friction. The recurring high-frequency usage pattern supports sustainable demand.",
+          "mo": "Score 6.0, rubric level 5-6. Identifiable buyer (subcontractors) with clear usage-based revenue mechanism generating $150-500 weekly per customer. However, ChatGPT provides immediate free substitute for basic RFP analysis, creating structural pricing pressure. The $50/bid pricing must deliver significant value beyond what free LLM tools provide to justify the cost versus current manual processes.",
+          "or": "Score 4.5, rubric level 3-4. ConWize already offers integrated procurement and bidding workflows with predictive analytics, covering core functionality. While trade-specific focus differentiates from general contractor tools, the core bidding workflow automation is replicable by existing construction software platforms. Building exclusive partnerships with electrical/HVAC/plumbing distributors for real-time pricing feeds would create a data moat competitors couldn't replicate without similar distributor relationships."
+        },
+        {
+          "md": "Score 6.5, rubric level 5-6. Clear target audience with demonstrated need - subcontractors spend 4-8 hours per bid in a recurring 3-10 weekly workflow, indicating genuine time burden. Trust barriers exist since bidding accuracy affects business survival, creating manageable but real adoption friction. The recurring high-frequency usage pattern supports sustainable demand.",
+          "mo": "Score 6.0, rubric level 5-6. Identifiable buyer (subcontractors) with clear usage-based revenue mechanism generating $150-500 weekly per customer. However, ChatGPT provides immediate free substitute for basic RFP analysis, creating structural pricing pressure. The $50/bid pricing must deliver significant value beyond what free LLMs provide to justify the cost versus current manual processes.",
+          "or": "Score 4.5, rubric level 3-4. ConWize already offers integrated procurement and bidding workflows with predictive analytics, covering core functionality. While trade-specific focus differentiates from general contractor tools, the core bidding automation and cost estimation capabilities exist. Building a comprehensive dataset of real-time distributor pricing across electrical/HVAC/plumbing trades would create a moat competitors couldn't replicate without 12+ months of supplier relationship development."
+        },
+        {
+          "md": "Score 6.5, rubric level 5-6. Clear target audience with demonstrated need - subcontractors spend 4-8 hours per bid in a recurring 3-10 weekly workflow, indicating genuine time burden. Trust barriers exist since bidding accuracy affects business survival, creating manageable but real adoption friction. The recurring high-frequency usage pattern supports sustainable demand.",
+          "mo": "Score 6.0, rubric level 5-6. Identifiable buyer (subcontractors) with clear usage-based revenue mechanism generating $150-500 weekly per customer. However, ChatGPT provides immediate free substitute for basic RFP analysis, creating structural pricing pressure. The $50/bid pricing must deliver significant value beyond what free LLM tools provide to justify the cost versus current manual processes.",
+          "or": "Score 4.5, rubric level 3-4. ConWize already offers integrated procurement and bidding workflows with predictive analytics, covering core functionality. While trade-specific focus differentiates from general contractor tools, the core bidding workflow automation is replicable by existing construction software platforms. Building exclusive partnerships with electrical/HVAC/plumbing distributors for real-time pricing feeds would create a data moat competitors couldn't replicate without similar distributor relationships."
+        },
+        {
+          "md": "Score 6.5, rubric level 5-6. Clear target audience with demonstrated need - subcontractors spend 4-8 hours per bid in a recurring 3-10 weekly workflow, indicating genuine time burden. Trust barriers exist since bidding accuracy affects business survival, creating manageable but real adoption friction. The recurring high-frequency usage pattern supports sustainable demand.",
+          "mo": "Score 6.0, rubric level 5-6. Identifiable buyer (subcontractors) with clear usage-based revenue mechanism generating $150-500 weekly per customer. However, ChatGPT provides immediate free substitute for basic RFP analysis, creating structural pricing pressure. The $50/bid pricing must deliver significant value beyond what free LLM tools provide to justify the cost versus current manual processes.",
+          "or": "Score 4.5, rubric level 3-4. ConWize already offers integrated procurement and bidding workflows with predictive analytics, covering core functionality. While trade-specific focus differentiates from general contractor tools, the core bidding workflow automation is replicable by existing construction software platforms. Building exclusive partnerships with electrical/HVAC/plumbing distributors for real-time pricing feeds would create a data moat competitors couldn't replicate without similar distributor relationships."
+        },
+        {
+          "md": "Score 6.5, rubric level 5-6. Clear target audience with demonstrated need - subcontractors spend 4-8 hours per bid in a recurring 3-10 weekly workflow, indicating genuine time burden. Trust barriers exist since bidding accuracy affects business survival, creating manageable but real adoption friction. The recurring high-frequency usage pattern supports sustainable demand.",
+          "mo": "Score 6.0, rubric level 5-6. Identifiable buyer (subcontractors) with clear usage-based revenue mechanism generating $150-500 weekly per customer. However, ChatGPT provides immediate free substitute for basic RFP analysis, creating structural pricing pressure. The $50/bid pricing must deliver significant value beyond what free LLMs provide to justify the cost versus current manual processes.",
+          "or": "Score 4.5, rubric level 3-4. ConWize already offers integrated procurement and bidding workflows with predictive analytics, covering core functionality. While trade-specific focus differentiates from general contractor tools, the core bidding automation and cost estimation capabilities exist. Building a comprehensive dataset of real-time distributor pricing across electrical/HVAC/plumbing suppliers would create a moat competitors couldn't replicate without 12+ months of supplier relationship development."
+        },
+        {
+          "md": "Score 6.5, rubric level 5-6. Clear target audience with demonstrated need - subcontractors spend 4-8 hours per bid in a recurring 3-10 weekly workflow, indicating genuine time burden. Trust barriers exist since bidding accuracy affects business survival, creating manageable but real adoption friction. The recurring high-frequency usage pattern supports sustainable demand.",
+          "mo": "Score 6.0, rubric level 5-6. Identifiable buyer (subcontractors) with clear usage-based revenue mechanism generating $150-500 weekly per customer. However, ChatGPT provides immediate free substitute for basic RFP analysis, creating structural pricing pressure. The $50/bid pricing must deliver significant value beyond what free LLM tools provide to justify the cost versus current manual processes.",
+          "or": "Score 4.5, rubric level 3-4. ConWize already offers integrated procurement and bidding workflows with predictive analytics, covering core functionality. While trade-specific focus differentiates from general contractor tools, the core bidding workflow automation is replicable by existing construction software platforms. Building exclusive partnerships with electrical/HVAC/plumbing distributors for real-time pricing feeds would create a data moat competitors couldn't replicate without similar distributor relationships."
+        },
+        {
+          "md": "Score 6.5, rubric level 5-6. Clear target audience with demonstrated need - subcontractors spending 4-8 hours per bid on 3-10 weekly jobs shows recurring pain. Trust barriers exist since bidding accuracy affects business survival, but the manual workflow inefficiency creates manageable adoption friction for tools that prove accuracy.",
+          "mo": "Score 6.0, rubric level 5-6. Identifiable buyer (subcontractors) with clear usage-based revenue mechanism generating $150-500 weekly per customer. ChatGPT substitution pressure exists for basic RFP analysis, but the specialized distributor pricing and historical win rate data creates willingness-to-pay differentiation beyond free alternatives.",
+          "or": "Score 4.5, rubric level 3-4. ConWize already offers integrated bidding workflows with predictive analytics, covering core functionality. While trade-specific material pricing creates some differentiation, established construction platforms could add these features with moderate development effort. Building exclusive distributor pricing partnerships and proprietary win-rate datasets across 1,000+ subcontractors would create a data moat competitors couldn't replicate without 18+ months of relationship building."
+        }
+      ],
+      "uniqueMOscores": [
+        6
+      ]
+    },
+    "AUDIT-MAT2-beginner": {
+      "runs": 10,
+      "scores": {
+        "md": [
+          5.5,
+          5.5,
+          5.5,
+          6,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          6
+        ],
+        "mo": [
+          4.5,
+          4.5,
+          6,
+          5.5,
+          6,
+          6,
+          6,
+          6,
+          6,
+          5.5
+        ],
+        "or": [
+          6,
+          6,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5
+        ]
+      },
+      "stddev": {
+        "md": 0.21081851067789195,
+        "mo": 0.6146362971528591,
+        "or": 0.6324555320336759
+      },
+      "spearman": {
+        "mdMo": -0.3952847075210474,
+        "mdOr": -0.25,
+        "moOr": -0.7905694150420948
+      },
+      "explanations": [
+        {
+          "md": "Score 5.5, rubric level 5-6. Small businesses demonstrate clear need through current manual dispute handling that requires specialized insurance expertise they lack. However, demand is constrained by relationship displacement requirements with existing benefits brokers who already serve this market and may handle disputes as part of broader relationship management. The frequency and dollar value of denied claims that would justify external help remains uncertain.",
+          "mo": "Score 4.5, rubric level 3-4. The 25% success fee eliminates upfront cost barriers and only charges on recovered claims. However, monetization is structurally pressured because small businesses currently handle disputes at no additional cost through manual processes, and benefits brokers provide dispute assistance as part of existing relationships without separate fees. The typical dollar value of recoverable claims and acceptability of 25% fees versus free alternatives remains unresolved.",
+          "or": "Score 6.0, rubric level 5-6. Real differentiation exists as no direct competitors target small business employers specifically for insurance disputes - Authsnap, Counterforce, and Rivet Resolve focus on healthcare providers or individual patients. However, benefits brokers already serve small businesses with established relationships and comprehensive benefits knowledge, making it moderately difficult but not impossible for them to expand into specialized claim dispute services. Building a structured database of successful dispute precedents across 10,000+ small business cases would create a knowledge moat that benefits brokers couldn't replicate without significant case volume investment."
+        },
+        {
+          "md": "Score 5.5, rubric level 5-6. Small businesses face genuine pain with manual claim disputes requiring specialized insurance expertise they lack. However, demand is constrained by relationship displacement friction — benefits brokers already serve this market and may handle disputes as part of existing relationships. The unresolved frequency and dollar value of denied claims creates uncertainty about actual buyer urgency.",
+          "mo": "Score 4.5, rubric level 3-4. The 25% success fee eliminates upfront barriers and aligns payment with outcomes. However, monetization faces structural pressure from free alternatives — manual processes cost nothing additional, and benefits brokers provide dispute assistance within existing relationship management without separate fees. Success depends on claim values being high enough to justify the fee versus free options.",
+          "or": "Score 6.0, rubric level 5-6. Real differentiation exists — competitors like Authsnap and Counterforce target healthcare providers or individual patients, not small business employers specifically. However, benefits brokers already serve this exact market with established relationships and comprehensive benefits knowledge, making expansion into specialized claim dispute services a moderate product effort rather than architectural redesign. Building a proprietary database of successful dispute strategies across insurance carriers would create a moat benefits brokers couldn't replicate without significant case volume."
+        },
+        {
+          "md": "Score 5-6, clear target audience with demonstrated need. Small businesses handle insurance claim disputes manually through time-intensive processes requiring specialized expertise they lack. However, benefits brokers already serve this market and may handle disputes as part of relationship management, reducing capturable demand. The frequency and dollar value of denied claims that would justify external help remains uncertain.",
+          "mo": "Score 5-6, identifiable buyer with comparable revenue mechanism. The 25% success fee eliminates upfront costs and only charges on recovery, addressing a clear willingness-to-pay signal. However, small businesses currently handle disputes at no additional cost through manual processes, and benefits brokers provide dispute assistance without separate fees, creating pricing pressure against free alternatives.",
+          "or": "Score 3-4, minor twist with trivial replication path. While no direct competitors target small business employers specifically (Authsnap, Counterforce, Rivet Resolve focus on providers/patients), benefits brokers already serve small businesses with established relationships and comprehensive benefits knowledge. They could easily expand claim dispute services as a competitive response. Building a structured database of successful dispute precedents across 1,000+ small business cases would create a knowledge moat competitors couldn't replicate without significant case volume."
+        },
+        {
+          "md": "Score 5-6, rubric level 5-6. Small businesses face genuine pain with manual claim disputes requiring specialized insurance expertise they lack. However, demand is constrained by relationship displacement requirements with existing benefits brokers who already serve this market, plus uncertainty around claim frequency and urgency that would drive external help-seeking behavior.",
+          "mo": "Score 5-6, rubric level 5-6. Success fee model eliminates upfront barriers and targets small business buyers with clear comparable mechanism. However, monetization faces structural pressure from free alternatives - manual processes cost nothing additional and benefits brokers provide dispute help within existing relationships without separate fees.",
+          "or": "Score 3-4, rubric level 3-4. While no direct competitors target small business employers specifically, benefits brokers already serve this market with established relationships and comprehensive benefits knowledge that could easily expand to specialized claim dispute services. The service differentiation is replicable by incumbents with moderate effort. Building proprietary data on claim dispute patterns across insurance carriers and specific denial reasons would create a knowledge moat competitors couldn't replicate without significant case volume."
+        },
+        {
+          "md": "Score 5-6, clear target audience with demonstrated need. Small businesses handle insurance claim disputes manually through time-intensive processes requiring specialized expertise they lack. However, benefits brokers already serve this market and may handle disputes as part of relationship management, reducing capturable demand. The frequency and dollar value of denied claims that would justify external help remains uncertain.",
+          "mo": "Score 5-6, identifiable buyer with comparable revenue mechanism. The 25% success fee eliminates upfront costs and only charges on recovery, addressing a clear willingness-to-pay signal. However, small businesses currently handle disputes at no additional cost through manual processes, and benefits brokers provide dispute assistance without separate fees, creating pricing pressure against free alternatives.",
+          "or": "Score 3-4, minor twist with trivial replication path. While no direct competitors target small business employers specifically (Authsnap, Counterforce, Rivet Resolve focus on providers/patients), benefits brokers already serve small businesses with established relationships and comprehensive benefits knowledge. They could easily expand claim dispute services as a competitive response. Building a structured database of successful dispute precedents across 1,000+ small business cases would create a knowledge moat competitors couldn't replicate without significant case volume."
+        },
+        {
+          "md": "Score 5-6, clear target audience with demonstrated need. Small businesses handle insurance claim disputes manually through time-intensive processes requiring specialized expertise they lack. However, benefits brokers already serve this market and may handle disputes as part of relationship management, creating relationship displacement friction. The frequency and dollar value of denied claims that would justify external help remains uncertain.",
+          "mo": "Score 5-6, identifiable buyer with comparable revenue mechanism. The 25% success fee eliminates upfront costs and only charges on recovery, addressing a clear willingness-to-pay signal. However, small businesses currently handle disputes at no additional cost through manual processes, and benefits brokers provide dispute assistance without separate fees, creating pricing pressure from free alternatives.",
+          "or": "Score 3-4, minor twist but competitors could replicate with moderate effort. While no direct competitors target small business employers specifically (Authsnap, Counterforce, Rivet Resolve focus on providers/patients), benefits brokers already serve small businesses with established relationships and comprehensive benefits knowledge. They could easily expand claim dispute services as a competitive response. Building a structured database of successful dispute precedents across 1,000+ small business cases would create a knowledge moat competitors couldn't replicate without significant case volume."
+        },
+        {
+          "md": "Score 5-6, clear target audience with demonstrated need. Small businesses handle insurance claim disputes manually through time-intensive processes requiring specialized expertise they lack. However, benefits brokers already serve this market and may handle disputes as part of relationship management, reducing capturable demand. The frequency and dollar value of denied claims that would justify external help remains uncertain.",
+          "mo": "Score 5-6, identifiable buyer with comparable revenue mechanism. The 25% success fee eliminates upfront costs and only charges on recovery, addressing a key barrier. However, small businesses currently handle disputes at no cost through manual processes, and benefits brokers provide dispute assistance without separate fees, creating pricing pressure against the success fee model.",
+          "or": "Score 3-4, minor differentiation but easily replicable. While no direct competitors target small business employers specifically (Authsnap, Counterforce, Rivet Resolve focus on providers/patients), benefits brokers already serve small businesses with established relationships and comprehensive benefits knowledge. They could easily expand claim dispute services as a competitive response. Building a structured database of successful dispute precedents across 1,000+ small business cases would create a knowledge moat competitors couldn't replicate without significant case volume."
+        },
+        {
+          "md": "Score 5-6, clear target audience with demonstrated need. Small businesses handle insurance claim disputes manually through time-intensive processes requiring specialized expertise they lack. However, benefits brokers already serve this market and may handle disputes as part of relationship management, reducing capturable demand. The frequency and dollar value of denied claims that would justify external help remains uncertain.",
+          "mo": "Score 5-6, identifiable buyer with comparable revenue mechanism. The 25% success fee eliminates upfront costs and only charges on recovery, addressing a clear willingness-to-pay signal. However, small businesses currently handle disputes at no additional cost, and benefits brokers provide dispute assistance without separate fees, creating pricing pressure against free alternatives.",
+          "or": "Score 3-4, minor differentiation but easily replicable. While no direct competitors target small business employers specifically (Authsnap, Counterforce, Rivet Resolve focus on providers/patients), benefits brokers already serve this market with established relationships and comprehensive benefits knowledge. They could easily expand claim dispute services as a competitive response. Building a structured database of successful dispute precedents across 1,000+ small business cases would create a knowledge moat competitors couldn't replicate without significant case volume."
+        },
+        {
+          "md": "Score 5.5, rubric level 5-6. Small businesses face genuine pain with manual claim disputes requiring specialized insurance expertise they lack. However, demand is constrained by relationship displacement friction — benefits brokers already serve this market and may handle disputes as part of existing relationships. The unresolved frequency and dollar value of denied claims creates uncertainty about actual buyer urgency.",
+          "mo": "Score 6.0, rubric level 5-6. Success fee model eliminates upfront cost barriers and aligns payment with results. However, monetization faces structural pressure from free alternatives — manual processes cost nothing additional, and benefits brokers provide dispute assistance within existing relationships without separate fees. The 25% fee rate needs validation against typical recovery values.",
+          "or": "Score 4.5, rubric level 3-4. While no direct competitors target small business employers specifically (Authsnap, Counterforce, Rivet Resolve focus on providers/patients), benefits brokers already serve this market with established relationships and comprehensive benefits knowledge. They could easily expand claim dispute services as a competitive response without significant architectural changes. Building a proprietary database of successful dispute strategies across insurance carriers and claim types would create a knowledge moat that benefits brokers couldn't replicate without extensive case history."
+        },
+        {
+          "md": "Score 5-6, rubric level 5-6. Small businesses face genuine pain with manual claim disputes requiring specialized insurance expertise they lack. However, demand is constrained by relationship displacement friction — benefits brokers already serve this market and may handle disputes as part of existing relationships. The frequency and dollar value of denied claims that would justify external help remains uncertain.",
+          "mo": "Score 5-6, rubric level 5-6. Success fee model eliminates upfront barriers and targets small business buyers with clear payment trigger (recovered claims). However, monetization faces structural pressure from free alternatives — manual processes cost nothing additional, and benefits brokers provide dispute help within existing relationships without separate fees. Willingness to pay 25% depends on claim values that remain unspecified.",
+          "or": "Score 3-4, rubric level 3-4. While no direct competitors target small business employers specifically (Authsnap, Counterforce, Rivet Resolve serve different segments), benefits brokers already serve this market with established relationships and comprehensive benefits knowledge. They could easily expand claim dispute services as a competitive response without significant architectural changes. Building proprietary data on small business claim patterns across specific insurance carriers would create a moat competitors couldn't replicate without 12+ months of case history collection."
+        }
+      ],
+      "uniqueMOscores": [
+        4.5,
+        5.5,
+        6
+      ]
+    },
+    "ARC-D2": {
+      "runs": 10,
+      "scores": {
+        "md": [
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5
+        ],
+        "mo": [
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6
+        ],
+        "or": [
+          4,
+          4,
+          4,
+          4,
+          3.5,
+          4,
+          3.5,
+          4,
+          3.5,
+          3.5
+        ]
+      },
+      "stddev": {
+        "md": 0,
+        "mo": 0,
+        "or": 0.2581988897471611
+      },
+      "spearman": {
+        "mdMo": 0,
+        "mdOr": 0,
+        "moOr": 0
+      },
+      "explanations": [
+        {
+          "md": "Score 5.5, rubric level 5-6. Manual underwriting workflows remain standard with documented inefficiencies, indicating clear target audience with demonstrated need. However, the 18-month pre-revenue requirement creates significant adoption friction, and specific buyer urgency triggers that would drive active solution-seeking are not identified in the evidence.",
+          "mo": "Score 6.0, rubric level 5-6. Aloan demonstrates that community banks will pay for AI commercial loan underwriting automation, providing clear willingness-to-pay evidence. The buyer (community banks $500M-$5B assets) is identified with a comparable revenue mechanism. However, the $2.8M pre-revenue investment requirement and 18-month payment delay create structural monetization pressure.",
+          "or": "Score 4.0, rubric level 3-4. Aloan already offers direct AI commercial loan underwriting automation for the same target market of community banks and credit unions. While regulatory barriers create entry friction, they don't prevent replication by existing competitors who have already navigated these requirements. Building proprietary loan performance data across 1,000+ community bank portfolios would create a dataset moat that competitors couldn't replicate without years of bank relationships."
+        },
+        {
+          "md": "Score 5.5, rubric level 5-6. Manual underwriting workflows remain standard with documented inefficiencies, indicating clear target audience with demonstrated need. However, the 18-month pre-revenue requirement creates significant adoption friction, and specific buyer urgency triggers are not identified in the evidence.",
+          "mo": "Score 6.0, rubric level 5-6. Aloan demonstrates that community banks will pay for AI commercial loan underwriting automation, providing clear willingness-to-pay evidence. However, the $2.8M pre-revenue investment requirement and 18-month delay before any revenue significantly pressures the monetization timeline.",
+          "or": "Score 4.0, rubric level 3-4. Aloan already offers direct AI commercial loan underwriting automation for the same target market of community banks and credit unions. While regulatory barriers create entry friction, they don't prevent replication by existing competitors who have already navigated these requirements. Building proprietary risk models trained on community bank loan performance data across 1,000+ institutions would create a defensible advantage competitors couldn't replicate without years of data collection."
+        },
+        {
+          "md": "Score 5.5, rubric level 5-6. Manual underwriting workflows remain standard with documented inefficiencies, indicating clear target audience with demonstrated need. However, the 18-month pre-revenue requirement creates significant adoption friction, and specific buyer urgency triggers that would drive active solution-seeking are not identified in the evidence.",
+          "mo": "Score 6.0, rubric level 5-6. Aloan demonstrates that community banks will pay for AI commercial loan underwriting automation, providing clear willingness-to-pay evidence. The buyer (community banks $500M-$5B assets) is identified with a comparable revenue mechanism. However, the $2.8M pre-revenue investment requirement and 18-month payment delay create structural monetization pressure.",
+          "or": "Score 4.0, rubric level 3-4. Aloan already offers direct AI commercial loan underwriting automation for the same target market of community banks and credit unions. While regulatory barriers create entry friction, they don't prevent replication by existing competitors who have already navigated these requirements. Building proprietary credit risk models trained on community bank-specific loan performance data across 1,000+ institutions would create a moat competitors couldn't replicate without years of data collection."
+        },
+        {
+          "md": "Score 5.5, rubric level 5-6. Manual underwriting workflows remain standard with documented inefficiencies, indicating clear target audience with demonstrated need. However, the 18-month pre-revenue requirement creates significant adoption friction, and specific buyer urgency triggers are not identified in the evidence.",
+          "mo": "Score 6.0, rubric level 5-6. Aloan demonstrates that community banks will pay for AI commercial loan underwriting automation, providing clear willingness-to-pay evidence. However, the $2.8M pre-revenue investment requirement and 18-month delay before any revenue significantly pressures the monetization timeline.",
+          "or": "Score 4.0, rubric level 3-4. Aloan already offers direct AI commercial loan underwriting automation for the same target market of community banks and credit unions. While regulatory barriers create entry friction, they don't prevent replication by existing competitors who have already navigated these requirements. Building proprietary risk models trained on 10,000+ community bank loan outcomes would create a data moat competitors couldn't replicate without years of customer relationships."
+        },
+        {
+          "md": "Score 5.5, rubric level 5-6. Manual underwriting workflows remain standard with documented inefficiencies, indicating clear target audience with demonstrated need. However, the 18-month pre-revenue requirement creates significant adoption friction, and specific buyer urgency triggers are not identified in the evidence.",
+          "mo": "Score 6.0, rubric level 5-6. Aloan demonstrates that community banks will pay for AI commercial loan underwriting automation, providing clear willingness-to-pay evidence. However, the $2.8M pre-revenue investment requirement and 18-month delay before any revenue significantly pressures the monetization timeline.",
+          "or": "Score 3.5, rubric level 3-4. Aloan already offers AI commercial loan underwriting automation for the same target market of community banks and credit unions. While regulatory barriers create entry friction, they don't differentiate against existing players who have already navigated these requirements. Building proprietary credit risk models trained on community bank-specific loan performance data across 1,000+ institutions would create a defensible advantage competitors couldn't replicate without years of data collection."
+        },
+        {
+          "md": "Score 5.5, rubric level 5-6. Manual underwriting workflows remain standard with documented inefficiencies, indicating clear target audience with demonstrated need. However, the 18-month pre-revenue requirement creates significant adoption friction, and specific buyer urgency triggers are not identified in the evidence.",
+          "mo": "Score 6.0, rubric level 5-6. Aloan demonstrates that community banks will pay for AI commercial loan underwriting automation, providing clear willingness-to-pay evidence. However, the $2.8M pre-revenue investment requirement and 18-month delay before any revenue significantly pressures the monetization timeline.",
+          "or": "Score 4.0, rubric level 3-4. Aloan already offers direct AI commercial loan underwriting automation for the same target market of community banks and credit unions. While regulatory barriers create entry friction, they don't prevent replication by existing competitors who have already navigated these requirements. Building proprietary credit risk models trained on community bank-specific loan performance data across 1,000+ institutions would create a defensible advantage competitors couldn't replicate without years of data collection."
+        },
+        {
+          "md": "Score 5.5, rubric level 5-6. Manual underwriting workflows remain standard with documented inefficiencies, indicating clear target audience with demonstrated need. However, the 18-month pre-revenue requirement creates significant adoption friction, and specific buyer urgency triggers are not identified in the evidence.",
+          "mo": "Score 6.0, rubric level 5-6. Aloan demonstrates that community banks will pay for AI commercial loan underwriting automation, providing clear willingness-to-pay evidence. However, the $2.8M pre-revenue investment requirement and 18-month delay before any revenue significantly pressures the monetization timeline.",
+          "or": "Score 3.5, rubric level 3-4. Aloan already offers AI commercial loan underwriting automation for the same community bank target market, representing direct competitive overlap. While regulatory barriers create entry friction, they don't differentiate against existing players who have already navigated these requirements. Building proprietary risk models trained on community bank loan performance data across 1,000+ institutions would create a defensible advantage competitors couldn't replicate without years of data collection."
+        },
+        {
+          "md": "Score 5.5, rubric level 5-6. Manual underwriting workflows remain standard with documented inefficiencies, indicating clear target audience with demonstrated need. However, the 18-month pre-revenue requirement creates significant adoption friction, and specific buyer urgency triggers beyond general inefficiency are not identified in the evidence.",
+          "mo": "Score 6.0, rubric level 5-6. Aloan demonstrates that community banks will pay for AI commercial loan underwriting automation, providing clear willingness-to-pay evidence. The $2.8M pre-revenue investment requirement creates structural pressure, but the regulatory compliance gates create natural willingness to pay for certified solutions.",
+          "or": "Score 4.0, rubric level 3-4. Aloan already offers direct AI commercial loan underwriting automation for the same target market of community banks and credit unions. While regulatory barriers create entry friction, they don't prevent replication by existing competitors who have already navigated these requirements. Building proprietary credit risk models trained on community bank loan performance data across 1,000+ institutions would create a defensible advantage that competitors couldn't replicate without years of data collection."
+        },
+        {
+          "md": "Score 5.5, rubric level 5-6. Manual underwriting workflows remain standard with documented inefficiencies, indicating clear target audience with demonstrated need. However, the 18-month pre-revenue requirement creates significant adoption friction, and specific buyer urgency triggers are not identified in the evidence.",
+          "mo": "Score 6.0, rubric level 5-6. Aloan demonstrates that community banks will pay for AI commercial loan underwriting automation, providing clear willingness-to-pay evidence. However, the $2.8M pre-revenue investment requirement and 18-month delay before any revenue significantly pressures the monetization timeline.",
+          "or": "Score 3.5, rubric level 3-4. Aloan already offers AI commercial loan underwriting automation for the same target market of community banks and credit unions. While regulatory barriers create entry friction, they don't differentiate against existing players who have already navigated these requirements. Building proprietary credit risk models trained on community bank-specific loan performance data across 1,000+ institutions would create a defensible advantage competitors couldn't replicate without years of data collection."
+        },
+        {
+          "md": "Score 5.5, rubric level 5-6. Manual underwriting workflows remain standard with documented inefficiencies, indicating clear target audience with demonstrated need. However, the 18-month pre-revenue requirement creates significant adoption friction, and specific buyer urgency triggers are not identified in the evidence.",
+          "mo": "Score 6.0, rubric level 5-6. Aloan demonstrates that community banks will pay for AI commercial loan underwriting automation, providing clear willingness-to-pay evidence. However, the $2.8M pre-revenue investment requirement and 18-month delay before any revenue significantly pressures the monetization timeline.",
+          "or": "Score 3.5, rubric level 3-4. Aloan already offers AI commercial loan underwriting automation for the same target market of community banks and credit unions. While regulatory barriers create entry friction, they don't differentiate against existing players who have already navigated these requirements. Building proprietary risk models trained on community bank loan performance data across 1,000+ institutions would create a defensible advantage competitors couldn't replicate without years of data collection."
+        }
+      ],
+      "uniqueMOscores": [
+        6
+      ]
+    },
+    "AUDIT-L2": {
+      "runs": 10,
+      "scores": {
+        "md": [
+          4.5,
+          4.5,
+          5.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5
+        ],
+        "mo": [
+          6,
+          6,
+          6,
+          6,
+          5.5,
+          6,
+          6,
+          6,
+          6,
+          6
+        ],
+        "or": [
+          4,
+          4,
+          4.5,
+          4,
+          3.5,
+          4,
+          4,
+          3.5,
+          3.5,
+          4
+        ]
+      },
+      "stddev": {
+        "md": 0.3162277660168379,
+        "mo": 0.15811388300841894,
+        "or": 0.31622776601683794
+      },
+      "spearman": {
+        "mdMo": 0.1111111111111111,
+        "mdOr": 0.5976143046671969,
+        "moOr": 0.4648111258522642
+      },
+      "explanations": [
+        {
+          "md": "Score 4.5, rubric level 3-4. Word-of-mouth referrals dominate tutor discovery but have limited reach, indicating real demand for better matching. However, parents rely on personal referrals for trust-based selection, creating significant adoption friction. The marketplace must displace established trust networks without clear triggers specified for why parents would switch to a platform-based approach.",
+          "mo": "Score 6.0, rubric level 5-6. Wyzant demonstrates commission model viability in tutoring marketplaces, and the 15% rate aligns with established marketplace economics. Clear buyer (parents) and transaction mechanism (hourly sessions) are specified. However, word-of-mouth referrals create direct pricing pressure as they have no platform fees, requiring value justification for the commission.",
+          "or": "Score 4.0, rubric level 3-4. The core tutor-parent matching and commission model overlaps directly with established marketplaces like Wyzant and Varsity Tutors. While retired teacher focus provides positioning differentiation, this is primarily audience targeting rather than product defensibility. Established platforms could add retired teacher recruitment features with moderate effort. Building exclusive partnerships with specific teacher retirement associations or pension systems would create a supply-side moat competitors couldn't replicate without similar institutional relationships."
+        },
+        {
+          "md": "Score 4.5, rubric level 3-4. Word-of-mouth referrals dominate tutor discovery but have limited reach, indicating real demand for better matching. However, parents typically rely on personal referrals for tutor selection, creating significant friction as the marketplace must displace established trust-based discovery patterns. The Boston retired-teacher population provides supply but doesn't address the core adoption barrier of trust displacement.",
+          "mo": "Score 6.0, rubric level 5-6. Wyzant operates with high commission rates as an established marketplace, demonstrating commission model viability in tutoring with identifiable buyers (parents) and comparable revenue mechanism (15% commission). However, word-of-mouth referrals have no platform fees, creating direct pricing pressure against any commission-based model, limiting pricing power.",
+          "or": "Score 4.0, rubric level 3-4. The core tutor-parent matching function and commission model overlaps directly with established marketplaces like Wyzant and Varsity Tutors. The specific focus on retired teachers as supply side provides minor differentiation, but established competitors could easily add retired teacher recruitment features without architectural changes. Building exclusive partnerships with specific teacher retirement systems or pension boards would create a supply moat competitors couldn't replicate without similar institutional relationships."
+        },
+        {
+          "md": "Score 5.5, rubric level 5-6. Clear target audience of parents seeking tutors with demonstrated need, as evidenced by established word-of-mouth referral patterns. However, the marketplace must displace trust-based discovery networks where parents already rely on personal referrals, creating meaningful adoption friction. The Boston retired-teacher population provides supply concentration, but demand capture depends on overcoming established referral preferences.",
+          "mo": "Score 6.0, rubric level 5-6. Identifiable buyer (parents) with named comparable revenue mechanism (15% commission) supported by Wyzant's demonstrated high commission rates in tutoring marketplaces. However, word-of-mouth referrals create direct pricing pressure as they have no platform fees, requiring clear value justification for the commission model to achieve sustainable willingness to pay.",
+          "or": "Score 4.5, rubric level 3-4. The core tutor-parent matching function and commission model overlaps directly with established marketplaces like Wyzant and Varsity Tutors. While the retired-teacher supply focus provides differentiation, this positioning could be replicated by incumbents through targeted recruitment campaigns without fundamental product changes. Building exclusive partnerships with retired teacher associations or pension systems would create a supply moat that established platforms couldn't easily replicate."
+        },
+        {
+          "md": "Score 4.5, rubric level 3-4. Word-of-mouth referrals dominate tutor discovery but have limited reach, indicating real demand for better matching. However, parents rely on personal referrals for trust-based selection, creating significant adoption friction. The marketplace must displace established trust networks without clear triggers specified for why parents would switch to a platform-based approach.",
+          "mo": "Score 6.0, rubric level 5-6. Wyzant demonstrates commission model viability in tutoring marketplaces, and the 15% rate aligns with established marketplace economics. Clear buyer (parents) and transaction mechanism (hourly sessions) are specified. However, word-of-mouth referrals create direct pricing pressure as they have no platform fees, requiring value justification for the commission.",
+          "or": "Score 4.0, rubric level 3-4. The core tutor-parent matching and commission model overlaps directly with established marketplaces like Wyzant and Varsity Tutors. While retired teacher focus provides positioning differentiation, this is primarily audience targeting rather than product defensibility. Established platforms could add retired teacher recruitment features with moderate effort. Building exclusive partnerships with specific teacher retirement associations or pension systems would create a supply-side moat competitors couldn't replicate without similar institutional relationships."
+        },
+        {
+          "md": "Score 4.5, rubric level 3-4. Word-of-mouth referrals dominate tutor discovery but have limited reach, indicating real demand for better matching. However, parents rely on personal referrals for trust-based selection, creating significant adoption friction. The marketplace must displace established trust networks without clear triggers specified for why parents would switch to a platform-based approach.",
+          "mo": "Score 5.5, rubric level 5-6. Wyzant demonstrates commission model viability in tutoring marketplaces, and the 15% rate is identifiable with a clear transaction-based mechanism. However, word-of-mouth referrals create direct pricing pressure as they have no platform fees, requiring the marketplace to justify its commission against free alternatives that parents already trust and use.",
+          "or": "Score 3.5, rubric level 3-4. The core tutor-parent matching function and commission model overlaps directly with established marketplaces like Wyzant and Varsity Tutors. While focusing specifically on retired teachers provides some differentiation, this is positioning rather than a structural barrier — established platforms could easily add retired teacher recruitment features or create dedicated sections. Building exclusive partnerships with specific teacher retirement associations or pension systems would create a supply moat that Wyzant couldn't replicate without similar institutional relationships."
+        },
+        {
+          "md": "Score 4.5, rubric level 3-4. Word-of-mouth referrals dominate tutor discovery but have limited reach, indicating real demand for better matching. However, parents rely on personal referrals for trust-based selection, creating significant adoption friction. The marketplace must displace established trust networks without clear triggers specified for why parents would switch to a platform-based approach.",
+          "mo": "Score 6.0, rubric level 5-6. Wyzant demonstrates commission model viability in tutoring marketplaces, and the 15% rate aligns with established marketplace economics. Clear buyer (parents) and transaction mechanism (hourly sessions) are specified. However, word-of-mouth referrals create direct pricing pressure as they have no platform fees, requiring value justification for the commission.",
+          "or": "Score 4.0, rubric level 3-4. The core tutor-parent matching and commission model overlaps directly with established marketplaces like Wyzant and Varsity Tutors. While retired teacher focus provides positioning differentiation, this is primarily audience targeting rather than product defensibility. Established platforms could add retired teacher recruitment features with moderate effort. Building exclusive partnerships with specific teacher retirement associations or pension systems would create a supply-side moat competitors couldn't replicate without similar institutional relationships."
+        },
+        {
+          "md": "Score 4.5, rubric level 3-4. Word-of-mouth referrals dominate tutor discovery but have limited reach, indicating real demand for better matching. However, parents typically rely on personal referrals for tutor selection, creating significant friction as the marketplace must displace established trust-based discovery patterns. The need is real but adoption barriers are substantial.",
+          "mo": "Score 6.0, rubric level 5-6. Wyzant operates with high commission rates as an established marketplace, demonstrating commission model viability in tutoring with identifiable buyers (parents) and comparable revenue mechanism. However, word-of-mouth referrals have no platform fees, creating direct pricing pressure against any commission-based model.",
+          "or": "Score 4.0, rubric level 3-4. The core tutor-parent matching function and commission model overlaps directly with established marketplaces like Wyzant and Varsity Tutors. While the specific focus on retired teachers provides differentiation, this is positioning rather than a structural barrier — established platforms could add retired teacher recruitment features with moderate effort. Building exclusive partnerships with specific teacher retirement systems or pension boards would create a supply-side moat competitors couldn't replicate without similar institutional relationships."
+        },
+        {
+          "md": "Score 4.5, rubric level 3-4. Word-of-mouth referrals dominate tutor discovery but have limited reach, indicating real demand for better matching. However, parents typically rely on personal referrals for tutor selection, creating significant friction as the marketplace must displace established trust-based discovery patterns. The need is real but adoption barriers are substantial.",
+          "mo": "Score 6.0, rubric level 5-6. Wyzant operates with high commission rates as an established marketplace, demonstrating commission model viability in tutoring with identifiable buyers (parents) and comparable revenue mechanism. However, word-of-mouth referrals have no platform fees, creating direct pricing pressure against any commission-based model.",
+          "or": "Score 3.5, rubric level 3-4. The core tutor-parent matching function and commission model overlaps directly with established marketplaces like Wyzant and Varsity Tutors. While the specific focus on retired teachers provides some differentiation, this is positioning rather than a structural barrier — established platforms could easily add retired teacher recruitment features. Building exclusive partnerships with specific teacher retirement systems or pension boards would create a supply-side moat competitors couldn't replicate without similar institutional relationships."
+        },
+        {
+          "md": "Score 4.5, rubric level 3-4. Word-of-mouth referrals dominate tutor discovery but have limited reach, indicating real demand for better matching. However, parents typically rely on personal referrals for tutor selection, creating significant friction as the marketplace must displace established trust-based discovery patterns. The need is real but adoption barriers are substantial.",
+          "mo": "Score 6.0, rubric level 5-6. Wyzant operates with high commission rates as an established marketplace, demonstrating commission model viability in tutoring with identifiable buyers (parents) and comparable revenue mechanism (15% commission). However, word-of-mouth referrals have no platform fees, creating direct pricing pressure against any commission-based model.",
+          "or": "Score 3.5, rubric level 3-4. The core tutor-parent matching function and commission model overlaps directly with established marketplaces like Wyzant and Varsity Tutors. While the specific focus on retired teachers provides differentiation, this is positioning rather than a structural barrier — established platforms could easily add retired teacher recruitment features. Building exclusive partnerships with specific teacher retirement systems or pension boards would create a supply-side moat competitors couldn't replicate without similar institutional relationships."
+        },
+        {
+          "md": "Score 4.5, rubric level 3-4. Word-of-mouth referrals dominate tutor discovery but have limited reach, indicating real demand for better matching. However, parents rely on personal referrals for trust-based selection, creating significant adoption friction. The marketplace must displace established trust networks without clear triggers specified for why parents would switch to a platform-based approach.",
+          "mo": "Score 6.0, rubric level 5-6. Wyzant demonstrates commission model viability in tutoring marketplaces, and the 15% rate aligns with established marketplace economics. Clear buyer (parents) and transaction mechanism (hourly sessions) are specified. However, word-of-mouth referrals create direct pricing pressure as they have no platform fees, requiring value justification for the commission.",
+          "or": "Score 4.0, rubric level 3-4. The core tutor-parent matching and commission model overlaps directly with established marketplaces like Wyzant and Varsity Tutors. While retired teacher focus provides positioning differentiation, this is primarily audience targeting rather than product defensibility. Established platforms could add retired teacher recruitment features with moderate effort. Building exclusive partnerships with specific teacher retirement associations or pension systems would create a supply-side moat competitors couldn't replicate without similar institutional relationships."
+        }
+      ],
+      "uniqueMOscores": [
+        5.5,
+        6
+      ]
+    },
+    "AUDIT-MD1": {
+      "runs": 10,
+      "scores": {
+        "md": [
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5
+        ],
+        "mo": [
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5
+        ],
+        "or": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ]
+      },
+      "stddev": {
+        "md": 0,
+        "mo": 0,
+        "or": 0
+      },
+      "spearman": {
+        "mdMo": 0,
+        "mdOr": 0,
+        "moOr": 0
+      },
+      "explanations": [
+        {
+          "md": "Score 5-6, clear target audience with demonstrated need. Manual spreadsheet workflows are widespread among freelancers and Invoice Payment Tracker's 500+ waitlist signups indicate active demand for payment automation solutions. However, trust barriers around sharing sensitive client and financial data create adoption friction, and switching costs from existing workflows require data migration and habit change.",
+          "mo": "Score 3-4, revenue path exists but is structurally pressured. While FreshBooks has higher pricing suggesting room for a lower-priced alternative, Avaza offers a free tier with comprehensive invoicing and time tracking features. The proposed $15/month pricing lacks validation, and the buyer segment and payment model remain unspecified, creating uncertainty about sustainable monetization.",
+          "or": "Score 3-4, minor twist that competitors could replicate trivially. InvoicePilot.AI and PayHint already offer AI-powered payment automation, while general-purpose LLMs can generate payment reminders and contract templates through direct prompting with no additional cost. Traditional incumbents like FreshBooks could add similar AI features with moderate product effort. Building a structured database of freelancer payment patterns across thousands of client interactions would create a moat competitors couldn't replicate without extensive data collection."
+        },
+        {
+          "md": "Score 5-6, clear target audience with demonstrated need. Manual spreadsheet workflows are widespread among freelancers and Invoice Payment Tracker's 500+ waitlist signups indicate active demand for payment automation solutions. However, trust barriers around sharing sensitive client and financial data create adoption friction, and switching costs from existing workflows require data migration and habit change.",
+          "mo": "Score 3-4, revenue path exists but is structurally pressured. While FreshBooks has higher pricing suggesting room for a lower-priced alternative, Avaza offers a free tier with comprehensive invoicing and time tracking features. The proposed $15/month pricing lacks validation, and the buyer segment and payment model are unspecified, creating uncertainty about sustainable monetization.",
+          "or": "Score 3-4, minor twist that competitors could replicate trivially. InvoicePilot.AI and PayHint already offer AI-powered payment automation, while general-purpose LLMs can generate payment reminders and contract templates with immediate availability and no additional cost. Traditional incumbents like FreshBooks could add AI features with moderate product effort. Building tighter workflow integration around freelancer-specific payment tracking patterns would create a moat competitors couldn't replicate without redesigning their core invoice-to-payment flow."
+        },
+        {
+          "md": "Score 5-6, clear target audience with demonstrated need. Manual spreadsheet workflows are widespread among freelancers and Invoice Payment Tracker's 500+ waitlist signups indicate active demand for payment automation solutions. However, trust barriers around sharing sensitive client and financial data create adoption friction, and switching costs from existing workflows require data migration and habit change.",
+          "mo": "Score 3-4, revenue path exists but is structurally pressured. While FreshBooks has higher pricing suggesting room for a lower-priced alternative, Avaza offers a free tier with comprehensive invoicing and time tracking features. The proposed $15/month pricing lacks validation, and the buyer segment is unspecified beyond the user's immediate network.",
+          "or": "Score 3-4, minor twist that competitors could replicate trivially. InvoicePilot.AI and PayHint already offer AI-powered payment automation, while general-purpose LLMs can generate payment reminders and contract templates through direct prompting with no additional cost. Traditional incumbents like FreshBooks could add similar AI features with moderate product effort. Building a structured dataset of freelancer payment patterns across thousands of client relationships would create a moat competitors couldn't replicate without extensive data collection."
+        },
+        {
+          "md": "Score 5-6, clear target audience with demonstrated need. Manual spreadsheet workflows are widespread among freelancers and Invoice Payment Tracker's 500+ waitlist signups indicate active demand for payment automation solutions. However, trust barriers around sharing sensitive client and financial data create adoption friction, and switching costs from existing workflows require data migration and habit change.",
+          "mo": "Score 3-4, revenue path exists but is structurally pressured. While FreshBooks has higher pricing suggesting room for a lower-priced alternative, Avaza offers a free tier with comprehensive invoicing and time tracking features. The proposed $15/month pricing lacks validation, and the buyer segment and payment model are unspecified, creating uncertainty about sustainable monetization.",
+          "or": "Score 3-4, minor twist that competitors could replicate trivially. InvoicePilot.AI and PayHint already offer AI-powered payment automation, while general-purpose LLMs can generate payment reminders and contract templates with immediate availability and no additional cost. Though traditional incumbents like FreshBooks haven't integrated AI capabilities yet, the workflow automation described could be added as features with moderate effort. Building a structured dataset of freelancer payment patterns across thousands of client interactions would create a moat competitors couldn't replicate without extensive data collection."
+        },
+        {
+          "md": "Score 5-6, clear target audience with demonstrated need. The user's personal experience plus widespread manual spreadsheet workflows indicate real freelancer pain around payment tracking. Invoice Payment Tracker's 500+ waitlist signups shows active demand for payment automation solutions. However, trust barriers around sharing sensitive financial data and switching costs from existing workflows create adoption friction that caps the score.",
+          "mo": "Score 3-4, revenue path exists but structurally pressured. While FreshBooks' higher pricing suggests room for a $15/month alternative, Avaza offers comprehensive freelancer features including invoicing and time tracking for free. The user hasn't validated willingness to pay at the proposed price point, and free alternatives cover much of the core workflow with minimal friction delta.",
+          "or": "Score 3-4, minor twist that competitors could replicate trivially. InvoicePilot.AI and PayHint already offer AI-powered payment automation, while general-purpose LLMs can generate payment reminders and contracts through direct prompting at no additional cost. Traditional incumbents like FreshBooks could add AI features with moderate product effort. Building a structured database of freelancer payment patterns across thousands of client relationships would create a moat competitors couldn't replicate without extensive data collection."
+        },
+        {
+          "md": "Score 5-6, clear target audience with demonstrated need. Manual spreadsheet workflows are widespread among freelancers and Invoice Payment Tracker's 500+ waitlist signups indicate active demand for payment automation solutions. However, trust barriers around sharing sensitive client and financial data create adoption friction, and switching costs from existing workflows require data migration and habit change.",
+          "mo": "Score 3-4, revenue path exists but is structurally pressured. While FreshBooks has higher pricing suggesting room for a lower-priced alternative, Avaza offers a free tier with comprehensive invoicing and time tracking features. The proposed $15/month pricing lacks validation, and the buyer segment and payment model are unspecified, creating uncertainty about sustainable monetization.",
+          "or": "Score 3-4, minor twist that competitors could replicate trivially. InvoicePilot.AI and PayHint already offer AI-powered payment automation, while general-purpose LLMs can generate payment reminders and contract templates with immediate availability and no additional cost. Though traditional incumbents haven't integrated AI capabilities yet, the core value could be added as features to existing platforms. Building a structured dataset of freelancer payment patterns across thousands of client relationships would create a moat competitors couldn't replicate without extensive data collection."
+        },
+        {
+          "md": "Score 5-6, clear target audience with demonstrated need. Manual spreadsheet workflows are widespread among freelancers, and Invoice Payment Tracker's 500+ waitlist signups indicates active demand for payment automation. However, trust barriers around sharing sensitive financial data and switching costs from existing workflows create adoption friction that limits capturable demand.",
+          "mo": "Score 3-4, revenue path exists but is structurally pressured. While FreshBooks charges higher prices suggesting room for a lower-cost alternative, Avaza offers comprehensive freelancer features including invoicing and time tracking for free. The proposed $15/month pricing lacks validation, and free alternatives significantly pressure subscription willingness-to-pay.",
+          "or": "Score 3-4, minor twist that competitors could replicate trivially. InvoicePilot.AI and PayHint already offer AI-powered payment automation, while general-purpose LLMs can generate payment reminders and contracts with no additional cost. Traditional incumbents like FreshBooks could add AI features with moderate product effort. Building tighter workflow integration around freelancer-specific payment tracking patterns would create a moat competitors couldn't replicate without redesigning their invoice-to-payment data models."
+        },
+        {
+          "md": "Score 5-6, clear target audience with demonstrated need. Manual spreadsheet workflows are widespread among freelancers and Invoice Payment Tracker's 500+ waitlist signups indicate active demand for payment automation solutions. However, trust barriers around sharing sensitive client and financial data create adoption friction, and switching costs from existing workflows require data migration and habit change.",
+          "mo": "Score 3-4, revenue path exists but is structurally pressured. While FreshBooks has higher pricing suggesting room for a lower-priced alternative, Avaza offers a free tier with comprehensive invoicing and time tracking features. The proposed $15/month pricing lacks validation, and the buyer segment remains unspecified beyond the user's immediate network.",
+          "or": "Score 3-4, minor twist that competitors could replicate trivially. InvoicePilot.AI and PayHint already offer AI-powered payment automation, while general-purpose LLMs can generate payment reminders and contract templates through direct prompting with no additional cost. Traditional incumbents like FreshBooks could add similar AI features with moderate product effort. Building a structured dataset of freelancer payment patterns across thousands of client relationships would create a moat competitors couldn't replicate without extensive data collection."
+        },
+        {
+          "md": "Score 5-6, clear target audience with demonstrated need. The user's personal experience and network validation shows real freelancer pain around payment delays, supported by Invoice Payment Tracker's 500+ waitlist signups indicating active demand. However, trust barriers around sharing sensitive financial data and switching costs from existing spreadsheet workflows create meaningful adoption friction that caps the score.",
+          "mo": "Score 3-4, revenue path exists but structurally pressured. While FreshBooks' higher pricing suggests room for a $15/month alternative, Avaza's free tier with comprehensive invoicing and time tracking features creates significant pricing pressure. The proposed $15/month lacks validation beyond the user's assumption, and free LLM alternatives can handle core AI features like payment reminders.",
+          "or": "Score 3-4, minor twist that competitors could replicate trivially. InvoicePilot.AI and PayHint already offer AI-powered payment automation, while general-purpose LLMs can generate payment reminders and contracts with no additional cost. Though traditional incumbents like FreshBooks haven't integrated AI yet, adding these features would require only moderate product effort. Building tighter workflow integration between payment tracking and reminder automation would create a harder-to-replicate user experience that incumbents couldn't match with simple feature additions."
+        },
+        {
+          "md": "Score 5-6, clear target audience with demonstrated need. Manual spreadsheet workflows are widespread among freelancers and Invoice Payment Tracker's 500+ waitlist signups indicate active demand for payment automation. However, trust barriers around sharing sensitive financial data and switching costs from existing workflows create adoption friction that limits capturable demand.",
+          "mo": "Score 3-4, revenue path exists but structurally pressured. While FreshBooks charges higher prices suggesting room for a $15/month alternative, Avaza offers comprehensive freelancer features including invoicing and time tracking for free. The proposed pricing lacks validation and faces direct competition from free alternatives covering the same workflow.",
+          "or": "Score 3-4, minor twist that competitors could replicate trivially. InvoicePilot.AI and PayHint already offer AI-powered payment automation, while general-purpose LLMs can generate payment reminders and contracts with no additional cost. Though traditional incumbents haven't integrated AI capabilities yet, the core value could be added as features to existing platforms with moderate effort. Building a structured database of payment follow-up patterns across thousands of freelancer-client interactions would create a moat competitors couldn't replicate without extensive data collection."
+        }
+      ],
+      "uniqueMOscores": [
+        4.5
+      ]
+    },
+    "AUDIT-MAT1-intermediate": {
+      "runs": 10,
+      "scores": {
+        "md": [
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6
+        ],
+        "mo": [
+          5.5,
+          5.5,
+          6.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5
+        ],
+        "or": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ]
+      },
+      "stddev": {
+        "md": 0,
+        "mo": 0.3162277660168379,
+        "or": 0
+      },
+      "spearman": {
+        "mdMo": 0,
+        "mdOr": 0,
+        "moOr": 0
+      },
+      "explanations": [
+        {
+          "md": "Score 6.0, rubric level 5-6. Small law firms demonstrate clear need through current manual workflows with high error potential, and the target buyer (firm decision-maker) is identifiable. However, the high-trust domain flag indicates significant adoption friction around legal compliance and attorney-client relationships that will slow conversion from awareness to payment.",
+          "mo": "Score 5.5, rubric level 5-6. Rally and Lawmatics demonstrate established payment willingness for document automation workflows, and the per-firm subscription model aligns with legal practice management norms. However, the evidence indicates small firms avoid existing solutions due to cost barriers, creating pricing pressure on the $299/month model, while medium LLM substitution risk adds structural monetization headwinds.",
+          "or": "Score 4.0, rubric level 3-4. Rally, Lawmatics, and MyCase already provide document automation with practice management integrations, making the core workflow easily replicable. While Clio integration and firm templates add some differentiation, these represent feature additions rather than architectural barriers to incumbent replication. Building exclusive data partnerships with state bar associations for jurisdiction-specific template libraries would create a moat competitors couldn't replicate without regulatory relationship development."
+        },
+        {
+          "md": "Score 6.0, rubric level 5-6. Small law firms demonstrate clear need through current manual workflows with high error potential, and established competitors like Rally and Lawmatics prove demand exists. However, the high-trust domain flag indicates significant adoption friction around legal compliance and attorney-client relationships that caps capturable demand.",
+          "mo": "Score 5.5, rubric level 5-6. Rally and Lawmatics demonstrate established payment willingness for legal document automation, and the $299/month per-firm model targets an identifiable buyer. However, the evidence indicates small firms avoid existing solutions due to cost barriers, suggesting price sensitivity that pressures the proposed pricing level.",
+          "or": "Score 4.0, rubric level 3-4. Rally, Lawmatics, and MyCase already provide document automation with practice management integrations, making the core workflow easily replicable. While Clio integration adds some switching costs, incumbents could add similar small-firm features with moderate product effort. Building a structured dataset of firm-specific document patterns across 1,000+ small law practices would create a moat competitors couldn't replicate without 18+ months of legal template collection."
+        },
+        {
+          "md": "Score 5-6, rubric level 5-6. Small law firms demonstrate clear need through current manual workflows with high error potential, and the target audience is well-defined. However, the high-trust domain flag indicates significant adoption friction, as legal document generation affects attorney-client relationships and compliance. The unresolved buyer urgency (what triggers active solution-seeking) limits confidence in capturable demand.",
+          "mo": "Score 5-6, rubric level 5-6. Rally and Lawmatics demonstrate established payment willingness for document automation workflows among law firms. The $299/month per-firm pricing model is clearly specified with a named buyer (small law firms). However, the evidence indicates price sensitivity in the target segment, with many small firms avoiding existing solutions due to cost barriers, which may challenge the proposed pricing level.",
+          "or": "Score 3-4, rubric level 3-4. Rally, Lawmatics, and MyCase already provide established document automation with workflow integration and could replicate the core value with minimal architectural changes. While Clio integration and firm-specific templates add some differentiation beyond general LLM drafting, these are feature additions that incumbents could implement without fundamental product redesign. Building a structured dataset of small-firm-specific legal document patterns across 1,000+ practices would create a moat competitors couldn't replicate without 6+ months of data collection."
+        },
+        {
+          "md": "Score 6.0, rubric level 5-6. Small law firms demonstrate clear need through current manual workflows with high error potential, and the target buyer (firm decision-maker) is identifiable. However, the high-trust domain flag indicates significant adoption friction around legal compliance and attorney-client relationships that will slow conversion from awareness to payment.",
+          "mo": "Score 5.5, rubric level 5-6. Rally and Lawmatics demonstrate established payment willingness for document automation workflows in this buyer segment. However, the evidence indicates small firms avoid existing solutions due to cost barriers, creating pricing pressure on the $299/month model, while medium LLM substitution risk suggests structural competition for the payment decision.",
+          "or": "Score 4.0, rubric level 3-4. Rally, Lawmatics, and MyCase already provide document automation with practice management integration, requiring minimal architectural changes to replicate the core Clio integration and template customization features. While firm-specific templates add some switching costs, incumbents could match this differentiation with moderate product effort. Building a structured dataset of legal document patterns across 1,000+ small firm matters would create a moat competitors couldn't replicate without 6+ months of data collection."
+        },
+        {
+          "md": "Score 6.0, rubric level 5-6. Small law firms demonstrate clear need through current manual workflows with high error potential, and the target buyer (firm decision-maker) is identifiable. However, the high-trust domain flag indicates significant adoption friction around legal compliance and attorney-client relationships that will slow conversion from awareness to payment.",
+          "mo": "Score 5.5, rubric level 5-6. Rally and Lawmatics demonstrate established willingness to pay for document automation in this segment, and the per-firm subscription model aligns with legal practice economics. However, the evidence indicates small firms avoid existing solutions due to cost barriers, creating pricing pressure on the proposed $299/month model.",
+          "or": "Score 4.0, rubric level 3-4. Rally, Lawmatics, and MyCase already provide document automation with practice management integration, making the core workflow easily replicable. While Clio integration adds some switching cost, any of these incumbents could add similar small-firm features with moderate product effort. Building a structured dataset of legal document patterns across 10,000+ small firm matters would create a moat competitors couldn't replicate without 12+ months of data collection."
+        },
+        {
+          "md": "Score 6.0, rubric level 5-6. Small law firms demonstrate clear need through current manual workflows with high error potential, and the target buyer (firm decision-maker) is identifiable. However, the high-trust domain flag indicates significant adoption friction around legal compliance and attorney-client relationships that will slow conversion from awareness to payment.",
+          "mo": "Score 5.5, rubric level 5-6. Rally and Lawmatics demonstrate established payment willingness for document automation workflows in this buyer segment. However, the evidence indicates small firms avoid existing solutions due to cost barriers, creating pricing pressure on the $299/month model, while medium LLM substitution risk suggests structural competition from free alternatives.",
+          "or": "Score 4.0, rubric level 3-4. Rally, Lawmatics, and MyCase already provide document automation with practice management integration, making the core workflow easily replicable. While Clio integration adds some switching costs, incumbents could match this capability with moderate development effort rather than fundamental product redesign. Building a structured dataset of small-firm-specific legal document patterns across 1,000+ practices would create a moat competitors couldn't replicate without 6+ months of data collection."
+        },
+        {
+          "md": "Score 6.0, rubric level 5-6. Small law firms demonstrate clear need through current manual workflows with high error potential, and the target buyer (firm decision-maker) is identifiable. However, the high-trust domain flag indicates significant adoption friction around legal compliance and attorney-client relationships that will slow conversion from awareness to payment.",
+          "mo": "Score 5.5, rubric level 5-6. Rally and Lawmatics demonstrate established payment willingness for document automation workflows, and the firm-level buyer is clearly identified. However, the evidence indicates small firms avoid existing solutions due to cost barriers, creating pricing pressure on the $299/month model, while medium LLM substitution risk suggests structural competition for payment.",
+          "or": "Score 4.0, rubric level 3-4. Rally, Lawmatics, and MyCase already provide document automation with workflow integration, making the core value easily replicable through feature additions rather than architectural changes. While Clio integration adds some switching costs, incumbents could match this capability with moderate development effort. Building a structured dataset of small-firm-specific legal document patterns across 1,000+ practices would create a moat competitors couldn't replicate without 6+ months of data collection."
+        },
+        {
+          "md": "Score 6.0, rubric level 5-6. Small law firms demonstrate clear need through current manual workflows with high error potential, and the target buyer (firm decision-maker) is identifiable. However, the high-trust domain flag indicates significant adoption friction around legal compliance and attorney-client relationships that will slow conversion from awareness to payment.",
+          "mo": "Score 5.5, rubric level 5-6. Rally and Lawmatics demonstrate established payment willingness for document automation workflows, and the firm-level buyer is clearly identified. However, the evidence indicates small firms avoid existing solutions due to cost barriers, creating pricing pressure on the $299/month model, while medium LLM substitution risk suggests structural competition for payment.",
+          "or": "Score 4.0, rubric level 3-4. Rally, Lawmatics, and MyCase already provide document automation with workflow integration, making the core value easily replicable through feature additions rather than architectural changes. While Clio integration adds some switching costs, incumbents could match this capability with moderate development effort. Building a structured dataset of small-firm-specific legal document patterns across 1,000+ practices would create a moat competitors couldn't replicate without 6+ months of data collection."
+        },
+        {
+          "md": "Score 6.0, rubric level 5-6. Small law firms demonstrate clear need through current manual workflows with high error potential, and the target buyer (firm decision-maker) is identifiable. However, the high-trust domain flag indicates significant adoption friction around legal compliance and attorney-client relationships that will slow conversion from awareness to payment.",
+          "mo": "Score 5.5, rubric level 5-6. Rally and Lawmatics demonstrate established payment willingness for document automation workflows in this buyer segment. However, the evidence indicates small firms avoid existing solutions due to cost barriers, creating pricing pressure on the $299/month model, while medium LLM substitution risk adds structural monetization headwinds.",
+          "or": "Score 4.0, rubric level 3-4. Rally, Lawmatics, and MyCase already provide document automation with practice management integration, requiring minimal effort to replicate the core value proposition. While Clio integration adds some switching costs, incumbents could match this with standard API work rather than architectural redesign. Building a structured dataset of small-firm-specific legal document patterns across 1,000+ practices would create a moat competitors couldn't replicate without 6+ months of data collection."
+        },
+        {
+          "md": "Score 6.0, rubric level 5-6. Small law firms demonstrate clear need through current manual workflows with high error potential, and the target buyer (firm decision-maker) is identifiable. However, the high-trust domain flag indicates significant adoption friction around legal compliance and attorney-client relationships that will slow conversion from awareness to payment.",
+          "mo": "Score 5.5, rubric level 5-6. Rally and Lawmatics demonstrate established payment willingness for document automation workflows in this buyer segment. However, the evidence indicates small firms avoid existing solutions due to cost barriers, creating pricing pressure on the $299/month model, while medium LLM substitution risk suggests structural competition for the payment decision.",
+          "or": "Score 4.0, rubric level 3-4. Rally, Lawmatics, and MyCase already provide document automation with practice management integration, requiring minimal effort to replicate the core client intake-to-document workflow. While Clio integration adds some switching cost, incumbents could match this capability with standard API work rather than architectural redesign. Building a structured dataset of small-firm document patterns across 1,000+ practices would create a moat competitors couldn't replicate without 6+ months of data collection."
+        }
+      ],
+      "uniqueMOscores": [
+        5.5,
+        6.5
+      ]
+    },
+    "AUDIT-M3": {
+      "runs": 10,
+      "scores": {
+        "md": [
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6
+        ],
+        "mo": [
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5
+        ],
+        "or": [
+          6.5,
+          6.5,
+          6.5,
+          6.5,
+          6.5,
+          6.5,
+          6.5,
+          6.5,
+          6.5,
+          6.5
+        ]
+      },
+      "stddev": {
+        "md": 0,
+        "mo": 0,
+        "or": 0
+      },
+      "spearman": {
+        "mdMo": 0,
+        "mdOr": 0,
+        "moOr": 0
+      },
+      "explanations": [
+        {
+          "md": "Score 6.0, rubric level 5-6. Writefull's explicit targeting of non-native English speakers demonstrates clear demand for this buyer segment. However, trust barriers from academic institutions regarding AI-assisted writing create meaningful adoption friction, and the unresolved question of whether students actively seek discipline-specific convention checking beyond general grammar limits confidence in capturable demand.",
+          "mo": "Score 5.5, rubric level 5-6. AJE's professional editing service demonstrates willingness to pay for manuscript preparation in this market. However, ChatGPT provides free manuscript editing that academics already use, creating structural pricing pressure. The uncertainty around whether PhD students have budget authority for $29/month subscriptions versus requiring institutional purchasing adds monetization friction.",
+          "or": "Score 6.5, rubric level 5-6. No existing competitor offers the specific combination of discipline-specific convention checking and Overleaf integration, creating real differentiation. While general LLMs pose medium substitution risk for basic academic writing feedback, the discipline-specific rules (passive vs active voice by field) and workflow integration represent genuine product gaps that competitors like Trinka and Writefull would need moderate development effort to match. Building a comprehensive database of discipline-specific writing conventions across 20+ academic fields would create a knowledge moat that academic writing competitors couldn't replicate without significant research investment."
+        },
+        {
+          "md": "Score 6.0, rubric level 5-6. Writefull's explicit targeting of non-native English speakers demonstrates clear demand for this buyer segment. However, trust barriers from academic institutions regarding AI-assisted writing create meaningful adoption friction, and the unresolved question of whether students actively seek discipline-specific convention checking beyond general grammar limits confidence in capturable demand.",
+          "mo": "Score 5.5, rubric level 5-6. AJE's professional editing service demonstrates willingness to pay for manuscript preparation in this market, and the $29/month student pricing is reasonable. However, ChatGPT's free manuscript editing assistance creates structural pricing pressure, and the uncertainty about whether PhD students have budget authority versus requiring institutional purchasing weakens the revenue path.",
+          "or": "Score 6.5, rubric level 5-6. No existing competitor offers discipline-specific convention checking or Overleaf integration, creating real differentiation from Trinka, Writefull, and Paperpal. However, the medium LLM substitution risk indicates general LLMs could potentially replicate core value, and existing academic writing tools could add discipline-specific rules with moderate development effort. Building a comprehensive database of field-specific writing conventions across 20+ academic disciplines would create a knowledge moat competitors couldn't replicate without extensive linguistic research."
+        },
+        {
+          "md": "Score 6.0, rubric level 5-6. Writefull's explicit targeting of non-native English speakers demonstrates clear demand for this buyer segment. However, trust barriers from academic institutions regarding AI-assisted writing create meaningful adoption friction, and the evidence doesn't establish whether students actively seek discipline-specific convention checking beyond general grammar assistance.",
+          "mo": "Score 5.5, rubric level 5-6. AJE's professional editing service demonstrates willingness to pay for manuscript preparation in this market. However, ChatGPT provides free manuscript editing that academics already use, creating structural pricing pressure. The $29/month student pricing faces uncertainty around budget authority versus institutional purchasing requirements.",
+          "or": "Score 6.5, rubric level 5-6. No competitor offers the specific combination of discipline-specific convention checking and Overleaf integration that this idea proposes. While general LLMs pose medium substitution risk for basic academic writing feedback, the discipline-specific rules (passive voice in bio vs active in CS) represent real differentiation that would require competitors like Trinka or Writefull to develop field-specific rulesets to match. Building a comprehensive database of discipline-specific writing conventions across 20+ academic fields would create a knowledge moat that competitors couldn't replicate without significant linguistic research investment."
+        },
+        {
+          "md": "Score 6.0, rubric level 5-6. Writefull's explicit targeting of non-native English speakers demonstrates clear demand for this buyer segment. However, trust barriers from academic institutions regarding AI-assisted writing create meaningful adoption friction, and the unresolved question of whether students actively seek discipline-specific convention checking beyond general grammar limits confidence in capturable demand.",
+          "mo": "Score 5.5, rubric level 5-6. AJE's professional editing service demonstrates willingness to pay for manuscript preparation in this market. The $29/month student pricing is reasonable compared to human editing costs. However, ChatGPT's free manuscript editing assistance creates structural pricing pressure, and uncertainty about whether PhD students have budget authority versus requiring institutional purchasing limits monetization confidence.",
+          "or": "Score 6.5, rubric level 5-6. No existing competitor offers discipline-specific convention checking (passive vs active voice by field) or Overleaf integration, creating real differentiation from Trinka, Writefull, and Paperpal. However, the medium LLM substitution risk indicates general LLMs could potentially replicate the core value, and existing academic writing tools could likely add discipline-specific rules with moderate development effort. Building a comprehensive database of field-specific writing conventions across 20+ academic disciplines would create a data moat competitors couldn't replicate without extensive linguistic research."
+        },
+        {
+          "md": "Score 6.0, rubric level 5-6. Writefull's explicit targeting of non-native English speakers demonstrates clear demand for this buyer segment. However, trust barriers from academic institutions regarding AI-assisted writing create meaningful adoption friction, and the unresolved question of whether students actively seek discipline-specific convention checking beyond general grammar limits confidence in capturable demand.",
+          "mo": "Score 5.5, rubric level 5-6. AJE's professional editing service demonstrates willingness to pay for manuscript preparation in this market. The $29/month student pricing is reasonable compared to human editing costs. However, ChatGPT's free manuscript editing assistance creates structural pricing pressure, and the uncertainty about whether PhD students have budget authority versus requiring institutional purchasing adds monetization friction.",
+          "or": "Score 6.5, rubric level 5-6. No existing competitor offers discipline-specific convention checking or Overleaf integration, creating real differentiation from Trinka, Writefull, and Paperpal. However, the medium LLM substitution risk indicates general LLMs could potentially replicate the core value, and existing academic writing tools could likely add discipline-specific rules with moderate development effort. Building a comprehensive database of field-specific writing conventions across 20+ academic disciplines would create a data moat competitors couldn't replicate without extensive linguistic research."
+        },
+        {
+          "md": "Score 6.0, rubric level 5-6. Writefull's explicit targeting of non-native English speakers demonstrates clear demand for this buyer segment. However, trust barriers from academic institutions regarding AI-assisted writing create meaningful adoption friction, and the unresolved question of whether students actively seek discipline-specific convention checking beyond general grammar limits confidence in capturable demand.",
+          "mo": "Score 5.5, rubric level 5-6. AJE's established professional editing service demonstrates willingness to pay for manuscript preparation in this market. However, ChatGPT's free/low-cost editing assistance creates structural pricing pressure, and the uncertainty around whether PhD students have budget authority for $29/month subscriptions versus requiring institutional purchasing weakens the revenue path.",
+          "or": "Score 6.5, rubric level 5-6. No existing competitor offers the specific combination of discipline-specific convention checking and Overleaf integration, creating real differentiation. While general LLMs pose medium substitution risk for basic academic writing feedback, the discipline-specific rules (passive vs active voice by field) and workflow integration would require moderate effort for competitors like Trinka or Writefull to replicate. Building a comprehensive database of discipline-specific writing conventions across 20+ academic fields would create a data moat competitors couldn't easily match."
+        },
+        {
+          "md": "Score 6.0, rubric level 5-6. Writefull's explicit targeting of non-native English speakers demonstrates clear demand for this buyer segment. However, trust barriers from academic institutions regarding AI-assisted writing create meaningful adoption friction, and the evidence doesn't establish whether students actively seek discipline-specific convention checking beyond general grammar assistance that ChatGPT already provides.",
+          "mo": "Score 5.5, rubric level 5-6. AJE's professional editing service demonstrates willingness to pay for manuscript preparation in this market. However, ChatGPT provides free manuscript editing that academics already use, creating structural pricing pressure. The $29/month student pricing faces uncertainty around budget authority - whether PhD students can pay directly or require institutional purchasing approval.",
+          "or": "Score 6.5, rubric level 5-6. No competitor offers the specific combination of discipline-specific convention checking and Overleaf integration that this idea proposes. While general LLMs pose medium substitution risk for basic academic writing feedback, the discipline-specific rules (passive voice in bio vs active in CS) represent genuine differentiation that would require competitors like Trinka or Writefull to develop field-specific rulesets. Building a comprehensive database of discipline-specific writing conventions across 20+ academic fields would create a knowledge moat that competitors couldn't replicate without significant linguistic research investment."
+        },
+        {
+          "md": "Score 6.0, rubric level 5-6. Writefull's explicit targeting of non-native English speakers demonstrates clear demand for this buyer segment. However, trust barriers from academic institutions regarding AI-assisted writing create meaningful adoption friction, and the unresolved question of whether students actively seek discipline-specific convention checking beyond general grammar limits confidence in capturable demand.",
+          "mo": "Score 5.5, rubric level 5-6. AJE's professional editing service demonstrates willingness to pay for manuscript preparation in this market. However, ChatGPT provides free manuscript editing that academics already use, creating structural pricing pressure. The uncertainty around whether PhD students have budget authority for $29/month subscriptions versus requiring institutional purchasing adds monetization friction.",
+          "or": "Score 6.5, rubric level 5-6. No existing competitor offers the specific combination of discipline-specific convention checking and Overleaf integration, creating real differentiation. However, the medium LLM substitution risk indicates general LLMs could potentially replicate core value, and existing tools like Trinka or Writefull could add discipline-specific rules with moderate development effort. Building a comprehensive database of field-specific writing conventions across 20+ academic disciplines would create a moat competitors couldn't replicate without extensive linguistic research."
+        },
+        {
+          "md": "Score 6.0, rubric level 5-6. Writefull's explicit targeting of non-native English speakers demonstrates clear demand for this buyer segment. However, trust barriers from academic institutions regarding AI-assisted writing create meaningful adoption friction, and the unresolved question of whether students actively seek discipline-specific convention checking beyond general grammar limits confidence in capturable demand.",
+          "mo": "Score 5.5, rubric level 5-6. AJE's professional editing service demonstrates willingness to pay for manuscript preparation in this market. However, ChatGPT provides free manuscript editing that academics already use, creating structural pricing pressure. The uncertainty around whether PhD students have budget authority for $29/month subscriptions versus requiring institutional purchasing adds monetization friction.",
+          "or": "Score 6.5, rubric level 5-6. No existing competitor offers the specific combination of discipline-specific convention checking and Overleaf integration, creating real differentiation. While general LLMs pose medium substitution risk for basic academic writing feedback, the discipline-specific rules (passive vs active voice by field) and workflow integration represent genuine product gaps that competitors like Trinka and Writefull would need moderate development effort to match. Building a comprehensive database of discipline-specific writing conventions across 20+ academic fields would create a knowledge moat that academic writing competitors couldn't replicate without significant research investment."
+        },
+        {
+          "md": "Score 6.0, rubric level 5-6. Writefull's explicit targeting of non-native English speakers demonstrates clear demand for this buyer segment. However, trust barriers from academic institutions regarding AI-assisted writing create meaningful adoption friction, and the unresolved question of whether students actively seek discipline-specific convention checking beyond general grammar limits confidence in capturable demand.",
+          "mo": "Score 5.5, rubric level 5-6. AJE's professional editing service demonstrates willingness to pay for manuscript preparation in this market. The $29/month student pricing is reasonable compared to human editing costs. However, ChatGPT's free manuscript editing assistance creates structural pricing pressure, and uncertainty about whether PhD students have budget authority versus requiring institutional purchasing limits monetization confidence.",
+          "or": "Score 6.5, rubric level 5-6. No existing competitor offers discipline-specific convention checking (passive vs active voice by field) or Overleaf integration, creating real differentiation from Trinka, Writefull, and Paperpal. However, the medium LLM substitution risk indicates general LLMs could potentially replicate the core value, and existing academic writing tools could likely add discipline-specific rules with moderate development effort. Building a comprehensive database of field-specific writing conventions across 20+ academic disciplines would create a data moat competitors couldn't replicate without extensive linguistic research."
+        }
+      ],
+      "uniqueMOscores": [
+        5.5
+      ]
+    },
+    "AUDIT-A2": {
+      "runs": 10,
+      "scores": {
+        "md": [
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5
+        ],
+        "mo": [
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5,
+          5.5
+        ],
+        "or": [
+          3.5,
+          3.5,
+          3.5,
+          3.5,
+          3.5,
+          3.5,
+          3.5,
+          3.5,
+          3.5,
+          3.5
+        ]
+      },
+      "stddev": {
+        "md": 0,
+        "mo": 0,
+        "or": 0
+      },
+      "spearman": {
+        "mdMo": 0,
+        "mdOr": 0,
+        "moOr": 0
+      },
+      "explanations": [
+        {
+          "md": "Score 4.5, rubric level 3-4. While Angi's weak suburban coverage suggests unmet demand, the relationship displacement barrier is significant — seniors rely on word-of-mouth referrals and established local handymen. The packet provides no evidence of adoption triggers that would cause seniors to actively seek a new platform over their current trusted methods. This creates manageable but meaningful friction that limits capturable demand.",
+          "mo": "Score 5.5, rubric level 5-6. Home Depot Pro Referral's fee structure demonstrates willingness to pay for verified referral access, and the 20% commission represents an identifiable revenue mechanism. However, word-of-mouth referrals create structural pricing pressure as they have no platform fees, and local handyman businesses offer lower costs without intermediaries. The buyer (seniors/adult children) is identified, but pricing power remains limited against free alternatives.",
+          "or": "Score 3.5, rubric level 3-4. Homee operates on-demand handyman service with background-checked local professionals and comprehensive verification process, directly overlapping the core value proposition. While targeting seniors and suburban markets provides positioning differentiation, the background verification and marketplace mechanics could be replicated by competitors like Homee with moderate effort. Building exclusive partnerships with senior-focused organizations or developing specialized trust verification protocols for elderly users would create a moat competitors couldn't replicate without significant relationship-building investment."
+        },
+        {
+          "md": "Score 4.5, rubric level 3-4. While Angi's weak suburban coverage suggests unmet demand, the relationship displacement barrier is significant — seniors rely on word-of-mouth referrals and established local handymen. The packet provides no evidence of adoption triggers that would cause seniors to actively seek a new platform over their current trusted methods. This creates manageable but meaningful friction that limits capturable demand.",
+          "mo": "Score 5.5, rubric level 5-6. Home Depot Pro Referral's fee structure demonstrates willingness to pay for verified referral access, and the 20% commission model is identifiable. However, word-of-mouth referrals create structural pricing pressure as they have no platform fees, and local handyman businesses offer lower costs without intermediaries. The buyer (seniors/adult children) is clear, but pricing power is constrained by free alternatives.",
+          "or": "Score 3.5, rubric level 3-4. Homee operates on-demand handyman service with background-checked local professionals and comprehensive verification process, directly overlapping the core value proposition. While targeting seniors and suburban markets provides positioning differentiation, the background verification and marketplace mechanics could be replicated by competitors like Homee with moderate effort. Building exclusive partnerships with senior-focused organizations or developing specialized trust verification protocols for elderly users would create a moat competitors couldn't replicate without significant relationship-building investment."
+        },
+        {
+          "md": "Score 4.5, rubric level 3-4. While Angi's weak suburban coverage suggests unmet demand, the relationship displacement barrier is significant — seniors rely on word-of-mouth referrals and established local handymen. The packet provides no evidence of adoption triggers that would cause seniors to actively seek a new platform over their current trusted methods. This creates manageable but meaningful friction that limits capturable demand to a smaller subset willing to change behavior.",
+          "mo": "Score 5.5, rubric level 5-6. Home Depot Pro Referral's fee structure demonstrates willingness to pay for verified referral access, establishing a comparable revenue mechanism. However, word-of-mouth referrals create structural pricing pressure as they have no platform fees, and local handyman businesses offer lower costs without intermediaries. The 20% commission rate is specified but the payer allocation remains unclear, affecting the actual monetization path.",
+          "or": "Score 3.5, rubric level 3-4. Homee operates on-demand handyman service with background-checked local professionals and comprehensive verification process, directly overlapping the core value proposition. Urban Company and Home Depot Pro Referral also provide vetted contractor networks with background checks. While targeting seniors and suburban markets provides positioning differentiation, the core verification and marketplace mechanics could be replicated by existing competitors with moderate effort. Building exclusive partnerships with senior-focused organizations or developing specialized trust verification protocols beyond standard background checks would create a moat competitors couldn't replicate without significant relationship-building investment."
+        },
+        {
+          "md": "Score 4.5, rubric level 3-4. While Angi's weak suburban coverage suggests unmet demand, the relationship displacement barrier is significant — seniors rely on word-of-mouth referrals and established local handymen. The packet provides no evidence of adoption triggers that would cause seniors to actively seek a new platform over their current trusted methods. This creates manageable but meaningful friction that limits capturable demand.",
+          "mo": "Score 5.5, rubric level 5-6. Home Depot Pro Referral's fee structure demonstrates willingness to pay for verified referral access, and the 20% commission model is identifiable. However, word-of-mouth referrals create structural pricing pressure as they have no platform fees, and local handyman businesses offer lower costs without intermediaries. The buyer (seniors/adult children) is clear, but pricing power is constrained by free alternatives.",
+          "or": "Score 3.5, rubric level 3-4. Homee operates on-demand handyman service with background-checked local professionals and comprehensive verification process, directly overlapping the core value proposition. While targeting seniors and suburban markets provides positioning differentiation, the background verification and marketplace mechanics could be replicated by competitors like Homee with moderate effort. Building exclusive partnerships with senior-focused organizations or developing specialized trust verification protocols for elderly users would create a moat competitors couldn't replicate without significant relationship-building investment."
+        },
+        {
+          "md": "Score 4.5, rubric level 3-4. While Angi's weak suburban coverage suggests unmet demand, the relationship displacement barrier is significant — seniors rely on word-of-mouth referrals and established local handymen. The target audience has demonstrated need but adoption friction from displacing trusted personal networks reduces capturable demand. No evidence of active seeking behavior or urgency triggers that would drive platform adoption over existing methods.",
+          "mo": "Score 5.5, rubric level 5-6. Home Depot Pro Referral's fee structure demonstrates willingness to pay for verified referral access, and the handyman service category supports transaction-based revenue. However, word-of-mouth referrals create structural pricing pressure as they have no platform fees, and local handyman businesses offer lower costs without intermediaries. The 20% commission rate faces competitive pressure from free alternatives.",
+          "or": "Score 3.5, rubric level 3-4. Homee operates on-demand handyman service with background-checked local professionals and comprehensive verification, directly overlapping the core value proposition. Urban Company and Home Depot Pro Referral also provide vetted contractor networks with background checks. The demographic focus on seniors and suburban geographic targeting provides minor differentiation, but competitors could easily add senior-focused features or expand suburban coverage. Building a proprietary dataset of senior-specific home maintenance patterns and safety requirements would create a moat competitors couldn't replicate without extensive domain research."
+        },
+        {
+          "md": "Score 4.5, rubric level 3-4. While Angi's weak suburban coverage suggests unmet demand, the relationship displacement barrier is significant — seniors rely on word-of-mouth referrals and established local handymen. The packet provides no evidence of adoption triggers that would cause seniors to actively seek a new platform over their current trusted methods. This creates manageable but meaningful friction that limits capturable demand.",
+          "mo": "Score 5.5, rubric level 5-6. Home Depot Pro Referral's fee structure demonstrates willingness to pay for verified referral access, and the 20% commission model is identifiable. However, word-of-mouth referrals create structural pricing pressure as they have no platform fees, and local handyman businesses offer lower costs without intermediaries. The revenue path exists but faces competitive pressure from free alternatives.",
+          "or": "Score 3.5, rubric level 3-4. Homee operates on-demand handyman service with background-checked local professionals and comprehensive verification process, directly overlapping the core value proposition. While targeting seniors and suburban markets provides positioning differentiation, the background verification and marketplace mechanics could be replicated by existing competitors with moderate effort. Building a structured dataset of senior-specific home maintenance patterns and safety requirements would create a moat competitors couldn't replicate without extensive demographic research."
+        },
+        {
+          "md": "Score 4.5, rubric level 3-4. While Angi's weak suburban coverage suggests unmet demand, the relationship displacement barrier is significant — seniors rely on word-of-mouth referrals and established local handymen. The packet provides no evidence of adoption triggers that would cause seniors to actively seek a new platform over their current trusted methods. This creates manageable but meaningful friction that limits capturable demand.",
+          "mo": "Score 5.5, rubric level 5-6. Home Depot Pro Referral's fee structure demonstrates willingness to pay for verified referral access, and the 20% commission represents an identifiable revenue mechanism. However, word-of-mouth referrals create structural pricing pressure as they have no platform fees, and local handyman businesses offer lower costs without intermediaries. The buyer (seniors/adult children) is identified, but pricing power remains limited against free alternatives.",
+          "or": "Score 3.5, rubric level 3-4. Homee operates on-demand handyman service with background-checked local professionals and comprehensive verification process, directly overlapping the core value proposition. While targeting seniors and suburban markets provides positioning differentiation, the background verification and marketplace mechanics could be replicated by competitors like Homee with moderate effort. Building exclusive partnerships with senior-focused organizations or developing specialized trust verification protocols for elderly users would create a moat competitors couldn't replicate without significant relationship-building investment."
+        },
+        {
+          "md": "Score 4.5, rubric level 3-4. While Angi's weak suburban coverage suggests unmet demand, the relationship displacement barrier is significant — seniors rely on word-of-mouth referrals and established local handymen. The packet provides no evidence of adoption triggers that would cause seniors to actively seek a new platform over their current trusted methods. This creates manageable but meaningful friction that limits capturable demand.",
+          "mo": "Score 5.5, rubric level 5-6. Home Depot Pro Referral's fee structure demonstrates willingness to pay for verified referral access, and the 20% commission model is identifiable. However, word-of-mouth referrals create structural pricing pressure as they have no platform fees, and local handyman businesses offer lower costs without intermediaries. The buyer (seniors/adult children) is clear, but pricing power is constrained by free alternatives.",
+          "or": "Score 3.5, rubric level 3-4. Homee operates on-demand handyman service with background-checked local professionals and comprehensive verification process, directly overlapping the core value proposition. While targeting seniors and suburban markets provides positioning differentiation, the background verification and marketplace mechanics could be replicated by competitors like Homee with moderate effort. Building exclusive partnerships with senior-focused organizations or developing specialized trust verification protocols for elderly users would create a moat competitors couldn't replicate without significant relationship-building investment."
+        },
+        {
+          "md": "Score 4.5, rubric level 3-4. While Angi's weak suburban coverage suggests unmet demand, the relationship displacement barrier is significant — seniors rely on word-of-mouth referrals and established local handymen. The packet provides no evidence of adoption triggers that would cause seniors to actively seek a new platform over their current trusted methods. This creates manageable but meaningful friction that limits capturable demand.",
+          "mo": "Score 5.5, rubric level 5-6. Home Depot Pro Referral's fee structure demonstrates willingness to pay for verified referral access, establishing a comparable revenue mechanism. However, word-of-mouth referrals create structural pricing pressure as they have no platform fees, and local handyman businesses offer lower costs without intermediaries. The buyer (seniors/adult children) is identifiable, but commission sustainability faces competitive pressure from free alternatives.",
+          "or": "Score 3.5, rubric level 3-4. Homee operates on-demand handyman service with background-checked local professionals and comprehensive verification process, directly overlapping the core value proposition. Urban Company and Home Depot Pro Referral also provide vetted contractor networks with background checks. While targeting seniors and suburban markets provides positioning differentiation, the core verification and marketplace mechanics could be replicated by existing competitors with moderate effort. Building exclusive partnerships with senior-focused organizations or developing specialized trust verification protocols for elderly users would create a moat competitors couldn't replicate without significant relationship-building investment."
+        },
+        {
+          "md": "Score 4.5, rubric level 3-4. While Angi's weak suburban coverage suggests unmet demand, the relationship displacement barrier is significant — seniors rely on word-of-mouth referrals and established local handymen. The packet provides no evidence of adoption triggers that would cause seniors to actively seek a new platform over their current trusted methods. This creates manageable but meaningful friction that limits capturable demand.",
+          "mo": "Score 5.5, rubric level 5-6. Home Depot Pro Referral's fee structure demonstrates willingness to pay for verified referral access, and the 20% commission represents an identifiable revenue mechanism. However, word-of-mouth referrals create structural pricing pressure as they have no platform fees, and local handyman businesses often offer lower costs without intermediaries.",
+          "or": "Score 3.5, rubric level 3-4. Homee operates on-demand handyman service with background-checked local professionals and comprehensive verification process, directly overlapping the core value proposition. While targeting seniors and suburban markets provides positioning differentiation, the verification and marketplace mechanics could be replicated by competitors like Homee with moderate effort. Building exclusive partnerships with senior-focused organizations or developing specialized trust mechanisms for this demographic would create a moat competitors couldn't replicate without significant relationship-building investment."
+        }
+      ],
+      "uniqueMOscores": [
+        5.5
+      ]
+    }
+  },
+  "rerunCount": 10
+}

@@ -327,6 +327,31 @@ ${idea}`;
               model: "claude-sonnet-4-20250514",
               max_tokens: 2000,
               temperature: 0,
+              // V4S29 Bundle 2 — F1 partial cure (May 8, 2026): sampler hardening
+              // on Stage 2a / 2b / TC to suppress Layer A sampler-driven near-tie
+              // collapse. Mechanism + rationale identical to Stage 1's V4S28 P0.5
+              // block above; applies symmetrically to all scoring/extraction calls.
+              //
+              // Investigation: counterfactual prompt-test sequence on 8-case bank
+              // (Phase A/B → Phase 2C sampler → Phase 2A MO-tighten → Phase 2B
+              // MD-loosen → Test 3 combined → Test 4 MAT2 → Test 5 dominant-signal).
+              // Sampler hardening cleanly cures sampler-driven cases:
+              // ARC-D2 σ(MO) 0.63→0, M3 σ(MO) 0.21→0. Two prompt-level interventions
+              // tested and rejected: asymmetric MO band tightening introduced
+              // cross-metric coupling (L2 MD downshift); symmetric dominant-signal
+              // instruction regressed previously-cured ARC-D2 (σ 0→0.73).
+              // Residuals (L2 frame-selection, MAT2-beginner cross-metric swap)
+              // are interpretive-frame phenomena resistant to sampler/prompt fixes
+              // at Stage 2b — scoped for future Stage 2a packeting bundle.
+              // See B10a-findings.md F1 closure + Methodology Principle 7
+              // (counterfactual prompt tests precede architectural change).
+              //
+              // Stage 2c and Stage 3 deliberately NOT hardened: they are narrative
+              // synthesis stages (summary, failure_risks, phases, tools), not
+              // scoring stages, and their stability concerns are tracked as
+              // separate B10a findings outside F1 scope.
+              top_k: 1,
+              top_p: 0.1,
               system: STAGE2A_SYSTEM_PROMPT,
               messages: [{ role: "user", content: stage2aUserMessage }],
             }),
@@ -334,6 +359,11 @@ ${idea}`;
               model: "claude-sonnet-4-20250514",
               max_tokens: 1000,
               temperature: 0,
+              // V4S29 Bundle 2 — F1 sampler hardening (see Stage 2a comment above
+              // for full rationale). Stage TC scores TC in isolation; same Layer A
+              // suppression logic applies.
+              top_k: 1,
+              top_p: 0.1,
               system: STAGE_TC_SYSTEM_PROMPT,
               messages: [{ role: "user", content: stageTcUserMessage }],
             }),
@@ -389,6 +419,11 @@ ${JSON.stringify(stage2aResult)}`;
             model: "claude-sonnet-4-20250514",
             max_tokens: 8192,
             temperature: 0,
+            // V4S29 Bundle 2 — F1 sampler hardening (see Stage 2a comment for
+            // full rationale). Stage 2b scores MD/MO/OR from packets; this is
+            // the call that produced the F1 production variance signal originally.
+            top_k: 1,
+            top_p: 0.1,
             system: STAGE2B_SYSTEM_PROMPT,
             messages: [{ role: "user", content: stage2bUserMessage }],
           });
