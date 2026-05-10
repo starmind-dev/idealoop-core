@@ -14,6 +14,7 @@
 // Usage:
 //   node runners/run-bundle3-f3-verification.js
 //   node runners/run-bundle3-f3-verification.js --resume
+//   node runners/run-bundle3-f3-verification.js --no-require-fixtures
 //   node runners/run-bundle3-f3-verification.js --base-url https://...
 //
 // Outputs (in same dir as runner):
@@ -60,6 +61,32 @@
 // NO AUTOMATED PASS/FAIL GATES — this verification is manual review only.
 //
 // ============================================================================
+//
+// PRE-VERIFICATION CHECKLIST (Methodology Principle 6 + Bundle 3.75 + #4):
+//
+// [ ] Dev server running with IDEALOOP_USE_FIXTURES=1
+//     Verify on server side:  echo $IDEALOOP_USE_FIXTURES   →   "1"
+//     Verify via runner:      auto-checks at preflight via /api/diag/fixture-mode
+//
+// [ ] Fixture freshness verified per Fixture Refresh Decision Tree
+//     Refresh required when these change since fixtures were last written:
+//       - prompt-stage1.js (Stage 1 competition-discovery prompt)
+//       - route.js Stage 1 invocation or query-construction logic
+//       - serper.js / github.js signatures or query encoding
+//       - keywords.js (Specificity Gate / keyword extraction)
+//       - competitors.js (query transformation)
+//     Refresh procedure:  rm -rf runners/fixtures/data/*
+//                         next run repopulates via cache-on-miss
+//
+// [ ] Pre-existing checkpoint cleared if re-running fresh
+//     rm runners/bundle3-f3-verification-checkpoint.json   (or use --resume)
+//
+// INTERPRETATION RULES:
+//   - Variance with fixture mode active     → engine-level signal (real)
+//   - Variance without fixture mode active  → Layer E + engine indistinguishable
+//                                             (rerun with fixture mode required)
+//
+// ============================================================================
 
 const fs = require("fs");
 const path = require("path");
@@ -76,8 +103,11 @@ const BASE_URL = (() => {
   return process.env.IDEALOOP_BASE_URL || "http://localhost:3000";
 })();
 const RESUME = args.includes("--resume");
+const NO_REQUIRE_FIXTURES = args.includes("--no-require-fixtures");
+const REQUIRE_FIXTURES = !NO_REQUIRE_FIXTURES;
 const OUTPUT_DIR = __dirname;
 const CHECKPOINT_PATH = path.join(OUTPUT_DIR, "bundle3-f3-verification-checkpoint.json");
+const FIXTURES_DIR = path.join(OUTPUT_DIR, "fixtures", "data");
 
 // ============================================================================
 // VERIFICATION CORPUS — the 10 canonical B10a F3 cases
@@ -273,6 +303,76 @@ function isCompleted(cp, caseId) {
 }
 
 // ============================================================================
+// FIXTURE MODE PROBE (Bundle 3.75 + #4 protocol enforcement)
+// ============================================================================
+
+async function checkFixtureMode() {
+  // Hit /api/diag/fixture-mode with retry — Next.js dev server may take
+  // 2-5s to compile a route handler on first hit (cold start).
+  // 3 attempts × 2s gap = up to 6s wait worst case.
+  let lastErr = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch(BASE_URL + "/api/diag/fixture-mode");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      return { ok: true, enabled: data.enabled === true, timestamp: data.timestamp };
+    } catch (e) {
+      lastErr = e;
+      if (attempt < 3) {
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+    }
+  }
+  return { ok: false, error: lastErr?.message || "unknown error" };
+}
+
+function countFixtures(dir) {
+  if (!fs.existsSync(dir)) return 0;
+  return fs.readdirSync(dir).filter((f) => f.endsWith(".json")).length;
+}
+
+// ============================================================================
+// PRE-FLIGHT (Bundle 3.75 + #4: fixture mode only — no sanity case probe)
+// ============================================================================
+
+async function preflight() {
+  console.log(`\n🔬  Fixture mode probe: ${BASE_URL}/api/diag/fixture-mode`);
+  const fmCheck = await checkFixtureMode();
+  if (!fmCheck.ok) {
+    console.log(`   ⚠️  Fixture mode endpoint unreachable (${fmCheck.error})`);
+    if (REQUIRE_FIXTURES) {
+      console.error(`\n❌  Cannot verify fixture mode. Two possibilities:`);
+      console.error(`    1. Endpoint missing — ensure src/app/api/diag/fixture-mode/route.js`);
+      console.error(`       exists and dev server has been restarted to pick it up.`);
+      console.error(`    2. Dev server unreachable at ${BASE_URL}.`);
+      console.error(`\n    Override (NOT RECOMMENDED — Layer E noise will corrupt results):`);
+      console.error(`        node runners/run-bundle3-f3-verification.js --no-require-fixtures`);
+      return false;
+    }
+    console.log(`   ⏭️  Proceeding without fixture verification (--no-require-fixtures set)`);
+    return true;
+  }
+  if (fmCheck.enabled) {
+    console.log(`   ✅  Server in fixture mode (${countFixtures(FIXTURES_DIR)} fixtures present)`);
+    return true;
+  }
+  if (REQUIRE_FIXTURES) {
+    console.error(`\n❌  Server is NOT in fixture mode.`);
+    console.error(`    The dev server is reachable but IDEALOOP_USE_FIXTURES is unset.`);
+    console.error(`    Per Bundle 3.75 + post-Bundle-3.75 #4 protocol, verification`);
+    console.error(`    must run against a fixture-mode server to avoid Layer E corruption.`);
+    console.error(`\n    Fix: stop the dev server, restart with:`);
+    console.error(`        IDEALOOP_USE_FIXTURES=1 npm run dev`);
+    console.error(`\n    Override (NOT RECOMMENDED — Layer E noise will corrupt results):`);
+    console.error(`        node runners/run-bundle3-f3-verification.js --no-require-fixtures`);
+    return false;
+  }
+  console.log(`   ⚠️  Server NOT in fixture mode but --no-require-fixtures set; proceeding`);
+  return true;
+}
+
+// ============================================================================
 // REPORT GENERATION
 // ============================================================================
 
@@ -403,10 +503,19 @@ async function main() {
   console.log("=".repeat(80));
   console.log("Bundle 3 / F3 Verification — 10 low-band cases");
   console.log("=".repeat(80));
-  console.log(`Base URL: ${BASE_URL}`);
-  console.log(`Cases: ${F3_VERIFICATION_CASES.length}`);
-  console.log(`Mode: ${RESUME ? "RESUME from checkpoint" : "FRESH run"}`);
-  console.log("");
+  console.log(`Base URL:        ${BASE_URL}`);
+  console.log(`Cases:           ${F3_VERIFICATION_CASES.length}`);
+  console.log(`Mode:            ${RESUME ? "RESUME from checkpoint" : "FRESH run"}`);
+  console.log(`Fixture mode:    ${REQUIRE_FIXTURES ? "REQUIRED (verified at preflight)" : "BYPASSED via --no-require-fixtures (Layer E noise risk)"}`);
+  console.log(`Fixtures dir:    ${FIXTURES_DIR}`);
+  console.log(`Fixtures count:  ${countFixtures(FIXTURES_DIR)}`);
+
+  // Pre-flight: fixture mode probe (Bundle 3.75 + #4 protocol enforcement)
+  const ok = await preflight();
+  if (!ok) {
+    console.error("\n❌  Pre-flight failed. Investigate before launching verification.");
+    process.exit(1);
+  }
 
   const cp = RESUME ? loadCheckpoint() : { runs: [], startedAt: new Date().toISOString() };
   if (!RESUME) saveCheckpoint(cp);

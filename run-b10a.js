@@ -15,10 +15,11 @@
 //   - 5-consecutive-failure halt budget
 //
 // Usage:
-//   node run-b10a.js                           # full run from scratch
-//   node run-b10a.js --resume                  # resume from checkpoint
-//   node run-b10a.js --skip-preflight          # skip production sanity (rare)
-//   node run-b10a.js --base-url https://...    # override default endpoint
+//   node run-b10a.js                              # full run from scratch (fixture mode required)
+//   node run-b10a.js --resume                     # resume from checkpoint
+//   node run-b10a.js --skip-preflight             # skip production sanity (rare)
+//   node run-b10a.js --no-require-fixtures        # bypass fixture mode probe (Layer E noise risk)
+//   node run-b10a.js --base-url https://...       # override default endpoint
 //
 // Outputs (in OUTPUT_DIR):
 //   B10a-checkpoint.json           — resume state
@@ -28,6 +29,44 @@
 //   delta_vs_v4s27.md              — V4S27 vs V4S28 factual comparison
 //   B10a-lens-review-template.md   — pre-structured judgment form
 //   B10a-summary.md                — gate verdicts + escalation roll-up
+//
+// ============================================================================
+//
+// PRE-VERIFICATION CHECKLIST (Methodology Principle 6 + Bundle 3.75 + #4):
+//
+// [ ] Dev server running with IDEALOOP_USE_FIXTURES=1
+//     Verify on server side:  echo $IDEALOOP_USE_FIXTURES   →   "1"
+//     Verify via runner:      auto-checks at preflight via /api/diag/fixture-mode
+//
+// [ ] Fixture freshness verified per Fixture Refresh Decision Tree
+//     Refresh required when these change since fixtures were last written:
+//       - prompt-stage1.js (Stage 1 competition-discovery prompt)
+//       - route.js Stage 1 invocation or query-construction logic
+//       - serper.js / github.js signatures or query encoding
+//       - keywords.js (Specificity Gate / keyword extraction)
+//       - competitors.js (query transformation)
+//     Refresh procedure:  rm -rf runners/fixtures/data/*
+//                         next run repopulates via cache-on-miss
+//     Refresh NOT required for:
+//       - Stage 2a/2b/2c/3/TC prompt or route changes (downstream of search)
+//       - frontend, schema, gates, contract amendments
+//       - case-bank additions (cache-on-miss handles automatically)
+//
+// [ ] Verification thresholds locked in b10a-gates.js BEFORE launch
+//     Distinguish controlled (frozen-fixture diagnostic) vs end-to-end
+//     (full-pipeline) thresholds explicitly per Bundle 2 lesson.
+//
+// [ ] Pre-existing checkpoint cleared if re-running fresh
+//     rm B10a-checkpoint.json   (or use --resume to continue)
+//
+// [ ] Serper API balance verified before launch (~$10 / ~100-180 calls budget)
+//     Check Serper dashboard if uncertain — May 5 contaminated run hit zero
+//     mid-execution due to balance exhaustion.
+//
+// INTERPRETATION RULES:
+//   - Variance with fixture mode active     → engine-level signal (real)
+//   - Variance without fixture mode active  → Layer E + engine indistinguishable
+//                                             (rerun with fixture mode required)
 //
 // ============================================================================
 
@@ -48,8 +87,11 @@ const BASE_URL = (() => {
 })();
 const RESUME = args.includes("--resume");
 const SKIP_PREFLIGHT = args.includes("--skip-preflight");
+const NO_REQUIRE_FIXTURES = args.includes("--no-require-fixtures");
+const REQUIRE_FIXTURES = !NO_REQUIRE_FIXTURES;
 const OUTPUT_DIR = __dirname;
 const CHECKPOINT_PATH = path.join(OUTPUT_DIR, "B10a-checkpoint.json");
+const FIXTURES_DIR = path.join(OUTPUT_DIR, "runners", "fixtures", "data");
 const RUN_PASSES = 2; // run the bank twice
 const TIER3_RERUN_INDEX = 3; // tier-3 boundary triples get a 3rd rerun
 const PREFLIGHT_CASE_ID = "AUDIT-H2"; // restaurant POS case — concrete, well-formed
@@ -209,6 +251,36 @@ function appendRun(cp, run) {
 }
 
 // ============================================================================
+// FIXTURE MODE PROBE (Bundle 3.75 + #4 protocol enforcement)
+// ============================================================================
+
+async function checkFixtureMode() {
+  // Hit /api/diag/fixture-mode with retry — Next.js dev server may take
+  // 2-5s to compile a route handler on first hit (cold start).
+  // 3 attempts × 2s gap = up to 6s wait worst case.
+  let lastErr = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch(BASE_URL + "/api/diag/fixture-mode");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      return { ok: true, enabled: data.enabled === true, timestamp: data.timestamp };
+    } catch (e) {
+      lastErr = e;
+      if (attempt < 3) {
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+    }
+  }
+  return { ok: false, error: lastErr?.message || "unknown error" };
+}
+
+function countFixtures(dir) {
+  if (!fs.existsSync(dir)) return 0;
+  return fs.readdirSync(dir).filter((f) => f.endsWith(".json")).length;
+}
+
+// ============================================================================
 // PRE-FLIGHT SANITY CHECK
 // ============================================================================
 
@@ -217,6 +289,39 @@ async function preflight() {
     console.log("⏭️  Skipping pre-flight (--skip-preflight)");
     return true;
   }
+
+  // 1. Fixture mode probe (Bundle 3.75 + #4 protocol enforcement)
+  console.log(`\n🔬  Fixture mode probe: ${BASE_URL}/api/diag/fixture-mode`);
+  const fmCheck = await checkFixtureMode();
+  if (!fmCheck.ok) {
+    console.log(`   ⚠️  Fixture mode endpoint unreachable (${fmCheck.error})`);
+    if (REQUIRE_FIXTURES) {
+      console.error(`\n❌  Cannot verify fixture mode. Two possibilities:`);
+      console.error(`    1. Endpoint missing — ensure src/app/api/diag/fixture-mode/route.js`);
+      console.error(`       exists and dev server has been restarted to pick it up.`);
+      console.error(`    2. Dev server unreachable at ${BASE_URL}.`);
+      console.error(`\n    Override (NOT RECOMMENDED — Layer E noise will corrupt results):`);
+      console.error(`        node run-b10a.js --no-require-fixtures`);
+      return false;
+    }
+    console.log(`   ⏭️  Proceeding without fixture verification (--no-require-fixtures set)`);
+  } else if (fmCheck.enabled) {
+    console.log(`   ✅  Server in fixture mode (${countFixtures(FIXTURES_DIR)} fixtures present)`);
+  } else if (REQUIRE_FIXTURES) {
+    console.error(`\n❌  Server is NOT in fixture mode.`);
+    console.error(`    The dev server is reachable but IDEALOOP_USE_FIXTURES is unset.`);
+    console.error(`    Per Bundle 3.75 + post-Bundle-3.75 #4 protocol, B10a verification`);
+    console.error(`    must run against a fixture-mode server to avoid Layer E corruption.`);
+    console.error(`\n    Fix: stop the dev server, restart with:`);
+    console.error(`        IDEALOOP_USE_FIXTURES=1 npm run dev`);
+    console.error(`\n    Override (NOT RECOMMENDED — Layer E noise will corrupt results):`);
+    console.error(`        node run-b10a.js --no-require-fixtures`);
+    return false;
+  } else {
+    console.log(`   ⚠️  Server NOT in fixture mode but --no-require-fixtures set; proceeding`);
+  }
+
+  // 2. Sanity case probe
   const target = ALL_CASES.find((c) => c.id === PREFLIGHT_CASE_ID);
   console.log(`\n🩺  Pre-flight: running ${PREFLIGHT_CASE_ID} against ${BASE_URL}`);
   try {
@@ -761,9 +866,12 @@ async function main() {
   console.log("=".repeat(80));
   console.log("V4S28 B10A LAUNCH GATE — single-command runner");
   console.log("=".repeat(80));
-  console.log(`Base URL: ${BASE_URL}`);
-  console.log(`Bank: ${ALL_CASES.length} cases × ${RUN_PASSES} passes + ${TIER3_BOUNDARY_TRIPLES.length} tier-3 triples`);
-  console.log(`Mode: ${RESUME ? "RESUME from checkpoint" : "FRESH run"}`);
+  console.log(`Base URL:        ${BASE_URL}`);
+  console.log(`Bank:            ${ALL_CASES.length} cases × ${RUN_PASSES} passes + ${TIER3_BOUNDARY_TRIPLES.length} tier-3 triples`);
+  console.log(`Mode:            ${RESUME ? "RESUME from checkpoint" : "FRESH run"}`);
+  console.log(`Fixture mode:    ${REQUIRE_FIXTURES ? "REQUIRED (verified at preflight)" : "BYPASSED via --no-require-fixtures (Layer E noise risk)"}`);
+  console.log(`Fixtures dir:    ${FIXTURES_DIR}`);
+  console.log(`Fixtures count:  ${countFixtures(FIXTURES_DIR)}`);
 
   // Pre-flight
   if (!RESUME) {
