@@ -1,5 +1,6 @@
 // ============================================
 // STAGE 2b PROMPT — SCORING (MD, MO, OR ONLY)
+// V4S29 STRUCTURAL RIGOR TEMPLATE
 // ============================================
 // Paid-tier chained pipeline: Stage 2b
 // Purpose: Score MD, MO, OR using evidence packets from Stage 2a
@@ -12,6 +13,16 @@
 // summary to Stage 2c. Stage 2c reads scores + evidence_strength from this
 // stage's output and synthesizes summary + failure_risks against profile +
 // Stage 1 + Stage 2a packets.
+//
+// V4S29 STRUCTURAL RIGOR TEMPLATE: MD and MO now have the same structural
+// pattern OR already had — top-line definition with negations, invalid bases
+// enumeration, binding upper-bound cap, required explanation structure with
+// (a)/(b)/exit sequencing, and metric-local uncertainty rule. MO also has
+// embedded metric-core hedge discipline inside its cap. Each metric's rules
+// live inside that metric's block (no universal "applies to all" framing) to
+// preserve packet-quarantine isolation. A cross-metric independence check at
+// the end of the file extends from the previous MD-OR check to all three
+// pairs (MD-MO, MD-OR, MO-OR) at ≥6.5 trigger.
 //
 // TC is scored in a separate isolated call. Stage 2b does not score TC.
 //
@@ -60,7 +71,8 @@ ANTI-SERIOUSNESS RULE: Domain seriousness (health, legal, finance, enterprise) i
 Score exactly 3 metrics. Follow each rubric precisely.
 
 METRIC 1: MARKET DEMAND (Weight: 30%)
-This metric evaluates CAPTURABLE demand — not whether people want something in this category, but whether a new entrant could realistically acquire and retain paying users.
+
+Market Demand measures CAPTURABLE demand — whether a specific buyer has enough urgency, recurrence, or active pull that a new entrant could acquire and retain them despite adoption friction and competitive alternatives. Not whether the category exists, not whether the problem is real, not whether users would benefit from a solution.
 
 Using the evidence in the market_demand packet, answer these questions:
 1. Who is the specific buyer (the person who pays, not just the user)?
@@ -78,6 +90,18 @@ Anti-inflation rules — apply before assigning any score above 6.0:
 - MARKETPLACE: Score based on likelihood of achieving initial liquidity. If the market operates on personal relationships, displacing those intermediaries is the hardest barrier.
 - OS/PLATFORM/LAYER FRAMING: Identify the ONE narrow sticky behavior first. Score demand for that, not the vision. If no narrow sticky behavior is identified, cap at 5.0-6.0.
 
+MD INVALID BASES: The following are NOT valid as primary anchors for MD. They may appear in the explanation as supporting context, but the explanation must also name a specific buyer, an active adoption trigger, and evidence that demand persists after friction. If the explanation rests only on the bases below without specific proof, MD cannot exceed 6.0:
+- "competitors exist" / "the category has multiple players"
+- "the category is large" / "TAM/market size is X"
+- "users would benefit" / "the problem is socially important"
+- "incumbents have many users"
+- "there are waiting lists" / "people are searching for solutions" — unless tied to a named adoption trigger
+- "the problem is real" / "users acknowledge this pain"
+
+This is not a list of forbidden phrases. It is a list of insufficient anchors. The explanation may cite any of these as context; it cannot rely on them as the primary justification.
+
+MD UNCERTAINTY RULE: When the market_demand packet evidence plausibly supports two adjacent MD score bands — for instance, between rubric 5–6 and rubric 7–8 — choose the LOWER MD band unless the packet contains a specific MD anchor that justifies the higher one. A specific MD anchor is a concrete fact about the named buyer's adoption trigger and friction-survival, tagged with a high-trust source ([competitor: Name], [domain_flag], or [idea_description]). [narrative_field] and [user_claim] sources alone do NOT justify the higher band.
+
 Score levels:
 1-2: No capturable demand. Need real but fully served or friction eliminates it.
 3-4: Niche, small. Problem real but low urgency or high friction.
@@ -85,9 +109,36 @@ Score levels:
 7-8: Large addressable market with active demand that SURVIVES friction analysis. Growing trend with evidence.
 9-10: Massive proven market with urgent unmet need. Extremely rare.
 
+MD BINDING CAP: To score MD at 7.0 or higher, the explanation MUST identify capturable demand that survives both friction and competition: a specific buyer (not just a user category), an active adoption trigger (not just a real problem), and evidence that demand persists after friction is named. If the explanation rests on category existence, problem reality, user benefit, or broad market presence without naming buyer + trigger + post-friction persistence, MD cannot reach 7.0.
+
 After scoring, cross-check: If you described major barriers, verify your score reflects them.
 
+MD EXPLANATION REQUIRED STRUCTURE: Every MD explanation must include two elements:
+1. The rubric-level justification (which band the score maps to, grounded in market_demand packet evidence).
+2. A demand proof point or validation move — one sentence that does ONE of the following:
+   (a) names a concrete piece of evidence in the packet that demonstrates the named buyer's adoption trigger survives friction (if such evidence is present), OR
+   (b) identifies the single most realistic move that would test whether the trigger survives friction (if evidence is partial).
+
+Use (a) when the packet contains concrete evidence sufficient to demonstrate trigger survival. Use (b) when evidence is partial but a realistic test exists.
+
+Good example, path (a): "Score 6.5, rubric level 5–6. School-based tutoring waiting lists indicate demand and Wyzant's commission acceptance demonstrates parental willingness to use marketplace platforms — but parents' word-of-mouth dominance is direct evidence that the discovery shift faces high friction. The packet's named friction (relationship-locked discovery) directly bears on whether retention can occur post-onboarding."
+
+Good example, path (b): "Score 5.5, rubric level 5–6. School-based tutoring waiting lists indicate genuine demand for tutoring capacity, but parents currently rely on word-of-mouth referrals as the dominant discovery method. Interview 20 Boston parents who currently use tutors to identify what specific referral friction would make them try a platform instead."
+
+Bad example (descriptive-only): "Score 5.5, rubric level 5–6. Waiting lists indicate demand, but parents rely on word-of-mouth." (Missing proof point or validation move.)
+
+The proof point or validation move must be:
+- Specific (named buyer segment, named adoption trigger, named friction — not generic "do customer development").
+- Realistic (not "survey the whole TAM").
+- Tied to THIS idea's specific demand uncertainty.
+
+ANTI-GENERIC GUARDRAIL: Do NOT suggest "customer interviews," "validate demand," "survey the market," or "do user research" unless a specific buyer segment, specific question, and specific decision criterion is identified.
+
+HONEST EXIT CLAUSE: If neither (a) nor (b) is possible from this evidence — for instance, because the buyer category is undefined or the adoption trigger is genuinely unknown and not testable — state that explicitly: "No realistic demand proof point or validation path is identifiable from this evidence; the buyer/trigger uncertainty cannot be resolved." Do NOT fabricate a generic validation suggestion.
+
 METRIC 2: MONETIZATION POTENTIAL (Weight: 25%)
+
+Monetization Potential measures whether a new entrant can capture durable revenue from a specific buyer at a specific price despite substitute pricing pressure and payment friction. Not whether competitors charge for the category, not whether buyers in the category have budgets, not whether a plausible revenue model exists.
 
 Using the evidence in the monetization packet, answer:
 1. Who pays?
@@ -103,6 +154,18 @@ Anti-inflation rules:
 - MARKETPLACE MONETIZATION: Score based on likelihood of reaching the point where fees can be charged.
 - REGULATED DOMAINS: Compliance costs, liability insurance, and trust-building reduce margins.
 
+MO INVALID BASES: The following are NOT valid as primary anchors for MO. They may appear in the explanation as supporting context, but the explanation must also name a specific buyer, a specific price tied to that buyer's payment context, and evidence that substitute pricing/payment friction does not collapse willingness to pay. If the explanation rests only on the bases below without specific proof, MO cannot exceed 6.0:
+- "competitor charges money" / "the category monetizes"
+- "category has budget" / "enterprise/category buyers have money"
+- "subscription model exists" / "a plausible revenue model"
+- "success fee aligns incentives" / "value-aligned pricing structure"
+- "insurance pays sometimes" / "category has revenue streams"
+- "users save time" — unless tied to specific pricing power and buyer payment context
+
+This is not a list of forbidden phrases. It is a list of insufficient anchors. The explanation may cite any of these as context; it cannot rely on them as the primary justification.
+
+MO UNCERTAINTY RULE: When the monetization packet evidence plausibly supports two adjacent MO score bands — for instance, between rubric 5–6 and rubric 7–8 — choose the LOWER MO band unless the packet contains a specific MO anchor that justifies the higher one. A specific MO anchor is a concrete fact about the named buyer's payment context (named buyer paying a named price for comparable value), tagged with a high-trust source. [narrative_field] and [user_claim] sources alone do NOT justify the higher band.
+
 For COMMERCIAL ideas:
 1-2: No viable revenue path. Substitutes are free and nearly equivalent.
 3-4: One weak revenue stream. Low pricing power. Strong free substitutes.
@@ -113,7 +176,34 @@ For COMMERCIAL ideas:
 For SOCIAL IMPACT ideas (label as "Sustainability Potential"):
 1-2: No sustainability path. 3-4: Small grants only. 5-6: Clear sustainability. 7-8: Multiple paths. 9-10: Self-sustaining.
 
+MO BINDING CAP: To score MO at 7.0 or higher, the explanation MUST identify a credible first-dollar path: a specific buyer, a specific price tied to that buyer's payment context, and evidence that substitute pricing and payment friction do not collapse willingness to pay. If the explanation rests on competitors monetizing the category, adjacent revenue, plausible revenue models, or category buyers having budgets — without naming buyer + price + payment-context defensibility — MO cannot reach 7.0.
+
+HEDGE DISCIPLINE: If the explanation contains uncertainty attacking MO's core (the buyer pays this price reliably) — e.g., "requires critical mass," "if achievable," "depends on cold-start resolution," "unit economics uncertain" — and no counter-anchor is named in the explanation, MO cannot reach 7.0 regardless of other positive signals. A counter-anchor is a specific named buyer + payment-context proof that resolves the uncertainty, not a restatement of the value prop.
+
 After scoring, cross-check: If your explanation mentions weak pricing power, strong free alternatives, or adoption barriers, verify your score reflects those concerns.
+
+MO EXPLANATION REQUIRED STRUCTURE: Every MO explanation must include two elements:
+1. The rubric-level justification (which band the score maps to, grounded in monetization packet evidence).
+2. A monetization proof point or validation move — one sentence that does ONE of the following:
+   (a) names a concrete piece of evidence in the packet that demonstrates the named buyer pays the named price despite substitutes/friction (if such evidence is present), OR
+   (b) identifies the single most realistic move that would test whether the named buyer pays the named price (if evidence is partial).
+
+Use (a) when the packet contains concrete evidence sufficient to demonstrate payment durability. Use (b) when evidence is partial but a realistic test exists.
+
+Good example, path (a): "Score 6.0, rubric level 5–6. The $99/month price sits within the $50-200 SaaS range for restaurant operators and MarginEdge's comparable POS-integrated tooling already commands subscription payment from this exact buyer segment — but free spreadsheets remain the dominant alternative, holding pricing power at the middle band."
+
+Good example, path (b): "Score 5.5, rubric level 5–6. $99/month pricing sits within the $50-200 SaaS range for restaurant operators, but MarginEdge offers comparable real-time POS-integrated cost tracking and free spreadsheets remain the dominant alternative. Run a 10-restaurant paid pilot at $99/month for 60 days — track whether retention exceeds 80% after the substitute comparison becomes obvious during use."
+
+Bad example (descriptive-only): "Score 5.5, rubric level 5–6. $99/month sits within the SaaS range but free alternatives exist." (Missing proof point or validation move.)
+
+The proof point or validation move must be:
+- Specific (named buyer, named price, named substitute/friction exposure mechanism).
+- Realistic (not "do market research on willingness to pay").
+- Tied to THIS idea's specific monetization uncertainty.
+
+ANTI-GENERIC GUARDRAIL: Do NOT suggest "validate willingness to pay," "test pricing," "survey customers about price," or "pricing research" unless a specific buyer, specific price, and specific retention/conversion test is identified.
+
+HONEST EXIT CLAUSE: If neither (a) nor (b) is possible from this evidence — for instance, because no specific buyer is named in the idea, or substitute pricing collapses any plausible test — state that explicitly: "No realistic monetization proof point or validation path is identifiable from this evidence; willingness-to-pay cannot be tested without first specifying the buyer and payment context." Do NOT fabricate a generic validation suggestion.
 
 METRIC 3: ORIGINALITY (Weight: 25%)
 Originality measures whether a new entrant has a credible structural wedge that incumbents cannot easily replicate — not whether the idea sounds thoughtful, combines useful things, or solves a real workflow problem.
@@ -137,6 +227,10 @@ Anti-inflation rules:
 - FEATURE VS PRODUCT: If the core user value could plausibly live as a module inside an existing product, cap at 5.0. Exception ONLY if matching would require the incumbent to fundamentally redesign product flow, permissions, data models, or system boundaries.
 - COMBINATION IS NOT ORIGINALITY: Simple bundling caps at 4.0-5.0. Tightly integrated end-to-end workflows solving real coordination problems can score 6.0-7.0 only if incumbents would need significant architectural work to match.
 - DISTRIBUTION IS NOT ORIGINALITY: Audience access doesn't make the product harder to replicate.
+
+These anti-inflation rules apply to the primary defensibility anchor. Workflow design, integrations, vertical positioning, domain seriousness, feature combination, or distribution advantages may appear as supporting context, but they cannot be the primary justification for OR above 6.0 unless the explanation names a concrete replication barrier that makes copying genuinely hard.
+
+OR UNCERTAINTY RULE: When the originality packet evidence plausibly supports two adjacent OR score bands — for instance, between rubric 5–6 and rubric 7–8 — choose the LOWER OR band unless the packet contains a specific OR anchor that justifies the higher one. A specific OR anchor is a concrete replication barrier (proprietary data, regulatory certification, hard-to-acquire integrations, network effects with named two-sided mechanism), tagged with a high-trust source. [narrative_field] and [user_claim] sources alone do NOT justify the higher band.
 
 Score levels:
 1-2: Direct copy. Exists exactly as described.
@@ -188,7 +282,18 @@ If the idea is a marketplace/platform depending on network effects, set marketpl
 3. Most scores should be 3-7. Scores 1-2 and 9-10 are rare.
 4. Each explanation MUST reference which rubric level the score maps to.
 5. SCORE-EXPLANATION CONSISTENCY (BOTH DIRECTIONS): After writing each explanation, verify the score matches what you described. A score above 6.0 with an explanation describing significant barriers is a contradiction — lower the score. Equally, a score below 5.0 with an explanation describing genuine buyer urgency, real wedge, manageable competition, or clear willingness to pay is also a contradiction — raise the score. Scores must reflect the balance of evidence, not default to pessimism or optimism.
-6. MD-OR INDEPENDENCE CHECK: After scoring both Market Demand and Originality, verify they are driven by different evidence. MD should be driven by buyer urgency, adoption friction, and need recurrence from the MD packet. OR should be driven by replication difficulty and competitor overlap from the OR packet. If both scores are above 6.0, verify each explanation cites different causal facts. If both explanations rely on the same underlying signal (e.g., "underserved market segment" boosting MD and "gap in competitor offerings" boosting OR), these are the same observation — lower the metric where the signal is weaker. An unserved market gap is primarily an MD fact (demand exists). It is only an OR fact if the gap exists because replication is genuinely hard — not merely because no one has built it yet.
+
+=== CROSS-METRIC INDEPENDENCE CHECK ===
+
+After drafting MD, MO, and OR scores and explanations, but before finalizing the output, run three independence verifications in order. Each verification triggers only when both relevant metrics are at or above 6.5.
+
+VERIFICATION 1 — MD–MO INDEPENDENCE: Buyer existence is primarily an MD fact (someone is in the market). It is only an MO fact if there is evidence the buyer pays this specific price with this specific value prop. "Category buyers have budgets" cannot drive both MD and MO upward — it is at most an MD signal, and MO requires its own specific payment-context evidence. If both MD ≥ 6.5 and MO ≥ 6.5, verify each explanation cites different causal facts. If the same underlying signal is being interpreted in two ways, lower the metric where the signal is weaker.
+
+VERIFICATION 2 — MD–OR INDEPENDENCE: An unserved market gap is primarily an MD fact (demand exists). It is only an OR fact if the gap exists because replication is genuinely hard — not merely because no one has built it yet. If both MD ≥ 6.5 and OR ≥ 6.5, verify each explanation cites different causal facts. If both explanations rely on the same underlying signal (e.g., "underserved market segment" boosting MD and "gap in competitor offerings" boosting OR), these are the same observation — lower the metric where the signal is weaker.
+
+VERIFICATION 3 — MO–OR INDEPENDENCE: Competitor pricing structure is primarily an MO fact (benchmark for what buyers pay). It is only an OR fact if the competitor's pricing model is itself the replication barrier — which is rare. If both MO ≥ 6.5 and OR ≥ 6.5, verify each explanation cites different causal facts.
+
+If two metrics relying on the same underlying signal interpreted differently are both ≥ 6.5, lower the metric where the signal is weaker.
 
 === EVIDENCE STRENGTH ===
 
