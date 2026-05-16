@@ -1,0 +1,136 @@
+================================================================================
+V4S28 B10A LAUNCH GATE — single-command runner
+================================================================================
+Base URL:        http://localhost:3000
+Bank:            47 cases × 2 passes + 3 tier-3 triples
+Mode:            FRESH run
+Fixture mode:    REQUIRED (verified at preflight)
+Fixtures dir:    /Users/emreyildiz/Projects/AI App Ideas/idea-validator-app-idea/runners/fixtures/data
+Fixtures count:  0
+
+🔬  Fixture mode probe: http://localhost:3000/api/diag/fixture-mode
+   ✅  Server in fixture mode (0 fixtures present)
+
+🩺  Pre-flight: running AUDIT-H2 against http://localhost:3000
+   ✅  Pre-flight OK (149.6s) — Overall 5.7, proceeding to B10a bank
+
+📋  Bank: 47 cases × 2 passes + 3 tier-3 triples = 97 calls
+📁  Checkpoint: /Users/emreyildiz/Projects/AI App Ideas/idea-validator-app-idea/B10a-checkpoint.json
+
+[1/97] AUDIT-H1__run1 (PRO) ... ✅ 144.4s — MD:6.5 MO:5.5 OR:4 TC:8.5 O:5.4 [HIGH]
+[2/97] AUDIT-H2__run1 (PRO) ... ✅ 148.1s — MD:6 MO:5.5 OR:4.5 TC:7 O:5.4 [HIGH]
+[3/97] AUDIT-H3__run1 (PRO) ... ✅ 151.2s — MD:6.5 MO:6 OR:4.5 TC:7.5 O:5.7 [HIGH]
+[4/97] AUDIT-H4__run1 (PRO) ... ✅ 145.7s — MD:6.5 MO:6 OR:4.5 TC:7.5 O:5.7 [HIGH]
+[5/97] AUDIT-M1__run1 (PRO) ... ✅ 142.0s — MD:5.5 MO:4.5 OR:3.5 TC:6.5 O:4.6 [HIGH]
+[6/97] AUDIT-M2__run1 (PRO) ... ✅ 137.9s — MD:6.5 MO:6 OR:5.5 TC:7.5 O:6 [HIGH]
+[7/97] AUDIT-M3__run1 (PRO) ... ✅ 142.1s — MD:6.5 MO:5 OR:4 TC:7 O:5.3 [HIGH]
+[8/97] AUDIT-M4__run1 (PRO) ... ✅ 177.8s — MD:6 MO:5.5 OR:4.5 TC:7 O:5.4 [HIGH]
+[9/97] AUDIT-L1__run1 (PRO) ... 🚪 GATED (0.9s)
+[10/97] AUDIT-L2__run1 (PRO) ... ✅ 155.1s — MD:5.5 MO:6 OR:4.5 TC:7.5 O:5.3 [HIGH]
+[11/97] AUDIT-S2__run1 (PRO) ... 🚪 GATED (0.8s)
+[12/97] AUDIT-A1__run1 (PRO) ... 🚪 GATED (0.8s)
+[13/97] AUDIT-A2__run1 (PRO) ... ✅ 167.3s — MD:5.5 MO:4.5 OR:4 TC:7 O:4.7 [HIGH]
+[14/97] AUDIT-A3__run1 (PRO) ... ✅ 139.8s — MD:6.5 MO:7 OR:4 TC:9 O:5.9 [HIGH]
+[15/97] AUDIT-B1__run1 (PRO) ... ✅ 149.0s — MD:6 MO:5.5 OR:4.5 TC:7.5 O:5.4 [HIGH]
+[16/97] AUDIT-B2__run1 (PRO) ... ✅ 146.9s — MD:6 MO:6.5 OR:4.5 TC:6.5 O:5.7 [HIGH]
+[17/97] AUDIT-B3__run1 (PRO) ... ✅ 137.8s — MD:6 MO:4.5 OR:5.5 TC:6.5 O:5.4 [HIGH]
+[18/97] AUDIT-R1__run1 (PRO) ... ✅ 145.1s — MD:6 MO:5.5 OR:4 TC:7.5 O:5.2 [MEDIUM]
+[19/97] AUDIT-R2__run1 (PRO) ... ✅ 149.7s — MD:6 MO:5.5 OR:6.5 TC:7 O:6 [HIGH]
+[20/97] AUDIT-R3__run1 (PRO) ... ✅ 153.2s — MD:6 MO:5.5 OR:4.5 TC:8 O:5.4 [HIGH]
+[21/97] AUDIT-MAT1-beginner__run1 (PRO) ... ✅ 170.4s — MD:6 MO:6.5 OR:4 TC:7.5 O:5.5 [HIGH]
+[22/97] AUDIT-MAT1-intermediate__run1 (PRO) ... ✅ 156.8s — MD:5.5 MO:4.5 OR:4 TC:7 O:4.7 [HIGH]
+[23/97] AUDIT-MAT1-senior__run1 (PRO) ... ✅ 154.3s — MD:5.5 MO:4.5 OR:3.5 TC:6 O:4.6 [HIGH]
+[24/97] AUDIT-MAT2-beginner__run1 (PRO) ... ✅ 136.0s — MD:6 MO:6.5 OR:5.5 TC:7.5 O:6 [MEDIUM]
+[25/97] AUDIT-MAT2-intermediate__run1 (PRO) ... ✅ 138.3s — MD:6.5 MO:6 OR:5.5 TC:7 O:6 [HIGH]
+[26/97] AUDIT-MAT2-senior__run1 (PRO) ... ✅ 151.8s — MD:6.5 MO:6 OR:5.5 TC:7.5 O:6 [HIGH]
+[27/97] AUDIT-MAT3-insider__run1 (PRO) ... ✅ 154.6s — MD:6.5 MO:5.5 OR:4.5 TC:7.5 O:5.6 [HIGH]
+[28/97] AUDIT-MAT3-tech-no-access__run1 (PRO) ... ✅ 159.6s — MD:6 MO:6.5 OR:4.5 TC:7 O:5.7 [HIGH]
+[29/97] AUDIT-MAT3-partial__run1 (PRO) ... ✅ 151.2s — MD:6.5 MO:6 OR:4.5 TC:7 O:5.7 [HIGH]
+[30/97] AUDIT-H2-std__run1 (FREE) ... ✅ 72.2s — MD:6.5 MO:6 OR:5.5 TC:6.5 O:6 [HIGH]
+[31/97] AUDIT-M1-std__run1 (FREE) ... ✅ 78.9s — MD:5.5 MO:4.5 OR:3.5 TC:5.5 O:4.6 [HIGH]
+[32/97] AUDIT-S2-std__run1 (FREE) ... 🚪 GATED (0.9s)
+[33/97] AUDIT-A1-std__run1 (FREE) ... 🚪 GATED (1.0s)
+[34/97] AUDIT-SP1__run1 (PRO) ... 🚪 GATED (0.8s)
+[35/97] AUDIT-MD1__run1 (PRO) ... ✅ 160.4s — MD:5.5 MO:4.5 OR:3.5 TC:7 O:4.6 [MEDIUM]
+[36/97] ARC-C1__run1 (PRO) ... ✅ 169.7s — MD:6.5 MO:5 OR:4.5 TC:8.5 O:5.4 [HIGH]
+[37/97] ARC-D1__run1 (PRO) ... ✅ 158.4s — MD:6.5 MO:6 OR:7 TC:8.5 O:6.5 [HIGH]
+[38/97] ARC-D2__run1 (PRO) ... ✅ 172.2s — MD:5.5 MO:4.5 OR:3.5 TC:8.5 O:4.6 [HIGH]
+[39/97] ARC-E1__run1 (PRO) ... ✅ 169.9s — MD:6.5 MO:6 OR:4.5 TC:8 O:5.7 [HIGH]
+[40/97] G1-LONG-1500W__run1 (PRO) ... ✅ 166.1s — MD:6 MO:6.5 OR:5.5 TC:7 O:6 [HIGH]
+[41/97] GATE-A1__run1 (PRO) ... ✅ 162.4s — MD:5.5 MO:4.5 OR:3.5 TC:7 O:4.6 [MEDIUM]
+[42/97] GATE-D2__run1 (PRO) ... ✅ 150.2s — MD:5.5 MO:4.5 OR:3.5 TC:5.5 O:4.6 [MEDIUM]
+[43/97] GATE-G2__run1 (PRO) ... 🚪 GATED (2.1s)
+[44/97] OPTZ-MED__run1 (PRO) ... ✅ 155.1s — MD:6.5 MO:6 OR:4.5 TC:7 O:5.7 [HIGH]
+[45/97] SPARSE-LOW__run1 (PRO) ... ✅ 137.1s — MD:6 MO:5.5 OR:4 TC:7 O:5.2 [MEDIUM]
+[46/97] SPARSE-LOW-std__run1 (FREE) ... ✅ 61.9s — MD:5.5 MO:6 OR:4 TC:6.5 O:5.2 [HIGH]
+[47/97] DOGFOOD-IDEALOOP__run1 (PRO) ... ✅ 168.2s — MD:5.5 MO:4.5 OR:4 TC:6.5 O:4.7 [HIGH]
+[48/97] AUDIT-H1__run2 (PRO) ... ✅ 152.9s — MD:6.5 MO:6 OR:4.5 TC:8.5 O:5.7 [HIGH]
+[49/97] AUDIT-H2__run2 (PRO) ... ✅ 138.9s — MD:6 MO:5.5 OR:4.5 TC:7 O:5.4 [HIGH]
+[50/97] AUDIT-H3__run2 (PRO) ... ✅ 151.0s — MD:6 MO:6.5 OR:4.5 TC:7.5 O:5.7 [HIGH]
+[51/97] AUDIT-H4__run2 (PRO) ... ✅ 165.3s — MD:6.5 MO:6 OR:5.5 TC:7.5 O:6 [HIGH]
+[52/97] AUDIT-M1__run2 (PRO) ... ✅ 126.2s — MD:5.5 MO:4.5 OR:4 TC:6.5 O:4.7 [HIGH]
+[53/97] AUDIT-M2__run2 (PRO) ... ✅ 142.1s — MD:6 MO:6.5 OR:4.5 TC:7.5 O:5.7 [HIGH]
+[54/97] AUDIT-M3__run2 (PRO) ... ✅ 152.5s — MD:6.5 MO:4.5 OR:4 TC:7 O:5.1 [HIGH]
+[55/97] AUDIT-M4__run2 (PRO) ... ✅ 163.7s — MD:6.5 MO:6 OR:4 TC:7 O:5.6 [HIGH]
+[56/97] AUDIT-L1__run2 (PRO) ... 🚪 GATED (0.9s)
+[57/97] AUDIT-L2__run2 (PRO) ... ✅ 148.0s — MD:6 MO:5.5 OR:4 TC:7.5 O:5.2 [MEDIUM]
+[58/97] AUDIT-S2__run2 (PRO) ... 🚪 GATED (1.3s)
+[59/97] AUDIT-A1__run2 (PRO) ... 🚪 GATED (1.0s)
+[60/97] AUDIT-A2__run2 (PRO) ... ✅ 157.4s — MD:6 MO:5.5 OR:4.5 TC:7 O:5.4 [HIGH]
+[61/97] AUDIT-A3__run2 (PRO) ... ✅ 144.6s — MD:6 MO:6.5 OR:4 TC:9 O:5.5 [MEDIUM]
+[62/97] AUDIT-B1__run2 (PRO) ... ✅ 141.8s — MD:6 MO:5.5 OR:4.5 TC:7.5 O:5.4 [HIGH]
+[63/97] AUDIT-B2__run2 (PRO) ... ✅ 145.7s — MD:6 MO:5.5 OR:4.5 TC:6.5 O:5.4 [HIGH]
+[64/97] AUDIT-B3__run2 (PRO) ... ✅ 125.0s — MD:6 MO:4.5 OR:5.5 TC:6.5 O:5.4 [HIGH]
+[65/97] AUDIT-R1__run2 (PRO) ... ✅ 144.0s — MD:6.5 MO:6 OR:4.5 TC:7.5 O:5.7 [HIGH]
+[66/97] AUDIT-R2__run2 (PRO) ... ✅ 154.7s — MD:6.5 MO:6 OR:5.5 TC:7 O:6 [HIGH]
+[67/97] AUDIT-R3__run2 (PRO) ... ✅ 152.3s — MD:6.5 MO:6 OR:4.5 TC:8 O:5.7 [HIGH]
+[68/97] AUDIT-MAT1-beginner__run2 (PRO) ... ✅ 148.2s — MD:6 MO:5 OR:4 TC:7.5 O:5.1 [HIGH]
+[69/97] AUDIT-MAT1-intermediate__run2 (PRO) ... ✅ 158.9s — MD:6 MO:5.5 OR:4 TC:7 O:5.2 [HIGH]
+[70/97] AUDIT-MAT1-senior__run2 (PRO) ... ✅ 158.3s — MD:6 MO:5 OR:4.5 TC:6 O:5.2 [HIGH]
+[71/97] AUDIT-MAT2-beginner__run2 (PRO) ... ✅ 145.1s — MD:6.5 MO:6 OR:6.5 TC:7.5 O:6.3 [HIGH]
+[72/97] AUDIT-MAT2-intermediate__run2 (PRO) ... ✅ 131.4s — MD:6.5 MO:5 OR:6 TC:7 O:5.9 [MEDIUM]
+[73/97] AUDIT-MAT2-senior__run2 (PRO) ... ✅ 142.9s — MD:6.5 MO:6 OR:5.5 TC:7.5 O:6 [HIGH]
+[74/97] AUDIT-MAT3-insider__run2 (PRO) ... ✅ 169.0s — MD:6.5 MO:6 OR:4.5 TC:7.5 O:5.7 [HIGH]
+[75/97] AUDIT-MAT3-tech-no-access__run2 (PRO) ... ✅ 151.0s — MD:6 MO:5.5 OR:4.5 TC:7 O:5.4 [HIGH]
+[76/97] AUDIT-MAT3-partial__run2 (PRO) ... ✅ 147.7s — MD:6 MO:6.5 OR:4.5 TC:7 O:5.7 [HIGH]
+[77/97] AUDIT-H2-std__run2 (FREE) ... ✅ 76.7s — MD:6.5 MO:6 OR:4.5 TC:6.5 O:5.7 [HIGH]
+[78/97] AUDIT-M1-std__run2 (FREE) ... ✅ 79.4s — MD:5.5 MO:4.5 OR:3.5 TC:5.5 O:4.6 [HIGH]
+[79/97] AUDIT-S2-std__run2 (FREE) ... 🚪 GATED (1.7s)
+[80/97] AUDIT-A1-std__run2 (FREE) ... 🚪 GATED (0.8s)
+[81/97] AUDIT-SP1__run2 (PRO) ... 🚪 GATED (1.1s)
+[82/97] AUDIT-MD1__run2 (PRO) ... ✅ 155.5s — MD:6 MO:4.5 OR:3.5 TC:7 O:4.8 [MEDIUM]
+[83/97] ARC-C1__run2 (PRO) ... ✅ 150.9s — MD:6.5 MO:5 OR:5.5 TC:8.5 O:5.7 [HIGH]
+[84/97] ARC-D1__run2 (PRO) ... ✅ 152.3s — MD:5.5 MO:4.5 OR:6 TC:8.5 O:5.3 [HIGH]
+[85/97] ARC-D2__run2 (PRO) ... ✅ 165.1s — MD:4.5 MO:3.5 OR:3 TC:8 O:3.7 [HIGH]
+[86/97] ARC-E1__run2 (PRO) ... ✅ 175.0s — MD:6 MO:6.5 OR:4.5 TC:8 O:5.7 [HIGH]
+[87/97] G1-LONG-1500W__run2 (PRO) ... ✅ 169.0s — MD:6 MO:6.5 OR:6.5 TC:7 O:6.3 [HIGH]
+[88/97] GATE-A1__run2 (PRO) ... ✅ 144.2s — MD:6 MO:4.5 OR:3.5 TC:7 O:4.8 [MEDIUM]
+[89/97] GATE-D2__run2 (PRO) ... ✅ 143.3s — MD:5.5 MO:4.5 OR:3.5 TC:5.5 O:4.6 [MEDIUM]
+[90/97] GATE-G2__run2 (PRO) ... 🚪 GATED (1.2s)
+[91/97] OPTZ-MED__run2 (PRO) ... ✅ 178.1s — MD:6.5 MO:6 OR:4.5 TC:7 O:5.7 [HIGH]
+[92/97] SPARSE-LOW__run2 (PRO) ... ✅ 140.8s — MD:6 MO:5.5 OR:4.5 TC:7 O:5.4 [MEDIUM]
+[93/97] SPARSE-LOW-std__run2 (FREE) ... ✅ 70.8s — MD:5.5 MO:4.5 OR:3.5 TC:6.5 O:4.6 [HIGH]
+[94/97] DOGFOOD-IDEALOOP__run2 (PRO) ... ✅ 153.0s — MD:5.5 MO:4 OR:4.5 TC:6.5 O:4.7 [HIGH]
+[95/97] AUDIT-H2__run3 (PRO) ... ✅ 140.4s — MD:6 MO:5.5 OR:4.5 TC:7 O:5.4 [HIGH]
+[96/97] AUDIT-M1__run3 (PRO) ... ✅ 140.9s — MD:5.5 MO:4.5 OR:4 TC:6.5 O:4.7 [MEDIUM]
+[97/97] OPTZ-MED__run3 (PRO) ... ✅ 152.0s — MD:6.5 MO:6 OR:4.5 TC:7 O:5.7 [HIGH]
+
+✅  Bank execution complete. 97 runs in checkpoint.
+
+⏱️   Total wall time: 202.5 minutes
+
+🔬  Evaluating gates...
+
+📝  Generating artifacts...
+  ✓ B10a-gates.json (15 KB)
+  ✓ B10a-raw.json (4147 KB)
+  ✓ B10a-sections.md (356 KB)
+  ✓ delta_vs_v4s27.md (20 KB)
+  ✓ B10a-lens-review-template.md (229 KB)
+  ✓ B10a-summary.md (6 KB)
+
+================================================================================
+B10A VERDICT: B10A_FAIL
+================================================================================
+Hard gates: 15/23 PASS
+Next: open B10a-lens-review-template.md and execute Phase 2 (qualitative lens review).

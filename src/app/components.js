@@ -204,7 +204,7 @@ export function StepProgress({ currentStep, savedMode, branchMode, t }) {
     { number: 1, label: "Profile" },
     { number: 2, label: "Idea" },
     { number: 3, label: "Analysis" },
-    { number: 4, label: "Roadmap" },
+    { number: 4, label: "Execution" },
     ...(branchMode ? [{ number: 5, label: "Delta" }] : savedMode ? [{ number: 5, label: "Evolve" }] : []),
   ];
 

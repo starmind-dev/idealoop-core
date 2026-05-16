@@ -23,16 +23,16 @@ import { calculateOverallScore } from "../../../lib/services/scoring";
 // packets + Stage 2b scores + evidence_strength. Stage 2b no longer outputs
 // summary or failure_risks — those moved to Stage 2c. Stage 3 reads
 // failure_risks from the merged evaluation object (mutated in-place after
-// Stage 2c completes), preserving Roadmap's risk-mitigation behavior.
+// Stage 2c completes), preserving Stage 3's risk-mitigation behavior.
 //
 // Sequencing rationale: 2c||3 parallel was rejected because Stage 3 reads
 // failure_risks as input — under parallel design Stage 3 would lose this input.
-// Sequential 2c → 3 protects Roadmap quality (the strongest section in the
-// audit) at a cost of ~5-8s latency. See execution-plan.md S3.
+// Sequential 2c → 3 protects Stage 3 quality at a cost of ~5-8s latency.
+// See execution-plan.md S3.
 //
 // Graceful degradation: if Stage 2c parse fails, summary + failure_risks are
 // set empty, Stage 3 proceeds without failure_risks input. Evaluation still
-// produces scores + roadmap.
+// produces scores.
 //
 // Stage TC runs in PARALLEL with Stage 2a — it receives ONLY idea + profile,
 // never sees Stage 1 output. This physically prevents TC from correlating with
@@ -247,7 +247,7 @@ USER PROFILE:
 
           // V4S28 B6 P12-S1: Stage 1 is profile-blind. Profile is NOT injected
           // into Stage 1 input. Profile-aware judgments live downstream in TC,
-          // Stage 2c synthesis, and Stage 3 roadmap. See prompt-stage1.js
+          // Stage 2c synthesis, and Stage 3. See prompt-stage1.js
           // PROFILE-BLINDNESS section for prompt-level contract.
           const stage1UserMessage = `USER'S AI PRODUCT IDEA:
 ${idea}`;
@@ -347,7 +347,7 @@ ${idea}`;
               // (counterfactual prompt tests precede architectural change).
               //
               // Stage 2c and Stage 3 deliberately NOT hardened: they are narrative
-              // synthesis stages (summary, failure_risks, phases, tools), not
+              // synthesis stages (summary, failure_risks), not
               // scoring stages, and their stability concerns are tracked as
               // separate B10a findings outside F1 scope.
               top_k: 1,
@@ -463,7 +463,7 @@ ${JSON.stringify(stage2aResult)}`;
           // (sparse summary + Specification cascade) driven by .level alone.
           // thin_dimensions is purely a frontend-rendering signal for the
           // partnered EARLY READ callout — must not influence downstream
-          // synthesis or roadmap generation.
+          // synthesis.
           //
           // Restored to ev.evidence_strength at final assembly time below
           // so the frontend payload includes the array.
@@ -544,7 +544,7 @@ ${JSON.stringify({
 
           // Graceful degradation per S3 lock: if Stage 2c parse fails, set
           // summary + failure_risks empty and proceed to Stage 3 with empty
-          // failure_risks input. Evaluation still produces scores + roadmap.
+          // failure_risks input. Evaluation still produces scores.
           try {
             const stage2cResult = JSON.parse(cleanJsonResponse(stage2cText));
             ev.summary = stage2cResult.summary || "";
@@ -567,10 +567,9 @@ ${JSON.stringify({
 
           // ============================
           // STAGE 3: ACT
-          // Generate roadmap informed by Stage 1 + combined scores + failure_risks
           // ============================
 
-          sendEvent({ step: "stage3_start", message: "Stage 3: Building adaptive roadmap..." });
+          sendEvent({ step: "stage3_start", message: "Stage 3: Building..." });
 
           // Stage 3 reads stage2bResult (now mutated to include TC, summary,
           // and failure_risks from Stage 2c). The Stage 3 prompt expects
@@ -590,8 +589,7 @@ ${JSON.stringify(stage2bResult)}`;
           const stage3Response = await client.messages.create({
             model: "claude-sonnet-4-20250514",
             // V4S28 B8 hotfix (May 1, 2026): bumped from 4096 → 8192. Stage 3
-            // generates roadmap (5-7 phases × ~400 words) + tools (6-10 entries)
-            // + estimates. Elaborate inputs (~5000 char idea text) consistently
+            // generates estimates. Elaborate inputs (~5000 char idea text) consistently
             // produced 5500-6500 tokens of output, hitting the old ceiling and
             // causing mid-string JSON truncation in estimates.explanation.
             max_tokens: 8192,
@@ -614,7 +612,7 @@ ${JSON.stringify(stage2bResult)}`;
 
           sendEvent({
             step: "stage3_done",
-            message: "Stage 3 complete: Roadmap generated",
+            message: "Stage 3 complete",
           });
 
           // ============================
@@ -667,8 +665,6 @@ ${JSON.stringify(stage2bResult)}`;
             classification: stage1Result.classification,
             scope_warning: stage1Result.scope_warning,
             competition: stage1Result.competition,
-            phases: stage3Result.phases,
-            tools: stage3Result.tools,
             estimates: stage3Result.estimates,
             evaluation: ev,
             // Pro-tier exclusive fields

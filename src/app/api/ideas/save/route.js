@@ -142,8 +142,6 @@ export async function POST(request) {
           failure_risks: eval_.failure_risks || [],
           evidence_strength: eval_.evidence_strength || null,
         },
-        roadmap_json: analysis.phases || [],
-        tools_json: analysis.tools || [],
         estimates_json: analysis.estimates || {},
         market_demand_score: eval_.market_demand?.score || 0,
         originality_score: eval_.originality?.score || 0,

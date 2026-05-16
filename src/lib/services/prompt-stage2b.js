@@ -391,13 +391,13 @@ Good: "Pricing model not specified — per-seat, per-usage, and freemium would e
 Bad: "Pricing model is unclear." (Doesn't imply what to add. Sounds like a complaint.)
 
 AFFECTED-SECTION NAMING (optional, when natural):
-When the connection is natural and brief, mention the specific metric or section whose interpretation would shift if the user filled the gap. Use human-readable names: "Market Demand", "Monetization Potential", "Originality", "Technical Complexity", "Roadmap", "Competitor read". Do NOT use abbreviations (MD, MO, OR, TC). Mention at most two affected areas. Most reasons should name one. If adding the section reference makes the reason longer or more mechanical, omit it — the callout should remain elegant.
+When the connection is natural and brief, mention the specific metric or section whose interpretation would shift if the user filled the gap. Use human-readable names: "Market Demand", "Monetization Potential", "Originality", "Technical Complexity", "Competitor read". Do NOT use abbreviations (MD, MO, OR, TC). Mention at most two affected areas. Most reasons should name one. If adding the section reference makes the reason longer or more mechanical, omit it — the callout should remain elegant.
 
 Good (with section): "Pricing model not specified — per-seat, per-usage, and freemium would lead to different Monetization Potential reads."
 
 Good (without section): "Buyer not distinguished from user — who pays for this product is implicit and changes the market demand framing."
 
-Bad (forced): "Pricing model not specified, which affects Monetization Potential, Market Demand, Roadmap, and the failure_risks output."
+Bad (forced): "Pricing model not specified, which affects Monetization Potential, Market Demand, and the failure_risks output."
 
 === THIN DIMENSIONS (LOW only — UI metadata field) ===
 This field is OPTIONAL UI metadata — it must NOT affect any score, rubric level, or explanation. Generate it ONLY when evidence_strength.level is LOW.

@@ -94,7 +94,7 @@ To identify the case-truth, run three convergence checks across the evidence bas
 
   Check 2 — VERDICT IMPACT: which dimension or interaction most directly accounts for the overall_score landing where it did? If a different read on this dimension would have moved overall_score materially, this dimension is verdict-impactful.
 
-  Check 3 — STRATEGIC CONSEQUENCE: which dimension or interaction most directly determines the user's next-best move? The case-truth is bounded by what Stage 2c can express interpretively — it is not Stage 3's Main Bottleneck declaration, not a roadmap phase, not a build-effort estimate.
+  Check 3 — STRATEGIC CONSEQUENCE: which dimension or interaction most directly determines the user's next-best move? The case-truth is bounded by what Stage 2c can express interpretively — it is not Stage 3's Main Bottleneck declaration, not a build-effort estimate.
 
 CONVERGENCE: when all three checks point to the same dimension or interaction, that is the case-truth. The case-truth is what the Summary's grammatical subject anchors to (per A3) and what Risk 3's firing decision tests against (per C1).
 
@@ -433,7 +433,7 @@ The Summary does NOT perform other surfaces' work:
 
   NOT enumeration of failure modes (failure_risks' territory per A1).
 
-  NOT roadmap phasing or time estimates (Stage 3 territory per D7). Summary may name ONE direction tied to the decisive uncertainty per A6, but does not sequence Phase 1 → Phase 2 moves.
+  NOT time estimates (Stage 3 territory per D7). Summary may name ONE direction tied to the decisive uncertainty per A6.
 
   NOT Main Bottleneck declaration (Stage 3 territory per D7). Summary may name the case-truth and the decisive uncertainty; Stage 3 declares the binding constraint as an enum value. Summary expresses these interpretively; Stage 3 declares them classificatorily.
 
@@ -1034,7 +1034,7 @@ Stage 2c synthesizes the verdict. It does NOT perform other stages' work. The fi
 
   STAGE 2b / METRIC EXPLANATIONS territory: score defense and metric-by-metric reasoning. Stage 2c may reference scores; metric explanations defend them. Stage 2c may say "MD scored well because demand evidence is strong"; it does not re-argue the score.
 
-  STAGE 3 / MAIN BOTTLENECK + ROADMAP territory: binding constraint declaration as enum value, roadmap phase sequencing, build-effort estimates. Stage 2c may name the case-truth interpretively; Stage 3 declares the binding constraint as a classificatory output. Stage 2c may name one direction tied to the decisive uncertainty; Stage 3 sequences Phase 1 → Phase 2 moves.
+  STAGE 3 / MAIN BOTTLENECK + Estimates territory: binding constraint declaration as enum value, build-effort estimates. Stage 2c may name the case-truth interpretively; Stage 3 declares the binding constraint as a classificatory output. Stage 2c may name one direction tied to the decisive uncertainty; Stage 3 commits to numeric build-effort estimates (duration, difficulty).
 
   TC (TECHNICAL COMPLEXITY) territory: build-effort estimates, technical timeline projections, infrastructure-requirement enumeration. Stage 2c references TC's score-output; it does not perform TC's analysis. The build-claim exception in A8 permits build-timeline reference ONLY when the build IS the case-truth's structural binding weakness.
 

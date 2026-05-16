@@ -2281,7 +2281,7 @@ export default function Home() {
                   marginBottom: 4,
                 }}>
                   <p style={{ fontSize: 13, color: t.sec, lineHeight: 1.6, margin: 0 }}>
-                    Open any idea to review your evaluation, track your roadmap progress, check recommended tools — and re-evaluate with fresh market data or changed variables.
+                    Open any idea to review your evaluation and re-evaluate with fresh market data or changed variables.
                   </p>
                 </div>
 
@@ -3360,7 +3360,7 @@ export default function Home() {
               </h1>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <button onClick={() => setCurrentScreen("results2")} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
-                  ← Back to roadmap
+                  ← Back to execution
                 </button>
                 {!authLoading && user && (
                   <>
