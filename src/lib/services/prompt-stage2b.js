@@ -111,6 +111,30 @@ Score levels:
 
 MD BINDING CAP: To score MD at 7.0 or higher, the explanation MUST identify capturable demand that survives both friction and competition: a specific buyer (not just a user category), an active adoption trigger (not just a real problem), and evidence that demand persists after friction is named. If the explanation rests on category existence, problem reality, user benefit, or broad market presence without naming buyer + trigger + post-friction persistence, MD cannot reach 7.0.
 
+MD OVERRIDE-EXPLICIT CLAUSE: To score MD higher than what an anti-inflation rule, INVALID BASES, or the BINDING CAP would otherwise permit, the explanation MUST name the cap rule by identifier and state the specific market_demand packet fact that overrides it.
+
+SCOPE: This clause applies when a specific cap rule actually fires on this case — when a named anti-inflation rule, INVALID BASES item, BINDING CAP, or domain flag matches a specific packet fact. When no named cap rule fires (the case has friction but no specific cap mechanism applies), score on case-evidence; the override clause does not require ceremonial cap-naming. A cap does not fire merely because the case has friction.
+
+This is an enforcement layer requiring visible engagement with the cap rule, on top of the existing content requirements (3-part proof for BINDING CAP, specific evidence per anti-inflation rule).
+
+TRIGGER-BUYER MATCH: The named buyer must match the actor whose adoption the cap rule is about. For ENTERPRISE cap, the buyer is the procurement decision-maker. For CONSUMER cap, the buyer is the end user paying or committing time. For domain flags like requires_relationship_displacement, the buyer is the actor whose existing relationship is being displaced. If the trigger affects a different actor than the named buyer (e.g., naming a regulatory change that affects prescribers when the cap rule asks about patient-side adoption), the trigger does not override the cap.
+
+Examples of what does NOT visibly engage with a cap:
+- Generic survival framing. "Demand survives this barrier" does not name the specific buyer whose adoption is the override.
+- Naming a trigger without verifying buyer match. "Regulatory momentum suggests adoption" identifies a trigger but does not establish that the actor affected by the trigger is the same actor the cap rule asks about.
+
+If the explanation cannot visibly engage with the relevant cap rule(s), the score lands at the cap value, not above it. When multiple cap rules apply, each must be named separately.
+
+MD CAP-LANDING PRECISION (narrow-use): When a NAMED MD cap rule fires because a specific market_demand packet fact matches that rule, and no counter-anchor argues past it under the OVERRIDE-EXPLICIT CLAUSE, the score lands at the cap rule's intended landing point — not the rubric band's upper edge (e.g., 6.0 not 6.5 for mid-band caps).
+
+This clause is narrow-use: apply it only when the named cap mechanism is explicit in the market_demand packet (matching a specific anti-inflation rule, INVALID BASES item, BINDING CAP condition, or domain flag), not when the explanation merely observes adoption friction.
+
+A cap does not fire merely because the case has friction. It fires only when the explanation can name the specific cap rule (by identifier) AND the packet fact that triggers it.
+
+Example: if ENTERPRISE fires (idea is enterprise B2B with named procurement complexity in the packet) and the explanation describes the procurement friction without naming a specific buyer's adoption trigger that overrides it, MD lands at 6.0, not 6.5.
+
+This clause applies only to named-cap cases. Mixed-evidence cases with real buyer context plus ordinary substitute pressure (B2-style) or well-justified cases where friction is real but no named cap rule binds (M2-style) should be scored on the evidence, not automatically pulled to 6.0.
+
 After scoring, cross-check: If you described major barriers, verify your score reflects them.
 
 MD EXPLANATION REQUIRED STRUCTURE: Every MD explanation must include two elements:
@@ -178,6 +202,28 @@ For SOCIAL IMPACT ideas (label as "Sustainability Potential"):
 
 MO BINDING CAP: To score MO at 7.0 or higher, the explanation MUST identify a credible first-dollar path: a specific buyer, a specific price tied to that buyer's payment context, and evidence that substitute pricing and payment friction do not collapse willingness to pay. If the explanation rests on competitors monetizing the category, adjacent revenue, plausible revenue models, or category buyers having budgets — without naming buyer + price + payment-context defensibility — MO cannot reach 7.0.
 
+MO OVERRIDE-EXPLICIT CLAUSE: To score MO higher than what an anti-inflation rule, INVALID BASES, the BINDING CAP, or HEDGE DISCIPLINE would otherwise permit, the explanation MUST name the cap rule by identifier and state the specific monetization packet fact that overrides it.
+
+SCOPE: This clause applies when a specific cap rule actually fires on this case — when a named anti-inflation rule, INVALID BASES item, BINDING CAP, HEDGE DISCIPLINE, or domain flag matches a specific packet fact. When no named cap rule fires (monetization has friction but no specific cap mechanism applies), score on case-evidence; the override clause does not require ceremonial cap-naming. A cap does not fire merely because monetization has friction.
+
+This is an enforcement layer requiring visible engagement with the cap rule, on top of the existing content requirements (3-part proof for BINDING CAP, counter-anchor for HEDGE DISCIPLINE, specific evidence per anti-inflation rule).
+
+Examples of what does NOT visibly engage with a cap:
+- Generic alignment framing. "Success-fee aligns incentives" hits INVALID BASES; the override would require naming a specific buyer's payment context, not the structural alignment.
+- Naming positive signals without addressing hedges. If HEDGE DISCIPLINE would otherwise fire (the explanation contains "requires critical mass," "if achievable," etc.), the override must name the hedge phrase and the counter-anchor that resolves it.
+
+If the explanation cannot visibly engage with the relevant cap rule(s), the score lands at the cap value, not above it. When multiple cap rules apply (e.g., HEDGE DISCIPLINE and BINDING CAP both fire), each must be named and engaged with separately; the score lands at the lower of the two cap values.
+
+MO CAP-LANDING PRECISION: When a NAMED MO cap rule fires because a specific monetization packet fact matches that rule, and no counter-anchor resolves it under the OVERRIDE-EXPLICIT CLAUSE, the score lands at the cap rule's intended landing point — not the rubric band's upper edge (e.g., 6.0 not 6.5 for mid-band caps).
+
+A cap does not fire merely because monetization has friction. It fires only when the explanation can name the specific cap rule AND the packet fact that triggers it.
+
+Examples:
+- If HEDGE DISCIPLINE fires because the packet contains "requires critical mass" or "if achievable" language, and no counter-anchor resolves the hedge, MO lands at 6.0, not 6.5.
+- If INVALID BASES applies because "success-fee aligns incentives" or similar appears without specific buyer payment context, MO lands at 6.0, not 6.5.
+
+Mixed-evidence cases with legitimate buyer/payment context should be scored on the evidence; this clause must not pull them down merely because substitutes or friction exist.
+
 HEDGE DISCIPLINE: If the explanation contains uncertainty attacking MO's core (the buyer pays this price reliably) — e.g., "requires critical mass," "if achievable," "depends on cold-start resolution," "unit economics uncertain" — and no counter-anchor is named in the explanation, MO cannot reach 7.0 regardless of other positive signals. A counter-anchor is a specific named buyer + payment-context proof that resolves the uncertainty, not a restatement of the value prop.
 
 After scoring, cross-check: If your explanation mentions weak pricing power, strong free alternatives, or adoption barriers, verify your score reflects those concerns.
@@ -240,6 +286,22 @@ Score levels:
 9-10: Paradigm shift. Extremely rare.
 
 To score above 6.0, the explanation MUST identify exactly why incumbent replication would be difficult — not just different, but genuinely hard to copy. If you cannot name a concrete replication barrier, the score cannot exceed 6.0.
+
+OR OVERRIDE-EXPLICIT CLAUSE: To score OR higher than what an anti-inflation rule or the BINDING CAP at 6.0 (which requires a concrete replication barrier) would otherwise permit, the explanation MUST name the rule by identifier and state the specific originality packet fact that overrides it.
+
+SCOPE: This clause applies when a specific cap rule actually fires on this case — when the case-evidence matches a named OR anti-inflation rule (by classification pattern), or when no concrete replication barrier is identifiable. When the case has genuine differentiation but no named anti-inflation rule applies, score on case-evidence; the override clause does not require ceremonial cap-naming. A cap does not fire merely because competitors exist or differentiation is moderate.
+
+The eight anti-inflation rules each have specific identifiers: WORKFLOW IS NOT WEDGE, INTEGRATION IS NOT MOAT, SERIOUS DOMAIN IS NOT DEFENSIBILITY, OS/PLATFORM/LAYER LANGUAGE, VERTICAL POSITIONING IS NOT MOAT, FEATURE VS PRODUCT, COMBINATION IS NOT ORIGINALITY, DISTRIBUTION IS NOT ORIGINALITY.
+
+RULE PRECEDENCE: When multiple anti-inflation rules apply, the most restrictive (lowest cap value) rule governs and must be named first. Approximate cap ordering: COMBINATION (4.0-5.0) and FEATURE VS PRODUCT (5.0) are most restrictive; VERTICAL POSITIONING (5.5) is next; WORKFLOW IS NOT WEDGE and INTEGRATION IS NOT MOAT (6.0) are loosest. Naming a permissive rule when a more restrictive rule also applies is not a valid override.
+
+This is an enforcement layer requiring visible engagement with the cap rule, on top of the existing content requirements.
+
+Examples of what does NOT visibly engage with a cap:
+- Renaming the disqualified pattern as something else. "Vertical positioning creates a structural wedge" renames VERTICAL POSITIONING as wedge without engaging with the rule that says positioning is not moat.
+- Claiming structural advantage without naming a concrete replication barrier. "Would require competitors to build new service delivery models" does not name proprietary data, regulatory certification, hardware integration, two-sided liquidity, or aggregated multi-year workflow data.
+
+If the explanation cannot visibly engage with the relevant cap rule(s), the score lands at the cap value, not above it.
 
 After scoring, cross-check: If differentiation relies on framing, positioning, workflow design, or combining existing capabilities, cap at 5.0-6.0.
 

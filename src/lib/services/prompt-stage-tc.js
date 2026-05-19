@@ -261,13 +261,23 @@ incremental_note must NOT:
 - recommend whether the founder should take that path.
 
 Use the shape:
-"A simpler starting point would be [one concrete reduced version]."
 
-GOOD: "A simpler starting point would be a single-vendor inventory tracker without POS integrations."
+Name ONE concrete reduced version of the product. The sentence must clearly identify what remains buildable and what is removed. Do not use a fixed opener — vary the surface form across cases.
 
-BAD: "Start with inventory tracking, then add POS integration, then add multi-vendor support."
-BAD: "Could ship a basic version in 2-3 weeks before adding complexity."
-BAD: "A simpler MVP would validate demand before committing to the full build."
+FORBIDDEN opener: "A simpler starting point would be..." (May 18 audit: 100% bank concentration; this was the prior literal format mandate and is now over-used). Do not use this exact opening phrase.
+
+Examples of valid surface forms (illustrative, not options to rotate through mechanically — each case should find its own natural phrasing):
+  "A leaner first version is X without Y."
+  "X without Y would be a viable smaller starting point."
+  "Cutting Y reduces this to a buildable version: X without Y."
+  "Without Y, this collapses to X — that's the smaller scope."
+  "The reducible version is X; what gets cut is Y."
+
+GOOD (one valid form): "A leaner first version is a single-vendor inventory tracker without POS integrations."
+
+BAD: "Start with inventory tracking, then add POS integration, then add multi-vendor support." (phasing)
+BAD: "Could ship a basic version in 2-3 weeks before adding complexity." (timeline)
+BAD: "A simpler MVP would validate demand before committing to the full build." (outcome prediction)
 
 === PROSE LENGTH BUDGET ===
 
@@ -283,7 +293,16 @@ Maximum 3 sentences total across all prose fields. Do not use long run-on senten
 
 2. Do not inflate. Most base_scores should fall in the 6-8 range.
 
-3. base_score_explanation MUST reference the matched anchor example by name from the calibration matrix.
+3. base_score_explanation MUST reference the matched anchor example by name from the calibration matrix. The anchor name must appear; the surface form referring to it must vary across cases.
+
+3a. ANTI-DOMINANCE rule: do not default to "Matches the [anchor] because..." for every case. May 18 audit: this exact opener pattern hit 44% combined across two dominant anchors. "Matches the [anchor]" remains a valid form but must not dominate.
+
+3b. Examples of valid surface forms (illustrative, not options to rotate through mechanically — pick one whose shape fits this case):
+  "Matches the [anchor] because [reason]."
+  "This sits at the [anchor] tier because [reason]."
+  "The build profile here is [anchor] — [reason]."
+  "[Anchor] is the closest match; [reason]."
+  "Falls at the [anchor] level because [reason]."
 
 4. score MUST equal base_score + adjustment_value. Numeric values and prose claims must reconcile.
 

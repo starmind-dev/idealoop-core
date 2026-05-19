@@ -245,6 +245,8 @@ ARCHETYPE DEFINITIONS:
     Opener: "Construction estimation has strong demand and proven monetization, but originality compresses against incumbents actively expanding AI features."
     Continuation should: identify the trade-specific defensibility test as the strategic question.
 
+  NOTE on β1 anti-imitation: Example 1's opening phrase "The tension between [X]" and closing phrase "is the case's defining structure" are documented over-imitation patterns from May 18 audit (49% of bank summaries copied this surface form). When selecting β1 archetype, the opener MUST NOT begin with "The tension between" and MUST NOT end with "the case's defining structure". The cognitive operation — naming a cross-metric tension as the case's defining feature — has many legitimate surface forms (contrast frame, asymmetry frame, concessive frame, structural-feature frame). These are illustrative options, not a list to rotate through mechanically — each case should find its own natural surface form, original to that case.
+
 β2 — UNCERTAINTY-LED
   Case-truth: case is mid because one decisive unresolved variable dominates the read.
   Grammatical subject: the unresolved variable.
@@ -261,6 +263,8 @@ ARCHETYPE DEFINITIONS:
   Example 3 (defensibility uncertainty):
     Opener: "Whether the trade-specific distributor-pricing integration is a genuine competitive wedge or a feature window incumbents can close before the wedge matures is the case's strategic uncertainty."
     Continuation should: confirm demand and founder fit, anchor first move to defensibility validation.
+
+  NOTE on β2 anti-imitation: Example 1's phrases "the unresolved variable" and "that determines this case's trajectory" are documented over-imitation patterns from May 18 audit (11% / 8% bank concentration emerging — will escalate once β1's surface form is unavailable). When selecting β2 archetype, the opener MUST NOT use "the unresolved variable" as the mid-phrase and MUST NOT end with "that determines this case's trajectory". The cognitive operation — naming an unresolved variable as the case's pivot — has many surface forms: "What is uncertain here is whether...", "The open question is...", "[X] cannot be assumed; that is the case's strategic gate.", "Whether [X] holds at scale determines [Y].", concessive-form ("Even granting [X], [Y] remains uncertain."). These are illustrative options, not a list to rotate through mechanically — each case should find its own natural surface form.
 
 β3 — EVIDENCE-ANCHORED / STRUCTURAL-LED
   Case-truth: case is mid because a structural feature of the market, category, or business model anchors the read.
@@ -949,7 +953,56 @@ this case.
 If both archetypes' C5 anchors directly describe the case, use Section 1.1 
 case-truth to select the archetype tied to the most verdict-impactful 
 founder-task gap.
-DISTRIBUTION DISCIPLINE: across cases, evidence-driven selection should produce variation across archetypes A1/A2/A3/B/C/D/E. If a single archetype dominates output across diverse cases, the selection process has drifted toward template-matching rather than evidence-matching.
+
+SELECTION PROCEDURE (apply in order — May 18 audit: archetype A firing at 61% of bank, indicating selection had drifted toward concreteness over leverage):
+
+STEP 1 — DEFAULT CANDIDATE SUBSET (context-driven narrowing per C3 classification)
+
+  Before walking all candidates, establish the default subset using the case's profile-domain classification from C3 and the idea's binding-resource dimension. The default subset sets the contextual prior for which archetype family fires; selection outside the default subset requires explicit override (Step 5) with substantive non-subset evidence.
+
+  PARTIAL-INSIDER (per C3) → default subset {B, C}
+    Rationale per C3: "the partial-insider's adjacent role doesn't include the specific decision-maker access or peer-credential the idea requires." The partial-insider can usually navigate technical execution through their adjacent operational experience, so A-archetype firing is the exception, not the default.
+
+  OUTSIDER (per C3) → default subset depends on the idea's binding-resource dimension(s). Identify which apply (multiple can coexist):
+    - Substantial software/AI build required + founder lacks engineering → adds {A1, A2, A3} to subset
+    - Buyer segment is relationship-locked + founder lacks specific network → adds {B} to subset
+    - Buyer segment is credential-gated + founder lacks credential → adds {C} to subset
+    - Substantial pre-revenue capital required + founder lacks capital-formation infrastructure → adds {D} to subset
+    - Founder-led enterprise sales motion required + founder lacks specific sales motion → adds {E} to subset
+
+  The default subset is the UNION of all applicable dimensions for the case. A case may have a default subset of {A1, A2, A3, C} (software build + credentialed buyer) or {B, D} (relationship-locked buyer + capital-heavy). This preserves contextual narrowing while allowing legitimate multi-dimensional cases.
+
+STEP 2 — WALK candidates within the default subset against C7 evidence anchors. Record which fire. Do not stop at first fire.
+
+  STRUCTURAL NOTE: A has three subtypes (A1, A2, A3) while B/C/D/E each have one. When {A1, A2, A3} is in the default subset, the 3:1 representation reflects the legitimate range of technical-execution gaps (engineering capacity, AI/data systems, regulated infrastructure). When {A1, A2, A3} is NOT in the default subset (because the case isn't software-build-dominated), the model must not import A-firing from candidate-space asymmetry. The 3:1 imbalance is internal reasoning structure for prose diversity in C5, not a signal that A is more likely correct.
+
+STEP 3 — If exactly one archetype fired within the default subset, select it. Exit.
+
+STEP 4 — If multiple archetypes fired within the default subset, apply the BINDING-LEVERAGE test, not the concreteness test:
+
+  For each fired archetype, ask: "If THIS gap were the only one resolved (founder hired/partnered/learned around it), would the case's first credible validation step become unblocked?"
+
+  Select the archetype whose resolution most directly unblocks the first credible step.
+
+  CRITICAL: leverage ≠ concreteness. Archetype A's gap is often more concretely visible (founder isn't an engineer + idea is software = easy to state) but a non-A gap may be the higher-leverage binding gap despite A's visibility. For example: if the founder cannot reach the buyer segment to test any product, B may be the binding gap despite A also firing — engineering capability cannot validate a product the founder cannot test with users. Similarly: if the founder lacks credentials that buyer evaluation hard-requires, C may be the binding gap despite A — even a perfectly built product cannot get evaluated by the buyer segment.
+
+  Do not select A merely because A's evidence is easier to state. Select by which gap, if resolved, most directly opens the case to forward progress.
+
+STEP 5 — OVERRIDE CHECK (non-subset candidates)
+
+  Now check candidates OUTSIDE the default subset against their C7 evidence anchors. If a non-subset candidate's evidence is SUBSTANTIVELY STRONGER than the strongest in-subset candidate's evidence — not merely "also fires" — override the default subset and select the non-subset candidate.
+
+  Override threshold: the non-subset candidate must win on substance, not on visibility. The justification test: "I can articulate why the default subset's prior is wrong for this specific case, citing case-truth-driven evidence."
+
+  This step should be RARE. The default subset reflects the case's contextual prior derived from C3 classification and binding-resource dimension; overriding it requires the case to be structurally atypical for its classification.
+
+STEP 6 — VERIFICATION
+
+  After selecting, re-check the alternative: would the non-selected archetype's evidence ALSO have substantively fired? If yes, ensure your selection passed the binding-leverage test (Step 4), not the concreteness test. If you selected A while a non-A archetype also fired, justify the selection by binding-leverage explicitly: what would resolving A unblock that resolving the non-A gap would not?
+
+  If you cannot answer that question concretely, reconsider Step 4 — you may have defaulted to A based on concreteness rather than leverage.
+
+DISTRIBUTION DISCIPLINE: across cases, evidence-driven selection should produce variation across archetypes A1/A2/A3/B/C/D/E. If a single archetype dominates output across diverse cases, the selection process has drifted toward template-matching rather than evidence-matching plus contextual narrowing plus binding-leverage.
 
 === C9 — FREE PIPELINE ARCHETYPE PARITY ===
 
@@ -1078,6 +1131,11 @@ Specific phrase patterns from prior audit corpora are documented disease pattern
     - "Your [N] years..." as sentence-1 subject (the F17 disease)
     - "Your [domain] background gives you..." as sentence-1 subject
     - "This idea addresses a real pain point but..." (universal mid-band opener)
+    - "The tension between [X] and..." as a repeated Summary opener (β1 example over-imitation; May 18 audit: 49% bank concentration; the tension cognitive operation is valid, but this exact opening structure is documented over-imitation)
+    - "the relationship-locked structure through which..." (β1 example phrase, over-imitated verbatim)
+    - "is the case's defining structure" (β1 example closing template; vary the closing frame)
+    - "the unresolved variable" as a repeated Summary mid-phrase (β2 example over-imitation; May 18 audit: 11% bank concentration emerging; the uncertainty cognitive operation is valid, but this exact phrasing is becoming templated)
+    - "that determines this case's trajectory" (β2 example 1 closing template)
 
   Risk 1 disease:
     - "is increasingly consolidated around established platforms" (the canonical F18 disease 5-gram)
