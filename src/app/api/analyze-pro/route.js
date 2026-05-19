@@ -6,7 +6,8 @@ import { searchSerper } from "../../../lib/services/serper";
 import { buildCompetitorContext, buildCompetitorInstructions } from "../../../lib/services/competitors";
 import { STAGE1_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage1";
 import { STAGE2A_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage2a";
-import { STAGE2B_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage2b";
+import { STAGE2B_ADJ_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage2b-adj";
+import { STAGE2B_SCORE_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage2b-score";
 import { STAGE2C_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage2c";
 import { STAGE_TC_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage-tc";
 import { STAGE3_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage3";
@@ -15,7 +16,30 @@ import { calculateOverallScore } from "../../../lib/services/scoring";
 // ============================================
 // MAIN API HANDLER — PAID TIER CHAINED PIPELINE
 // ============================================
-// Orchestrates: Keywords → Search → Stage 1 (Discover) → [Stage 2a + Stage TC in parallel] → Stage 2b (Score MD/MO/OR) → Stage 2c (Synthesis) → Stage 3 (Act) → Assembly
+// Orchestrates: Keywords → Search → Stage 1 (Discover) → [Stage 2a + Stage TC in parallel] → Stage 2b-Adj → Stage 2b-Score → Stage 2c (Synthesis) → Stage 3 (Act) → Assembly
+//
+// V4S31 TWO-CALL STAGE 2b (May 19, 2026):
+// Stage 2b is now physically separated into two sequential calls:
+//   Call 1 (Stage 2b-Adj): produces score_adjudication + evidence_strength.
+//     No score, no explanation. The model has no downstream score commitment
+//     to protect — adjudication is made honestly on packet evidence.
+//   Call 2 (Stage 2b-Score): receives Call 1's adjudication as locked
+//     structured input (mirrors Stage 2a → Stage 2b pattern). Produces
+//     score (constrained to score_basis range; code-side clamping enforces)
+//     and explanation (must reflect locked adjudication).
+//
+// Rationale: V4S30 externalized score_adjudication into Stage 2b's output
+// schema, achieving 100% structural compliance but only 1/4 watch zones
+// closed. Empirical analysis identified the failure mode: single-call
+// adjudication still allows the model to rationalize resolution=overridden
+// with actor-mismatched override evidence (the trigger_buyer_match_verified
+// disease on A3-class cases). Physical separation removes the score-anchoring
+// pressure that drives the rationalization.
+//
+// score_adjudication is preserved across the two calls and restored to the
+// final payload for the frontend (future popup feature). Stage 2c and
+// Stage 3 do NOT receive score_adjudication in V4S31 (Option 2 staging:
+// downstream pass-through is a follow-on session with separate verification).
 //
 // V4S28 S1+S2+S3 (Bundle B1):
 // Stage 2c (NEW) sits between Stage 2b and Stage 3, sequential. It synthesizes
@@ -39,11 +63,54 @@ import { calculateOverallScore } from "../../../lib/services/scoring";
 // competition-informed metrics (OR, MD, MO).
 //
 // Stage 2a extracts 3 evidence packets (MD, MO, OR) — no TC packet.
-// Stage 2b scores 3 metrics from those packets.
+// Stage 2b adjudicates + scores 3 metrics from those packets (two calls).
 // Stage 2c synthesizes interpretive output (summary + failure_risks).
 // TC score is merged in during assembly.
 //
 // Output schema is identical to the free tier route — the frontend renders both the same way.
+
+// ============================================
+// V4S31 — SCORE-BASIS RANGE DERIVATION HELPER
+// ============================================
+// Mechanical mapping from Call 1's score_basis enum to the score range Call 2
+// must land in. Used by code-side score clamping after Call 2: if Call 2 emits
+// a score outside the derived range, the score is clamped to the range and a
+// warning is logged. This is the structural enforcement of score-adjudication
+// consistency — Call 1's locked score_basis defines the score range; Call 2's
+// score must respect it.
+//
+// Returns { min, max } or null if score_basis is unrecognized (clamping skipped).
+function deriveExpectedScoreRange(adjudication) {
+  if (!adjudication || typeof adjudication.score_basis !== "string") return null;
+  const basis = adjudication.score_basis;
+
+  // cap_floor_X_X → score = X.X exactly
+  const capFloorMatch = basis.match(/^cap_floor_(\d+)_(\d+)$/);
+  if (capFloorMatch) {
+    const val = parseFloat(`${capFloorMatch[1]}.${capFloorMatch[2]}`);
+    return { min: val, max: val };
+  }
+
+  // cap_range_X_X_Y_Y → X.X ≤ score ≤ Y.Y
+  const capRangeMatch = basis.match(/^cap_range_(\d+)_(\d+)_(\d+)_(\d+)$/);
+  if (capRangeMatch) {
+    const lo = parseFloat(`${capRangeMatch[1]}.${capRangeMatch[2]}`);
+    const hi = parseFloat(`${capRangeMatch[3]}.${capRangeMatch[4]}`);
+    return { min: lo, max: hi };
+  }
+
+  // evidence_band_X_Y and post_override_evidence_band_X_Y → [X.0, Y.5]
+  const bandMatch = basis.match(/^(?:post_override_)?evidence_band_(\d+)_(\d+)$/);
+  if (bandMatch) {
+    const lo = parseFloat(`${bandMatch[1]}.0`);
+    const hi = parseFloat(`${bandMatch[2]}.5`);
+    // Evidence band ceiling is intentionally Y.5 (e.g. evidence_band_5_6 → [5.0, 6.5])
+    // matching V4S29 decimal scoring convention.
+    return { min: lo, max: hi };
+  }
+
+  return null; // Unrecognized basis — skip clamping
+}
 
 export async function POST(request) {
   try {
@@ -398,46 +465,138 @@ ${idea}`;
           });
 
           // ============================
-          // STAGE 2b: SCORE MD/MO/OR
-          // Score from evidence packets ONLY — no raw Stage 1, no TC
+          // STAGE 2b: SCORE MD/MO/OR (TWO-CALL — V4S31)
+          // V4S31 PHYSICAL SEPARATION: adjudication (Call 1) is produced with
+          // no downstream score commitment. Scoring + explanation (Call 2)
+          // receives Call 1's adjudication as locked input. This closes the
+          // override-rationalization disease observed in V4S30 (single-call
+          // adjudication where score-anchoring pressure flowed back into
+          // resolution selection and override_evidence content).
+          //
+          // Score from evidence packets ONLY — no raw Stage 1, no TC.
+          // Call 2 also receives Call 1's adjudication as fixed structured
+          // input, mirroring the Stage 2a → Stage 2b structural-input pattern.
           // ============================
 
-          sendEvent({ step: "stage2b_start", message: "Stage 2b: Scoring idea from evidence..." });
+          sendEvent({ step: "stage2b_start", message: "Stage 2b: Adjudicating cap-discipline from evidence..." });
 
           // CRITICAL: Stage 2b receives idea + evidence packets ONLY.
           // No raw Stage 1 output. No TC data. No user profile (not needed for MD/MO/OR).
           // V4S28 B6 (B4 Change 4 fold-in): profile injection removed — code now
           // matches comment + B5 NarrativeContract V3 §3.9 (Evidence Strength
           // is profile-blind) + V4S9 quarantine principle.
-          const stage2bUserMessage = `USER'S AI PRODUCT IDEA:
+
+          // ---- Call 1: Adjudication ----
+          const stage2bAdjUserMessage = `USER'S AI PRODUCT IDEA:
 ${idea}
 
 === EVIDENCE PACKETS FROM STAGE 2a ===
 ${JSON.stringify(stage2aResult)}`;
 
-          const stage2bResponse = await client.messages.create({
+          const stage2bAdjResponse = await client.messages.create({
             model: "claude-sonnet-4-20250514",
-            max_tokens: 8192,
+            max_tokens: 4096,
             temperature: 0,
             // V4S29 Bundle 2 — F1 sampler hardening (see Stage 2a comment for
-            // full rationale). Stage 2b scores MD/MO/OR from packets; this is
-            // the call that produced the F1 production variance signal originally.
+            // full rationale).
             top_k: 1,
             top_p: 0.1,
-            system: STAGE2B_SYSTEM_PROMPT,
-            messages: [{ role: "user", content: stage2bUserMessage }],
+            system: STAGE2B_ADJ_SYSTEM_PROMPT,
+            messages: [{ role: "user", content: stage2bAdjUserMessage }],
           });
 
-          const stage2bText = stage2bResponse.content[0].text;
+          const stage2bAdjText = stage2bAdjResponse.content[0].text;
 
-          let stage2bResult;
+          let stage2bAdjResult;
           try {
-            stage2bResult = JSON.parse(cleanJsonResponse(stage2bText));
+            stage2bAdjResult = JSON.parse(cleanJsonResponse(stage2bAdjText));
           } catch (parseError) {
-            console.error("Stage 2b parse failed:", stage2bText);
-            sendEvent({ step: "error", message: "Stage 2b failed to parse. Please try again." });
+            console.error("Stage 2b-Adj parse failed:", stage2bAdjText);
+            sendEvent({ step: "error", message: "Stage 2b-Adj failed to parse. Please try again." });
             controller.close();
             return;
+          }
+
+          sendEvent({
+            step: "stage2b_adj_done",
+            message: "Stage 2b-Adj complete: Adjudication produced",
+          });
+
+          // ---- Call 2: Scoring + Explanation from locked adjudication ----
+          sendEvent({ step: "stage2b_score_start", message: "Stage 2b-Score: Producing scores and explanations from locked adjudication..." });
+
+          const stage2bScoreUserMessage = `USER'S AI PRODUCT IDEA:
+${idea}
+
+=== EVIDENCE PACKETS FROM STAGE 2a ===
+${JSON.stringify(stage2aResult)}
+
+=== LOCKED ADJUDICATION FROM STAGE 2b-ADJ ===
+${JSON.stringify(stage2bAdjResult)}`;
+
+          const stage2bScoreResponse = await client.messages.create({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 4096,
+            temperature: 0,
+            top_k: 1,
+            top_p: 0.1,
+            system: STAGE2B_SCORE_SYSTEM_PROMPT,
+            messages: [{ role: "user", content: stage2bScoreUserMessage }],
+          });
+
+          const stage2bScoreText = stage2bScoreResponse.content[0].text;
+
+          let stage2bScoreResult;
+          try {
+            stage2bScoreResult = JSON.parse(cleanJsonResponse(stage2bScoreText));
+          } catch (parseError) {
+            console.error("Stage 2b-Score parse failed:", stage2bScoreText);
+            sendEvent({ step: "error", message: "Stage 2b-Score failed to parse. Please try again." });
+            controller.close();
+            return;
+          }
+
+          // ---- Merge: combine Call 1's adjudication + evidence_strength with Call 2's scores + explanations ----
+          // Final stage2bResult shape mirrors V4S30 monolith output (downstream consumers expect this shape).
+          const stage2bResult = {
+            evaluation: {
+              evidence_strength: stage2bAdjResult.evaluation?.evidence_strength,
+              market_demand: {
+                ...stage2bScoreResult.evaluation?.market_demand,
+                score_adjudication: stage2bAdjResult.evaluation?.market_demand?.score_adjudication,
+              },
+              monetization: {
+                ...stage2bScoreResult.evaluation?.monetization,
+                score_adjudication: stage2bAdjResult.evaluation?.monetization?.score_adjudication,
+              },
+              originality: {
+                ...stage2bScoreResult.evaluation?.originality,
+                score_adjudication: stage2bAdjResult.evaluation?.originality?.score_adjudication,
+              },
+              marketplace_note: stage2bScoreResult.evaluation?.marketplace_note ?? null,
+            },
+          };
+
+          // ---- Code-side score-basis consistency check (clamp with warning) ----
+          // For each metric, derive the expected score range from Call 1's
+          // score_basis and verify Call 2's score lands in it. Clamp with
+          // warning rather than hard-fail to avoid brittleness on borderline
+          // drift. Track clamping rate as a verification metric.
+          for (const metricKey of ["market_demand", "monetization", "originality"]) {
+            const metric = stage2bResult.evaluation[metricKey];
+            const adj = metric?.score_adjudication;
+            const range = deriveExpectedScoreRange(adj);
+            if (range && typeof metric.score === "number") {
+              if (metric.score < range.min || metric.score > range.max) {
+                const clamped = Math.max(range.min, Math.min(range.max, metric.score));
+                console.warn(
+                  `[V4S31] Score-basis drift on ${metricKey}: Call 2 emitted ${metric.score}, ` +
+                  `Call 1 score_basis="${adj.score_basis}" implies [${range.min}, ${range.max}]. ` +
+                  `Clamping to ${clamped}.`
+                );
+                metric.score = clamped;
+              }
+            }
           }
 
           sendEvent({
@@ -487,6 +646,36 @@ ${JSON.stringify(stage2aResult)}`;
           ) {
             // Model returned thin_dimensions on a non-LOW level — strip silently
             delete ev.evidence_strength.thin_dimensions;
+          }
+
+          // ============================
+          // V4S31 — SCORE_ADJUDICATION DOWNSTREAM FILTER (mirrors thin_dimensions B8 pattern)
+          // Extract score_adjudication per metric and strip it from ev BEFORE
+          // Stage 2c and Stage 3 see it. They receive only { score, explanation,
+          // evidence_strength, marketplace_note } — same contract as V4S29.
+          //
+          // OPTION 2 (V4S31 ship discipline): downstream pass-through of
+          // adjudication is deferred to a follow-on session. Stage 2c and
+          // Stage 3 prompts are NOT modified in V4S31. Their input contract
+          // stays unchanged, so they cannot leak rule_id labels (REGULATED,
+          // ENTERPRISE, etc.) or shortcut their own selection procedures
+          // based on adjudication content they were not designed to consume.
+          //
+          // score_adjudication is restored to each metric at final assembly
+          // time below, so the frontend payload includes the adjudication
+          // object (for future popup feature; currently ignored by frontend).
+          // ============================
+
+          const preservedAdjudications = {
+            market_demand: null,
+            monetization: null,
+            originality: null,
+          };
+          for (const metricKey of ["market_demand", "monetization", "originality"]) {
+            if (ev[metricKey] && ev[metricKey].score_adjudication) {
+              preservedAdjudications[metricKey] = ev[metricKey].score_adjudication;
+              delete ev[metricKey].score_adjudication;
+            }
           }
 
           // ============================
@@ -629,6 +818,17 @@ ${JSON.stringify(stage2bResult)}`;
           // now safe to attach back since all Sonnet calls are complete).
           if (preservedThinDimensions !== null) {
             ev.evidence_strength.thin_dimensions = preservedThinDimensions;
+          }
+
+          // V4S31 — restore score_adjudication per metric for frontend payload
+          // (stripped before Stage 2c/3 per Option 2 to prevent downstream
+          // contamination; now safe to attach back since all Sonnet calls are
+          // complete). Frontend currently ignores this field; reserved for
+          // future popup feature exposing the structural adjudication chain.
+          for (const metricKey of ["market_demand", "monetization", "originality"]) {
+            if (preservedAdjudications[metricKey] && ev[metricKey]) {
+              ev[metricKey].score_adjudication = preservedAdjudications[metricKey];
+            }
           }
 
           // SANITY CHECK: Flag score-explanation contradictions
