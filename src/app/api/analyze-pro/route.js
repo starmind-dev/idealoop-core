@@ -12,11 +12,47 @@ import { STAGE2C_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage2c";
 import { STAGE_TC_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage-tc";
 import { STAGE3_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage3";
 import { calculateOverallScore } from "../../../lib/services/scoring";
+// V4S32 — Prosecutor + Repair quality-control layer
+import { runStage2bQualityControl } from "../../../lib/services/stage2b-qc-orchestrator";
+import { logQcEvents } from "../../../lib/services/log-qc-events";
 
 // ============================================
 // MAIN API HANDLER — PAID TIER CHAINED PIPELINE
 // ============================================
-// Orchestrates: Keywords → Search → Stage 1 (Discover) → [Stage 2a + Stage TC in parallel] → Stage 2b-Adj → Stage 2b-Score → Stage 2c (Synthesis) → Stage 3 (Act) → Assembly
+// Orchestrates: Keywords → Search → Stage 1 (Discover) → [Stage 2a + Stage TC in parallel] → Stage 2b-Adj → Stage 2b-Score → [V4S32 PROSECUTOR+REPAIR] → Stage 2c (Synthesis) → Stage 3 (Act) → Assembly
+//
+// V4S32 PROSECUTOR + REPAIR LAYER (May 19-20, 2026):
+// New quality-control layer inserted between Stage 2b-Score and Stage 2c.
+// Audits whether each metric's explanation+adjudication survives adversarial
+// review by a packet-grounded prosecutor; if FAIL, runs a constrained repair
+// stage that regenerates score + explanation + score_adjudication; if the
+// repair re-prosecutes PASS, the repaired output replaces the original in ev.
+//
+// Validated across two probes (V4S31 + B10a): prosecutor 5/6 spike recall +
+// 23/231 (10%) clean B10a rate; repair 7/7 + 21/21 success, 0 double-fails.
+// See orchestrator file header + prompt-stage2b-prosecutor.js / -repair.js
+// for full calibration history.
+//
+// Architecture:
+//   - Sequential before Stage 2c (Stage 2c sees post-repair scores, not pre)
+//   - Per-metric parallelization within the layer (MD/MO/OR independent)
+//   - Repair regenerates score_adjudication too (not just prose) so the
+//     post-QC adjudication restored to the frontend payload reflects the
+//     corrected reasoning chain (not the flawed pre-repair one)
+//   - QC layer failures NEVER block the pipeline (safety-layer principle)
+//   - Feature-flagged via STAGE2B_QC_MODE = off | log_only | repair
+//     (defaults to 'repair' per locked architecture decision)
+//
+// Stage 2c boundary discipline (mirrors V4S31 score_adjudication strip):
+//   - Stage 2c NEVER sees quality_control metadata
+//   - Stage 2c eventually may see repaired score_adjudication (deferred
+//     to M3 — same Option 2 staging as V4S31)
+//   - quality_control restored at final assembly for frontend payload
+//
+// Supabase logging: every prosecutor invocation that produces a real verdict
+// (PASS / FAIL_REPAIRED / BORDERLINE / DOUBLE_FAIL / QC_UNAVAILABLE) is
+// logged fire-and-forget to public.stage2b_qc_events. Skipped metrics are
+// not logged. See migration file + log-qc-events.js for table schema.
 //
 // V4S31 TWO-CALL STAGE 2b (May 19, 2026):
 // Stage 2b is now physically separated into two sequential calls:
@@ -123,6 +159,13 @@ export async function POST(request) {
       );
     }
 
+    // V4S32 — Generate evaluation correlation ID. Used as the join key for
+    // QC event logging (public.stage2b_qc_events.evaluation_id) and surfaced
+    // in the response so the frontend can use the same ID when persisting
+    // the evaluation to its own table. crypto.randomUUID is available in
+    // Node 14.17+ / all Next.js runtimes.
+    const evaluationId = crypto.randomUUID();
+
     // Create a readable stream for SSE
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
@@ -191,6 +234,25 @@ export async function POST(request) {
               return trimmed;
             }
             return trimmed.slice(firstBrace, lastBrace + 1);
+          }
+
+          // V4S32 — Sonnet caller for the prosecutor + repair layer.
+          // Thin wrapper around the existing anthropic-client that exposes
+          // the (systemPrompt, userMessage) → rawText shape the QC
+          // orchestrator expects. Same sampler config as all other scoring
+          // calls (temp 0 / top_k 1 / top_p 0.1) so QC verdicts are as
+          // deterministic as the pipeline they audit.
+          async function callSonnetForQc(systemPrompt, userMessage) {
+            const response = await client.messages.create({
+              model: "claude-sonnet-4-20250514",
+              max_tokens: 1024,
+              temperature: 0,
+              top_k: 1,
+              top_p: 0.1,
+              system: systemPrompt,
+              messages: [{ role: "user", content: userMessage }],
+            });
+            return response.content[0].text;
           }
 
           // ============================
@@ -605,6 +667,79 @@ ${JSON.stringify(stage2bAdjResult)}`;
           });
 
           // ============================
+          // V4S32 — PROSECUTOR + REPAIR QUALITY-CONTROL LAYER
+          // Adversarial audit of Stage 2b output. Catches reasoning flaws
+          // (INVALID_ANCHOR / OMITTED_LIMITING_FACT / HYPOTHESIS_AS_PROOF /
+          // UNGROUNDED_HIGH_SCORE) and runs a constrained repair stage that
+          // regenerates score + explanation + score_adjudication for FAIL
+          // metrics. Repaired output replaces original in ev only if it
+          // re-prosecutes PASS or BORDERLINE; DOUBLE_FAILs keep original and
+          // are marked for review.
+          //
+          // Insertion point: AFTER Stage 2b clamping, BEFORE TC merge.
+          // Reason: prosecutor needs both score_adjudication (still on ev here)
+          // and packet (from stage2aResult). Running before TC merge keeps ev
+          // surface small (just MD/MO/OR) — TC is execution-side, not part of
+          // the reasoning chain prosecutor audits.
+          //
+          // Per locked architecture decisions:
+          //   - Sequential before Stage 2c (Stage 2c sees post-repair scores)
+          //   - Per-metric parallelization within the layer
+          //   - Repair regenerates score_adjudication so downstream sees clean state
+          //   - QC failures NEVER block the pipeline (try/catch around the call)
+          //
+          // Feature-flagged via STAGE2B_QC_MODE = off | log_only | repair
+          // (defaults to 'repair' per V4S32 launch decision; no real users yet,
+          // shadow run not earning its place in solo-testing context).
+          // ============================
+
+          let qcResult;
+          try {
+            qcResult = await runStage2bQualityControl({
+              ev: stage2bResult.evaluation,
+              evidencePackets: stage2aResult.evidence_packets,
+              callSonnet: callSonnetForQc,
+              evaluationId,
+              // qcMode omitted — falls back to env STAGE2B_QC_MODE or 'repair'
+            });
+            // Reassign post-QC ev back onto stage2bResult so downstream code
+            // (TC merge, strip blocks, Stage 2c/3 input construction, final
+            // assembly) operates on the corrected version.
+            stage2bResult.evaluation = qcResult.ev;
+          } catch (qcError) {
+            // Defensive: orchestrator catches internally per metric, but a
+            // catastrophic orchestration error (e.g. import resolution
+            // failure, env config issue) should NEVER block the evaluation.
+            // Log and continue with the pre-QC ev unchanged.
+            console.error("[V4S32] QC layer failed catastrophically:", qcError);
+            qcResult = {
+              ev: stage2bResult.evaluation,
+              qc_events: [],
+              quality_control_summary: {
+                qc_layer_version: "v1.0",
+                qc_mode: "error",
+                qc_layer_error: qcError.message || String(qcError),
+                checked_metrics: 0,
+                repaired_metrics: 0,
+                borderline_metrics: 0,
+                double_fail_metrics: 0,
+                qc_unavailable_metrics: 0,
+                total_qc_latency_ms: 0,
+                quality_failure: false,
+              },
+            };
+          }
+
+          // Fire-and-forget Supabase logging — never block the response.
+          // Skipped metrics are not logged; only PASS / BORDERLINE /
+          // FAIL_REPAIRED / DOUBLE_FAIL / QC_UNAVAILABLE produce events.
+          if (qcResult.qc_events.length > 0) {
+            logQcEvents(qcResult.qc_events).catch((err) => {
+              console.error("[V4S32] Failed to log qc_events to Supabase:", err);
+            });
+          }
+
+          // ============================
           // MERGE TC INTO EVALUATION
           // Stage 2b has MD/MO/OR. Stage TC has TC. Combine them.
           // ============================
@@ -650,9 +785,12 @@ ${JSON.stringify(stage2bAdjResult)}`;
 
           // ============================
           // V4S31 — SCORE_ADJUDICATION DOWNSTREAM FILTER (mirrors thin_dimensions B8 pattern)
-          // Extract score_adjudication per metric and strip it from ev BEFORE
-          // Stage 2c and Stage 3 see it. They receive only { score, explanation,
-          // evidence_strength, marketplace_note } — same contract as V4S29.
+          // V4S32 EXTENSION — also strip quality_control per metric (same boundary discipline)
+          //
+          // Extract score_adjudication and quality_control per metric and
+          // strip them from ev BEFORE Stage 2c and Stage 3 see them. They
+          // receive only { score, explanation, evidence_strength,
+          // marketplace_note } — same contract as V4S29.
           //
           // OPTION 2 (V4S31 ship discipline): downstream pass-through of
           // adjudication is deferred to a follow-on session. Stage 2c and
@@ -661,9 +799,14 @@ ${JSON.stringify(stage2bAdjResult)}`;
           // ENTERPRISE, etc.) or shortcut their own selection procedures
           // based on adjudication content they were not designed to consume.
           //
-          // score_adjudication is restored to each metric at final assembly
-          // time below, so the frontend payload includes the adjudication
-          // object (for future popup feature; currently ignored by frontend).
+          // V4S32: quality_control follows the same boundary rule — Stage 2c
+          // and Stage 3 never see prosecutor verdicts, flaw categories, or
+          // close_call_framing. Those are frontend-only metadata.
+          //
+          // Both fields are restored to each metric at final assembly time
+          // below so the frontend payload includes them (adjudication for
+          // future popup feature; quality_control for the V4S32 "Internal
+          // Quality Check" UI surfacing).
           // ============================
 
           const preservedAdjudications = {
@@ -671,10 +814,21 @@ ${JSON.stringify(stage2bAdjResult)}`;
             monetization: null,
             originality: null,
           };
+          const preservedQualityControl = {
+            market_demand: null,
+            monetization: null,
+            originality: null,
+          };
           for (const metricKey of ["market_demand", "monetization", "originality"]) {
-            if (ev[metricKey] && ev[metricKey].score_adjudication) {
-              preservedAdjudications[metricKey] = ev[metricKey].score_adjudication;
-              delete ev[metricKey].score_adjudication;
+            if (ev[metricKey]) {
+              if (ev[metricKey].score_adjudication) {
+                preservedAdjudications[metricKey] = ev[metricKey].score_adjudication;
+                delete ev[metricKey].score_adjudication;
+              }
+              if (ev[metricKey].quality_control) {
+                preservedQualityControl[metricKey] = ev[metricKey].quality_control;
+                delete ev[metricKey].quality_control;
+              }
             }
           }
 
@@ -697,6 +851,11 @@ ${JSON.stringify(stage2bAdjResult)}`;
           // value is recomputed at assembly below (ev.overall_score = ...) —
           // no risk of drift, and the duplicate cost is sub-millisecond.
           // See prompt-stage2c.js HARD RULE — LOW-BAND OPENING SENTENCE block.
+          //
+          // V4S32 NOTE: this computation now uses post-prosecutor scores
+          // (FAIL_REPAIRED metrics already replaced before this point). Stage
+          // 2c's low-band opener logic sees the corrected overall_score, not
+          // the pre-repair inflated one — which is exactly what we want.
           const overallScoreForStage2c = calculateOverallScore(ev);
 
           const stage2cUserMessage = `${userProfile}
@@ -825,9 +984,19 @@ ${JSON.stringify(stage2bResult)}`;
           // contamination; now safe to attach back since all Sonnet calls are
           // complete). Frontend currently ignores this field; reserved for
           // future popup feature exposing the structural adjudication chain.
+          //
+          // V4S32 — also restore quality_control per metric (same pattern).
+          // Frontend uses these for the "Internal Quality Check" surfacing
+          // (close_call_framing on BORDERLINE, "verified" badge on PASS,
+          // optional "metric repaired" indicator on FAIL_REPAIRED). Stripped
+          // before Stage 2c/3 since they are post-scoring metadata, not
+          // inputs to downstream reasoning.
           for (const metricKey of ["market_demand", "monetization", "originality"]) {
             if (preservedAdjudications[metricKey] && ev[metricKey]) {
               ev[metricKey].score_adjudication = preservedAdjudications[metricKey];
+            }
+            if (preservedQualityControl[metricKey] && ev[metricKey]) {
+              ev[metricKey].quality_control = preservedQualityControl[metricKey];
             }
           }
 
@@ -867,9 +1036,15 @@ ${JSON.stringify(stage2bResult)}`;
             competition: stage1Result.competition,
             estimates: stage3Result.estimates,
             evaluation: ev,
+            // V4S32 — payload-level QC summary (aggregate over MD/MO/OR).
+            // Includes quality_failure boolean (true when 2+ metrics double-failed
+            // per locked decision) that the frontend can use to trigger credit
+            // return or manual review surfacing.
+            quality_control_summary: qcResult.quality_control_summary,
             // Pro-tier exclusive fields
             _pro: {
               evaluation_mode: "paid_chained",
+              evaluation_id: evaluationId,
               domain_risk_flags: stage1Result.domain_risk_flags,
               stage1_competitor_count: competitorCount,
               evidence_packets: stage2aResult.evidence_packets,
