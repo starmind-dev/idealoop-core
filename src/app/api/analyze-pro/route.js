@@ -6,15 +6,16 @@ import { searchSerper } from "../../../lib/services/serper";
 import { buildCompetitorContext, buildCompetitorInstructions } from "../../../lib/services/competitors";
 import { STAGE1_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage1";
 import { STAGE2A_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage2a";
-import { STAGE2B_ADJ_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage2b-adj";
-import { STAGE2B_SCORE_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage2b-score";
+// V5.0 NEW PIPELINE — three separate metric scorers replace the former
+// two-call Stage 2b (adjudicate + score) plus the prosecutor/repair QC layer.
+// Each scorer reads ONLY its own packet from Stage 2a (clean quarantine).
+import { STAGE_MD_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage-md";
+import { STAGE_MO_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage-mo";
+import { STAGE_OR_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage-or";
 import { STAGE2C_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage2c";
 import { STAGE_TC_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage-tc";
 import { STAGE3_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage3";
 import { calculateOverallScore } from "../../../lib/services/scoring";
-// V4S32 — Prosecutor + Repair quality-control layer
-import { runStage2bQualityControl } from "../../../lib/services/stage2b-qc-orchestrator";
-import { logQcEvents } from "../../../lib/services/log-qc-events";
 
 // ============================================
 // MAIN API HANDLER — PAID TIER CHAINED PIPELINE
@@ -116,38 +117,6 @@ import { logQcEvents } from "../../../lib/services/log-qc-events";
 // score must respect it.
 //
 // Returns { min, max } or null if score_basis is unrecognized (clamping skipped).
-function deriveExpectedScoreRange(adjudication) {
-  if (!adjudication || typeof adjudication.score_basis !== "string") return null;
-  const basis = adjudication.score_basis;
-
-  // cap_floor_X_X → score = X.X exactly
-  const capFloorMatch = basis.match(/^cap_floor_(\d+)_(\d+)$/);
-  if (capFloorMatch) {
-    const val = parseFloat(`${capFloorMatch[1]}.${capFloorMatch[2]}`);
-    return { min: val, max: val };
-  }
-
-  // cap_range_X_X_Y_Y → X.X ≤ score ≤ Y.Y
-  const capRangeMatch = basis.match(/^cap_range_(\d+)_(\d+)_(\d+)_(\d+)$/);
-  if (capRangeMatch) {
-    const lo = parseFloat(`${capRangeMatch[1]}.${capRangeMatch[2]}`);
-    const hi = parseFloat(`${capRangeMatch[3]}.${capRangeMatch[4]}`);
-    return { min: lo, max: hi };
-  }
-
-  // evidence_band_X_Y and post_override_evidence_band_X_Y → [X.0, Y.5]
-  const bandMatch = basis.match(/^(?:post_override_)?evidence_band_(\d+)_(\d+)$/);
-  if (bandMatch) {
-    const lo = parseFloat(`${bandMatch[1]}.0`);
-    const hi = parseFloat(`${bandMatch[2]}.5`);
-    // Evidence band ceiling is intentionally Y.5 (e.g. evidence_band_5_6 → [5.0, 6.5])
-    // matching V4S29 decimal scoring convention.
-    return { min: lo, max: hi };
-  }
-
-  return null; // Unrecognized basis — skip clamping
-}
-
 export async function POST(request) {
   try {
     const { idea, profile } = await request.json();
@@ -234,25 +203,6 @@ export async function POST(request) {
               return trimmed;
             }
             return trimmed.slice(firstBrace, lastBrace + 1);
-          }
-
-          // V4S32 — Sonnet caller for the prosecutor + repair layer.
-          // Thin wrapper around the existing anthropic-client that exposes
-          // the (systemPrompt, userMessage) → rawText shape the QC
-          // orchestrator expects. Same sampler config as all other scoring
-          // calls (temp 0 / top_k 1 / top_p 0.1) so QC verdicts are as
-          // deterministic as the pipeline they audit.
-          async function callSonnetForQc(systemPrompt, userMessage) {
-            const response = await client.messages.create({
-              model: "claude-sonnet-4-20250514",
-              max_tokens: 1024,
-              temperature: 0,
-              top_k: 1,
-              top_p: 0.1,
-              system: systemPrompt,
-              messages: [{ role: "user", content: userMessage }],
-            });
-            return response.content[0].text;
           }
 
           // ============================
@@ -527,224 +477,195 @@ ${idea}`;
           });
 
           // ============================
-          // STAGE 2b: SCORE MD/MO/OR (TWO-CALL — V4S31)
-          // V4S31 PHYSICAL SEPARATION: adjudication (Call 1) is produced with
-          // no downstream score commitment. Scoring + explanation (Call 2)
-          // receives Call 1's adjudication as locked input. This closes the
-          // override-rationalization disease observed in V4S30 (single-call
-          // adjudication where score-anchoring pressure flowed back into
-          // resolution selection and override_evidence content).
+          // STAGE MD / MO / OR: THREE SEPARATE METRIC SCORERS (V5.0)
+          // Replaces the former two-call Stage 2b (adjudicate + score) and the
+          // prosecutor/repair QC layer. Each scorer is an isolated evaluator that
+          // reads ONLY its own packet from Stage 2a — clean per-metric quarantine,
+          // stricter than the old monolith which dumped the whole stage2aResult
+          // into one call.
           //
-          // Score from evidence packets ONLY — no raw Stage 1, no TC.
-          // Call 2 also receives Call 1's adjudication as fixed structured
-          // input, mirroring the Stage 2a → Stage 2b structural-input pattern.
+          // Each scorer receives: idea + its own evidence packet (which already
+          // embeds that metric's binding/component emission) + domain_flags +
+          // sparse_input_triggered (context the scorers reference). No raw Stage 1,
+          // no TC, no profile (MD/MO/OR are profile-blind per V4S9 quarantine).
+          //
+          // Each scorer emits its metric object under its own top-level key
+          // (market_demand / monetization / originality) with: score (decimal from
+          // lookup), prose fields (diagnosis + binding-explanation + direction;
+          // OR has four prose fields), and a nested _internal audit block. The
+          // score is computed mechanically from predicate commitments + the
+          // archetype/sub-position lookup — no free-chosen score, no rationalization
+          // surface (the disease the old two-call separation was built to fight,
+          // now structurally prevented by score-then-prose ordering inside each
+          // scorer).
           // ============================
 
-          sendEvent({ step: "stage2b_start", message: "Stage 2b: Adjudicating cap-discipline from evidence..." });
+          sendEvent({ step: "stage2b_start", message: "Scoring Market Demand, Monetization, and Originality..." });
 
-          // CRITICAL: Stage 2b receives idea + evidence packets ONLY.
-          // No raw Stage 1 output. No TC data. No user profile (not needed for MD/MO/OR).
-          // V4S28 B6 (B4 Change 4 fold-in): profile injection removed — code now
-          // matches comment + B5 NarrativeContract V3 §3.9 (Evidence Strength
-          // is profile-blind) + V4S9 quarantine principle.
-
-          // ---- Call 1: Adjudication ----
-          const stage2bAdjUserMessage = `USER'S AI PRODUCT IDEA:
-${idea}
-
-=== EVIDENCE PACKETS FROM STAGE 2a ===
-${JSON.stringify(stage2aResult)}`;
-
-          const stage2bAdjResponse = await client.messages.create({
-            model: "claude-sonnet-4-20250514",
-            max_tokens: 4096,
-            temperature: 0,
-            // V4S29 Bundle 2 — F1 sampler hardening (see Stage 2a comment for
-            // full rationale).
-            top_k: 1,
-            top_p: 0.1,
-            system: STAGE2B_ADJ_SYSTEM_PROMPT,
-            messages: [{ role: "user", content: stage2bAdjUserMessage }],
-          });
-
-          const stage2bAdjText = stage2bAdjResponse.content[0].text;
-
-          let stage2bAdjResult;
-          try {
-            stage2bAdjResult = JSON.parse(cleanJsonResponse(stage2bAdjText));
-          } catch (parseError) {
-            console.error("Stage 2b-Adj parse failed:", stage2bAdjText);
-            sendEvent({ step: "error", message: "Stage 2b-Adj failed to parse. Please try again." });
-            controller.close();
-            return;
-          }
-
-          sendEvent({
-            step: "stage2b_adj_done",
-            message: "Stage 2b-Adj complete: Adjudication produced",
-          });
-
-          // ---- Call 2: Scoring + Explanation from locked adjudication ----
-          sendEvent({ step: "stage2b_score_start", message: "Stage 2b-Score: Producing scores and explanations from locked adjudication..." });
-
-          const stage2bScoreUserMessage = `USER'S AI PRODUCT IDEA:
-${idea}
-
-=== EVIDENCE PACKETS FROM STAGE 2a ===
-${JSON.stringify(stage2aResult)}
-
-=== LOCKED ADJUDICATION FROM STAGE 2b-ADJ ===
-${JSON.stringify(stage2bAdjResult)}`;
-
-          const stage2bScoreResponse = await client.messages.create({
-            model: "claude-sonnet-4-20250514",
-            max_tokens: 4096,
-            temperature: 0,
-            top_k: 1,
-            top_p: 0.1,
-            system: STAGE2B_SCORE_SYSTEM_PROMPT,
-            messages: [{ role: "user", content: stage2bScoreUserMessage }],
-          });
-
-          const stage2bScoreText = stage2bScoreResponse.content[0].text;
-
-          let stage2bScoreResult;
-          try {
-            stage2bScoreResult = JSON.parse(cleanJsonResponse(stage2bScoreText));
-          } catch (parseError) {
-            console.error("Stage 2b-Score parse failed:", stage2bScoreText);
-            sendEvent({ step: "error", message: "Stage 2b-Score failed to parse. Please try again." });
-            controller.close();
-            return;
-          }
-
-          // ---- Merge: combine Call 1's adjudication + evidence_strength with Call 2's scores + explanations ----
-          // Final stage2bResult shape mirrors V4S30 monolith output (downstream consumers expect this shape).
-          const stage2bResult = {
-            evaluation: {
-              evidence_strength: stage2bAdjResult.evaluation?.evidence_strength,
-              market_demand: {
-                ...stage2bScoreResult.evaluation?.market_demand,
-                score_adjudication: stage2bAdjResult.evaluation?.market_demand?.score_adjudication,
-              },
-              monetization: {
-                ...stage2bScoreResult.evaluation?.monetization,
-                score_adjudication: stage2bAdjResult.evaluation?.monetization?.score_adjudication,
-              },
-              originality: {
-                ...stage2bScoreResult.evaluation?.originality,
-                score_adjudication: stage2bAdjResult.evaluation?.originality?.score_adjudication,
-              },
-              marketplace_note: stage2bScoreResult.evaluation?.marketplace_note ?? null,
-            },
+          const sharedPacketContext = {
+            domain_flags: stage2aResult.domain_flags,
+            sparse_input_triggered: stage2aResult.sparse_input_triggered,
           };
 
-          // ---- Code-side score-basis consistency check (clamp with warning) ----
-          // For each metric, derive the expected score range from Call 1's
-          // score_basis and verify Call 2's score lands in it. Clamp with
-          // warning rather than hard-fail to avoid brittleness on borderline
-          // drift. Track clamping rate as a verification metric.
-          for (const metricKey of ["market_demand", "monetization", "originality"]) {
-            const metric = stage2bResult.evaluation[metricKey];
-            const adj = metric?.score_adjudication;
-            const range = deriveExpectedScoreRange(adj);
-            if (range && typeof metric.score === "number") {
-              if (metric.score < range.min || metric.score > range.max) {
-                const clamped = Math.max(range.min, Math.min(range.max, metric.score));
-                console.warn(
-                  `[V4S31] Score-basis drift on ${metricKey}: Call 2 emitted ${metric.score}, ` +
-                  `Call 1 score_basis="${adj.score_basis}" implies [${range.min}, ${range.max}]. ` +
-                  `Clamping to ${clamped}.`
-                );
-                metric.score = clamped;
-              }
+          const stageMdUserMessage = `USER'S AI PRODUCT IDEA:
+${idea}
+
+=== STAGE 2a MARKET DEMAND EVIDENCE PACKET ===
+${JSON.stringify({
+            ...sharedPacketContext,
+            evidence_packet: stage2aResult.evidence_packets?.market_demand,
+          })}`;
+
+          const stageMoUserMessage = `USER'S AI PRODUCT IDEA:
+${idea}
+
+=== STAGE 2a MONETIZATION EVIDENCE PACKET ===
+${JSON.stringify({
+            ...sharedPacketContext,
+            evidence_packet: stage2aResult.evidence_packets?.monetization,
+          })}`;
+
+          const stageOrUserMessage = `USER'S AI PRODUCT IDEA:
+${idea}
+
+=== STAGE 2a ORIGINALITY EVIDENCE PACKET ===
+${JSON.stringify({
+            ...sharedPacketContext,
+            evidence_packet: stage2aResult.evidence_packets?.originality,
+          })}`;
+
+          // Same sampler config as all scoring calls (temp 0 / top_k 1 / top_p 0.1)
+          // for determinism. max_tokens 4096 — each scorer emits prose + a full
+          // nested _internal predicate-commitment block.
+          const scorerCallConfig = {
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 4096,
+            temperature: 0,
+            top_k: 1,
+            top_p: 0.1,
+          };
+
+          const [stageMdResponse, stageMoResponse, stageOrResponse] = await Promise.all([
+            client.messages.create({
+              ...scorerCallConfig,
+              system: STAGE_MD_SYSTEM_PROMPT,
+              messages: [{ role: "user", content: stageMdUserMessage }],
+            }),
+            client.messages.create({
+              ...scorerCallConfig,
+              system: STAGE_MO_SYSTEM_PROMPT,
+              messages: [{ role: "user", content: stageMoUserMessage }],
+            }),
+            client.messages.create({
+              ...scorerCallConfig,
+              system: STAGE_OR_SYSTEM_PROMPT,
+              messages: [{ role: "user", content: stageOrUserMessage }],
+            }),
+          ]);
+
+          let stageMdResult, stageMoResult, stageOrResult;
+          try {
+            stageMdResult = JSON.parse(cleanJsonResponse(stageMdResponse.content[0].text));
+          } catch (parseError) {
+            console.error("Stage MD parse failed:", stageMdResponse.content[0].text);
+            sendEvent({ step: "error", message: "Market Demand scoring failed to parse. Please try again." });
+            controller.close();
+            return;
+          }
+          try {
+            stageMoResult = JSON.parse(cleanJsonResponse(stageMoResponse.content[0].text));
+          } catch (parseError) {
+            console.error("Stage MO parse failed:", stageMoResponse.content[0].text);
+            sendEvent({ step: "error", message: "Monetization scoring failed to parse. Please try again." });
+            controller.close();
+            return;
+          }
+          try {
+            stageOrResult = JSON.parse(cleanJsonResponse(stageOrResponse.content[0].text));
+          } catch (parseError) {
+            console.error("Stage OR parse failed:", stageOrResponse.content[0].text);
+            sendEvent({ step: "error", message: "Originality scoring failed to parse. Please try again." });
+            controller.close();
+            return;
+          }
+
+          // ---- Synthesize a single .explanation per metric for the frontend ----
+          // The frontend renders one explanation block per metric
+          // (renderProseSection reads ev.{metric}.explanation). The V5.0 scorers
+          // emit multiple prose fields instead of a single explanation. Concatenate
+          // each metric's prose fields (in narrative order: situation → binding
+          // limit → direction) into .explanation so none of the scorer's reasoning
+          // is lost in the current single-block UI. The raw prose fields are
+          // retained on the metric object too, so a future multi-field UI (esp.
+          // OR's four-question layout) can render them without a pipeline change.
+          const joinProse = (...parts) => parts.filter(Boolean).map((s) => String(s).trim()).filter(Boolean).join(" ");
+
+          const md = stageMdResult.market_demand || {};
+          const mo = stageMoResult.monetization || {};
+          const or = stageOrResult.originality || {};
+
+          // ---- Score-shape guard ----
+          // Each scorer's JSON parsed successfully, but a malformed shape (metric
+          // not nested under its key, or score emitted as a non-number) would
+          // surface downstream as ev.{metric}.score === undefined and crash the
+          // frontend at score.toFixed(1). Fail cleanly here with a clear SSE
+          // error (mirrors the parse-failure handling above) so a bad scorer
+          // output produces a retry-able message, never a white-screen render
+          // crash. calculateOverallScore + Stage 2c low-band logic also depend on
+          // numeric scores.
+          const scoreGuard = [
+            ["market_demand", md],
+            ["monetization", mo],
+            ["originality", or],
+          ];
+          for (const [metricKey, metricObj] of scoreGuard) {
+            if (typeof metricObj.score !== "number" || Number.isNaN(metricObj.score)) {
+              console.error(
+                `${metricKey} scorer returned a non-numeric score:`,
+                JSON.stringify(metricObj).slice(0, 500)
+              );
+              sendEvent({
+                step: "error",
+                message: `${metricKey} scoring returned an invalid score. Please try again.`,
+              });
+              controller.close();
+              return;
             }
           }
 
+          md.explanation = joinProse(md.diagnosis, md.binding_friction_explanation, md.direction);
+          mo.explanation = joinProse(mo.diagnosis, mo.binding_payment_constraint_explanation, mo.direction);
+          or.explanation = joinProse(
+            or.differentiation_basis_diagnosis,
+            or.defensibility_diagnosis,
+            or.binding_constraint_explanation,
+            or.direction
+          );
+
+          // ---- Assemble the evaluation object ----
+          // evidence_strength now comes from Stage 2a (V5.0 Option A) — the old
+          // producer (Stage 2b-Adj) is removed. marketplace_note has no producer
+          // in the new pipeline; emit null (frontend renders it conditionally, so
+          // null simply does not render).
+          const ev = {
+            evidence_strength: stage2aResult.evidence_strength,
+            market_demand: md,
+            monetization: mo,
+            originality: or,
+            marketplace_note: null,
+          };
+
           sendEvent({
             step: "stage2b_done",
-            message: "Stage 2b complete: Scores calculated",
+            message: "Scores calculated: Market Demand, Monetization, Originality",
           });
 
           // ============================
-          // V4S32 — PROSECUTOR + REPAIR QUALITY-CONTROL LAYER
-          // Adversarial audit of Stage 2b output. Catches reasoning flaws
-          // (INVALID_ANCHOR / OMITTED_LIMITING_FACT / HYPOTHESIS_AS_PROOF /
-          // UNGROUNDED_HIGH_SCORE) and runs a constrained repair stage that
-          // regenerates score + explanation + score_adjudication for FAIL
-          // metrics. Repaired output replaces original in ev only if it
-          // re-prosecutes PASS or BORDERLINE; DOUBLE_FAILs keep original and
-          // are marked for review.
-          //
-          // Insertion point: AFTER Stage 2b clamping, BEFORE TC merge.
-          // Reason: prosecutor needs both score_adjudication (still on ev here)
-          // and packet (from stage2aResult). Running before TC merge keeps ev
-          // surface small (just MD/MO/OR) — TC is execution-side, not part of
-          // the reasoning chain prosecutor audits.
-          //
-          // Per locked architecture decisions:
-          //   - Sequential before Stage 2c (Stage 2c sees post-repair scores)
-          //   - Per-metric parallelization within the layer
-          //   - Repair regenerates score_adjudication so downstream sees clean state
-          //   - QC failures NEVER block the pipeline (try/catch around the call)
-          //
-          // Feature-flagged via STAGE2B_QC_MODE = off | log_only | repair
-          // (defaults to 'repair' per V4S32 launch decision; no real users yet,
-          // shadow run not earning its place in solo-testing context).
-          // ============================
-
-          let qcResult;
-          try {
-            qcResult = await runStage2bQualityControl({
-              ev: stage2bResult.evaluation,
-              evidencePackets: stage2aResult.evidence_packets,
-              callSonnet: callSonnetForQc,
-              evaluationId,
-              // qcMode omitted — falls back to env STAGE2B_QC_MODE or 'repair'
-            });
-            // Reassign post-QC ev back onto stage2bResult so downstream code
-            // (TC merge, strip blocks, Stage 2c/3 input construction, final
-            // assembly) operates on the corrected version.
-            stage2bResult.evaluation = qcResult.ev;
-          } catch (qcError) {
-            // Defensive: orchestrator catches internally per metric, but a
-            // catastrophic orchestration error (e.g. import resolution
-            // failure, env config issue) should NEVER block the evaluation.
-            // Log and continue with the pre-QC ev unchanged.
-            console.error("[V4S32] QC layer failed catastrophically:", qcError);
-            qcResult = {
-              ev: stage2bResult.evaluation,
-              qc_events: [],
-              quality_control_summary: {
-                qc_layer_version: "v1.0",
-                qc_mode: "error",
-                qc_layer_error: qcError.message || String(qcError),
-                checked_metrics: 0,
-                repaired_metrics: 0,
-                borderline_metrics: 0,
-                double_fail_metrics: 0,
-                qc_unavailable_metrics: 0,
-                total_qc_latency_ms: 0,
-                quality_failure: false,
-              },
-            };
-          }
-
-          // Fire-and-forget Supabase logging — never block the response.
-          // Skipped metrics are not logged; only PASS / BORDERLINE /
-          // FAIL_REPAIRED / DOUBLE_FAIL / QC_UNAVAILABLE produce events.
-          if (qcResult.qc_events.length > 0) {
-            logQcEvents(qcResult.qc_events).catch((err) => {
-              console.error("[V4S32] Failed to log qc_events to Supabase:", err);
-            });
-          }
-
-          // ============================
           // MERGE TC INTO EVALUATION
-          // Stage 2b has MD/MO/OR. Stage TC has TC. Combine them.
+          // The three scorers produced MD/MO/OR (assembled into ev above).
+          // Stage TC scored TC in isolation. Attach it.
           // ============================
 
-          const ev = stage2bResult.evaluation;
           ev.technical_complexity = stageTcResult.technical_complexity;
 
           // ============================
@@ -784,51 +705,30 @@ ${JSON.stringify(stage2bAdjResult)}`;
           }
 
           // ============================
-          // V4S31 — SCORE_ADJUDICATION DOWNSTREAM FILTER (mirrors thin_dimensions B8 pattern)
-          // V4S32 EXTENSION — also strip quality_control per metric (same boundary discipline)
+          // V5.0 — _INTERNAL DOWNSTREAM FILTER (mirrors thin_dimensions B8 pattern)
           //
-          // Extract score_adjudication and quality_control per metric and
-          // strip them from ev BEFORE Stage 2c and Stage 3 see them. They
-          // receive only { score, explanation, evidence_strength,
-          // marketplace_note } — same contract as V4S29.
+          // Each V5.0 scorer emits a large nested _internal audit block
+          // (predicate commitments, archetype, sub-position arithmetic, binding
+          // constraint). Stage 2c and Stage 3 read ONLY .score from each metric
+          // (plus evidence_strength + packets) — they never consume _internal.
+          // Strip _internal per metric BEFORE Stage 2c/3 to keep their input
+          // context lean and prevent any accidental leakage of scorer-internal
+          // enum vocabulary into the synthesis/diagnosis stages.
           //
-          // OPTION 2 (V4S31 ship discipline): downstream pass-through of
-          // adjudication is deferred to a follow-on session. Stage 2c and
-          // Stage 3 prompts are NOT modified in V4S31. Their input contract
-          // stays unchanged, so they cannot leak rule_id labels (REGULATED,
-          // ENTERPRISE, etc.) or shortcut their own selection procedures
-          // based on adjudication content they were not designed to consume.
-          //
-          // V4S32: quality_control follows the same boundary rule — Stage 2c
-          // and Stage 3 never see prosecutor verdicts, flaw categories, or
-          // close_call_framing. Those are frontend-only metadata.
-          //
-          // Both fields are restored to each metric at final assembly time
-          // below so the frontend payload includes them (adjudication for
-          // future popup feature; quality_control for the V4S32 "Internal
-          // Quality Check" UI surfacing).
+          // Restored to each metric at final assembly time below so the payload
+          // retains _internal for logging, debugging, and the verification runner
+          // (the frontend ignores it; grep-confirmed zero reads).
           // ============================
 
-          const preservedAdjudications = {
-            market_demand: null,
-            monetization: null,
-            originality: null,
-          };
-          const preservedQualityControl = {
+          const preservedInternal = {
             market_demand: null,
             monetization: null,
             originality: null,
           };
           for (const metricKey of ["market_demand", "monetization", "originality"]) {
-            if (ev[metricKey]) {
-              if (ev[metricKey].score_adjudication) {
-                preservedAdjudications[metricKey] = ev[metricKey].score_adjudication;
-                delete ev[metricKey].score_adjudication;
-              }
-              if (ev[metricKey].quality_control) {
-                preservedQualityControl[metricKey] = ev[metricKey].quality_control;
-                delete ev[metricKey].quality_control;
-              }
+            if (ev[metricKey] && ev[metricKey]._internal !== undefined) {
+              preservedInternal[metricKey] = ev[metricKey]._internal;
+              delete ev[metricKey]._internal;
             }
           }
 
@@ -851,11 +751,6 @@ ${JSON.stringify(stage2bAdjResult)}`;
           // value is recomputed at assembly below (ev.overall_score = ...) —
           // no risk of drift, and the duplicate cost is sub-millisecond.
           // See prompt-stage2c.js HARD RULE — LOW-BAND OPENING SENTENCE block.
-          //
-          // V4S32 NOTE: this computation now uses post-prosecutor scores
-          // (FAIL_REPAIRED metrics already replaced before this point). Stage
-          // 2c's low-band opener logic sees the corrected overall_score, not
-          // the pre-repair inflated one — which is exactly what we want.
           const overallScoreForStage2c = calculateOverallScore(ev);
 
           const stage2cUserMessage = `${userProfile}
@@ -919,10 +814,11 @@ ${JSON.stringify({
 
           sendEvent({ step: "stage3_start", message: "Stage 3: Building..." });
 
-          // Stage 3 reads stage2bResult (now mutated to include TC, summary,
-          // and failure_risks from Stage 2c). The Stage 3 prompt expects
-          // failure_risks to be present in the Stage 2 results — this is
-          // satisfied by the in-place mutation above.
+          // Stage 3 reads the evaluation object (now mutated to include TC,
+          // summary, and failure_risks from Stage 2c). The Stage 3 prompt expects
+          // failure_risks under evaluation.failure_risks — satisfied by the
+          // in-place mutation of ev above. _internal is stripped at this point
+          // (restored at assembly), so Stage 3 sees clean metric objects.
           const stage3UserMessage = `${userProfile}
 
 USER'S AI PRODUCT IDEA:
@@ -932,7 +828,7 @@ ${idea}
 ${JSON.stringify(stage1Result)}
 
 === STAGE 2 RESULTS: SCORING ===
-${JSON.stringify(stage2bResult)}`;
+${JSON.stringify({ evaluation: ev })}`;
 
           const stage3Response = await client.messages.create({
             model: "claude-sonnet-4-20250514",
@@ -979,55 +875,25 @@ ${JSON.stringify(stage2bResult)}`;
             ev.evidence_strength.thin_dimensions = preservedThinDimensions;
           }
 
-          // V4S31 — restore score_adjudication per metric for frontend payload
-          // (stripped before Stage 2c/3 per Option 2 to prevent downstream
-          // contamination; now safe to attach back since all Sonnet calls are
-          // complete). Frontend currently ignores this field; reserved for
-          // future popup feature exposing the structural adjudication chain.
-          //
-          // V4S32 — also restore quality_control per metric (same pattern).
-          // Frontend uses these for the "Internal Quality Check" surfacing
-          // (close_call_framing on BORDERLINE, "verified" badge on PASS,
-          // optional "metric repaired" indicator on FAIL_REPAIRED). Stripped
-          // before Stage 2c/3 since they are post-scoring metadata, not
-          // inputs to downstream reasoning.
+          // V5.0 — restore _internal per metric for the payload (stripped before
+          // Stage 2c/3 to keep their context lean; now safe to reattach since all
+          // Sonnet calls are complete). Frontend ignores it; retained for logging,
+          // debugging, and the verification runner.
           for (const metricKey of ["market_demand", "monetization", "originality"]) {
-            if (preservedAdjudications[metricKey] && ev[metricKey]) {
-              ev[metricKey].score_adjudication = preservedAdjudications[metricKey];
-            }
-            if (preservedQualityControl[metricKey] && ev[metricKey]) {
-              ev[metricKey].quality_control = preservedQualityControl[metricKey];
+            if (preservedInternal[metricKey] && ev[metricKey]) {
+              ev[metricKey]._internal = preservedInternal[metricKey];
             }
           }
 
-          // SANITY CHECK: Flag score-explanation contradictions
-          const sanityWarnings = [];
-          const metrics = [
-            { name: "market_demand", score: ev.market_demand?.score, explanation: ev.market_demand?.explanation },
-            { name: "monetization", score: ev.monetization?.score, explanation: ev.monetization?.explanation },
-            { name: "originality", score: ev.originality?.score, explanation: ev.originality?.explanation },
-          ];
-
-          const positiveSignals = ["clear", "proven", "demonstrated", "strong", "growing", "established", "active demand", "willingness to pay"];
-          const negativeSignals = ["severely limited", "no viable", "no capturable", "structurally weak", "no clear", "eliminates", "impossible", "doomed"];
-
-          for (const m of metrics) {
-            if (!m.score || !m.explanation) continue;
-            const expLower = m.explanation.toLowerCase();
-            const hasPositive = positiveSignals.some(s => expLower.includes(s));
-            const hasNegative = negativeSignals.some(s => expLower.includes(s));
-
-            if (m.score <= 4.0 && hasPositive && !hasNegative) {
-              sanityWarnings.push(`${m.name}: score ${m.score} but explanation uses positive language`);
-            }
-            if (m.score >= 6.5 && hasNegative && !hasPositive) {
-              sanityWarnings.push(`${m.name}: score ${m.score} but explanation uses negative language`);
-            }
-          }
-
-          if (sanityWarnings.length > 0) {
-            console.warn("SANITY CHECK WARNINGS:", sanityWarnings);
-          }
+          // SANITY CHECK REMOVED (V5.0): the old heuristic flagged
+          // score/explanation contradictions by keyword-matching the explanation
+          // prose against the score band. The V5.0 scorers compute score
+          // mechanically from predicate commitments and generate prose AFTER the
+          // score is locked, so the score-vs-prose contradiction the heuristic
+          // guarded against is structurally prevented. The keyword heuristic would
+          // also misfire on the new synthesized .explanation (which concatenates
+          // diagnosis + binding-limit + direction). Each scorer's own internal
+          // self-check enforces score/prose coherence.
 
           // Assemble final analysis in the same schema as free tier
           const analysis = {
@@ -1036,11 +902,6 @@ ${JSON.stringify(stage2bResult)}`;
             competition: stage1Result.competition,
             estimates: stage3Result.estimates,
             evaluation: ev,
-            // V4S32 — payload-level QC summary (aggregate over MD/MO/OR).
-            // Includes quality_failure boolean (true when 2+ metrics double-failed
-            // per locked decision) that the frontend can use to trigger credit
-            // return or manual review surfacing.
-            quality_control_summary: qcResult.quality_control_summary,
             // Pro-tier exclusive fields
             _pro: {
               evaluation_mode: "paid_chained",
@@ -1048,6 +909,12 @@ ${JSON.stringify(stage2bResult)}`;
               domain_risk_flags: stage1Result.domain_risk_flags,
               stage1_competitor_count: competitorCount,
               evidence_packets: stage2aResult.evidence_packets,
+              // Derived signals from Stage 2a, exposed for the verification runner
+              // and downstream visibility. The three metric scorers consume these
+              // via their per-packet user messages; this _pro exposure is purely
+              // for runner/debugging visibility.
+              sparse_input_triggered: stage2aResult.sparse_input_triggered,
+              domain_flags: stage2aResult.domain_flags,
               tc_isolated: true,
             },
             _meta: {
