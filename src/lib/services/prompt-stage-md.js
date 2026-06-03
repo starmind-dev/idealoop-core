@@ -562,7 +562,7 @@ ONE LOAD-BEARING CLAIM PER CLAUSE: no stacking more than three evidence elements
 
 direction does two jobs: it tells the user why the result sits where it does inside the current band, and what evidence would move it higher. These are conceptual roles, not a fixed visible template — vary the sentence and do not let a single scaffold become the default across cases. Do not make every direction begin with the band-position phrase; when it reads more naturally, lead with the case-specific evidence and let the position follow.
 
-CURRENT-POSITION job: why the demand evidence places this result toward the lower, middle, or upper part of the band. Draw it from how direct and target-specific the strongest positive demand evidence is, and how broadly the demand case is corroborated — the evidence-maturity of the demand shown. Name what the evidence does show as well as what it does not yet show, so it reads as calibration, not pure absence. TRANSLATE, do not transport — never write predicate names, level enums, "sub-position," or SP-A/B/C; use natural score-position language (e.g. "closer to the lower edge," "near the center of this range," "the upper part of this band") and prioritize case-specific phrasing over any fixed phrase.
+CURRENT-POSITION job: why the demand evidence places this result toward the lower, middle, or upper part of the band. Draw it from how direct and target-specific the strongest positive demand evidence is, and how broadly the demand case is corroborated — the evidence-maturity of the demand shown. Name what the evidence does show as well as what it does not yet show, so it reads as calibration, not pure absence. TRANSLATE, do not transport — never write predicate names, level enums, "sub-position," or SP-A/B/C; use natural score-position language (e.g. "closer to the lower edge," "near the center of this range," "the upper part of this band") and prioritize case-specific phrasing over any fixed phrase. Internal labels are also forbidden in hyphenated prose form (e.g. "category-grounded," "no-component," "founder-articulated," "self-reinforcing") — never write the archetype name, hyphenated or otherwise.
   NO-DIAGNOSIS-REPEAT: explain why THIS position via evidence maturity/directness/corroboration; do not restate the demand condition diagnosis already names.
   FRICTION FENCE: may note in a bare backward-looking phrase that survival past the friction is not yet shown, but must NOT re-name or re-explain the friction mechanism (binding_friction_explanation owns that) and must NOT state what would resolve it (the next-evidence job owns that).
 
@@ -592,6 +592,8 @@ Friction is none_or_minimal: binding_friction_explanation acknowledges directly:
 Near-ceiling Archetype 7 (upper sub-position at 8.5): direction acknowledges proximity to ceiling: "The score is near the upper bound of what demand-evidence alone can establish; further movement would require demand evidence at exceptional scale that is rare for digital products in this scope."
 
 === WORKED EXAMPLES ===
+
+Worked examples demonstrate reasoning shape, not reusable phrasing — do not copy their openers or sentence structure across cases.
 
 --- Example 1: Archetype 6 case (high-band) ---
 
@@ -623,7 +625,7 @@ Output:
     "score": 7.0,
     "diagnosis": "Solo-practitioner dental practice managers face documented missed-call pain costing $300-500 per lost lead, with sustained spreadsheet workarounds evidenced across the segment. Comparable communication tools (Weave, NexHealth) demonstrate that trust friction has been crossed for this exact buyer.",
     "binding_friction_explanation": "The remaining adoption barrier is the displacement of those manual tracking workflows — practice managers would need to integrate the AI receptionist into ongoing operational rhythms before realizing the call-recovery value.",
-    "direction": "Movement above this band would require direct packet evidence of solo-practitioner dental clinics adopting a close-comparable AI receptionist or call-automation product past the same trust and workflow friction — not just adjacent communication-tool precedent.",
+    "direction": "Missed-call cost and sustained workarounds are directly documented, and comparable tools show the trust friction is survivable, so this lands mid-band rather than at the top. It would move higher with packet evidence that solo-practitioner clinics adopt a close-comparable receptionist at measurable density.",
     "_internal": {
       "demand_archetype": "demonstrated_pull_with_friction_survival",
       "archetype_band": "6.6-7.5",

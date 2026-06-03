@@ -701,12 +701,12 @@ ONE LOAD-BEARING CLAIM PER CLAUSE: no stacking more than three evidence elements
 
 direction does two jobs: it tells the user why the result sits where it does inside the current band, and what evidence would move it higher. These are conceptual roles, not a fixed visible template — vary the sentence and do not let a single scaffold become the default across cases. Do not make every direction begin with the band-position phrase; when it reads more naturally, lead with the case-specific evidence and let the position follow.
 
-CURRENT-POSITION job: why the payment-capture evidence places this result toward the lower, middle, or upper part of the band. Draw it from how directly grounded the strongest payment-capture evidence is (founder-described vs externally grounded vs documented sustained adoption at the payer + job + shape + price class) and how broadly the case is corroborated. Name what the evidence does show as well as what it does not yet show, so it reads as calibration, not pure absence. TRANSLATE, do not transport — never write predicate names, level enums, "sub-position," or SP-A/B/C; use natural score-position language and prioritize case-specific phrasing over any fixed phrase.
+CURRENT-POSITION job: why the payment-capture evidence places this result toward the lower, middle, or upper part of the band. Draw it from how directly grounded the strongest payment-capture evidence is (founder-described vs externally grounded vs documented sustained adoption at the payer + job + shape + price class) and how broadly the case is corroborated. Name what the evidence does show as well as what it does not yet show, so it reads as calibration, not pure absence. TRANSLATE, do not transport — never write predicate names, level enums, "sub-position," or SP-A/B/C; use natural score-position language and prioritize case-specific phrasing over any fixed phrase. Internal labels are also forbidden in hyphenated prose form (e.g. "category-grounded," "no-component," "founder-articulated," "self-reinforcing") — never write the archetype name, hyphenated or otherwise.
   NO-DIAGNOSIS-REPEAT: explain why THIS position via payment-evidence directness/grounding/corroboration; do not restate the payment-capture condition diagnosis already names.
   CONSTRAINT FENCE: may note in a bare backward-looking phrase that durable payment capture is not yet evidenced, but must NOT re-name or re-explain the binding payment mechanism (binding_payment_constraint_explanation owns that) and must NOT state what would resolve it (the next-evidence job owns that).
   PRESCRIPTION FENCE: payment-evidence language only — never pricing, packaging, bundling, offer-structure, pricing-model, or target-segment advice (see NO PRICING/GTM PRESCRIPTION above).
 
-NEXT-EVIDENCE job: the specific payment evidence that would move the result toward the next band, targeting the weakest payment-capture predicate. Use the DIRECTION OPENERS and the per-weakest-predicate patterns below.
+NEXT-EVIDENCE job: the specific payment evidence that would move the result toward the next band, targeting the weakest payment-capture predicate. This is the SECOND clause: the current-position job must be stated first, and the per-weakest-predicate patterns below supply only this next-evidence clause — they are never a substitute for stating the within-band position. Use the DIRECTION OPENERS and the per-weakest-predicate patterns below.
 
 SPARSE / LOW-BAND: when evidence is thin, the current-position job may be absence-based, but it must name the specific missing payment-capture evidence (no named payer with authority, no payment-shape grounding, no comparable paid precedent) — never generic "limited evidence" filler.
 
@@ -724,6 +724,8 @@ Hold the whole field to one or two sentences. For opener variety on the current-
 Do not use the same opener across every case.
 
 --- DIRECTION SENTENCE PATTERNS PER WEAKEST PREDICATE ---
+
+These supply the next-evidence (second) clause ONLY — draft the current-position clause first, and never open direction with one of these patterns.
 
 When weakest is PAYER_SPECIFICITY: direction asks for sharper payer identification — named role with payment authority, named decision context.
 
@@ -746,6 +748,8 @@ Binding mechanism is none_or_minimal at low archetype: binding_payment_constrain
 Near-ceiling Archetype 6 (upper sub-position at 8.5): direction acknowledges proximity to ceiling: "The score is near the upper bound of what payment-capture evidence alone can establish; further movement would require evidence at exceptional scale that is rare for digital products in this scope."
 
 === WORKED EXAMPLES ===
+
+Worked examples demonstrate reasoning shape, not reusable phrasing — do not copy their openers or sentence structure across cases.
 
 EXAMPLES ARE ILLUSTRATIVE. Real company names (Vanta, Drata, Headspace, Toast, Bicycle Health, etc.) anchor the teaching pattern, but specific quantified metrics (penetration percentages, named company counts, sustained-adoption ratios) are synthetic. The model MUST NOT fabricate quantified competitor data in its own outputs — only cite quantified data when the Stage 2a packet provides it.
 
@@ -779,7 +783,7 @@ Output:
     "score": 1.0,
     "diagnosis": "The packet identifies remote workers as a target and proposes a freemium subscription, but does not yet show a coherent payer segment, named price-class precedent, or current payment behavior that would establish payment capture for this product.",
     "binding_payment_constraint_explanation": "The case does not yet have payment-capture evidence to constrain; payment-capture territory is not yet evidenced for the named payer at the named shape.",
-    "direction": "The score would move higher with evidence of a coherent payer segment paying for comparable productivity tools at a comparable shape and price class — without these, the case sits at speculative payment territory.",
+    "direction": "No coherent payer segment or price-class precedent is evidenced for the proposed remote-worker tool — only a freemium intention — so the payment case remains at the floor. It would move higher with evidence of a defined payer paying for comparable productivity tools at a named shape and price class.",
     "_internal": {
       "monetization_archetype": "insufficient_evidence",
       "archetype_band": "1.0-2.8",
@@ -826,7 +830,7 @@ Output:
     "score": 3.6,
     "diagnosis": "Consumer meditation has category-level subscription pricing infrastructure with established competitors (Headspace, Calm), but the packet's payment evidence is at category level — the founder proposes $9.99/month for stressed knowledge workers without segment-specific willingness-to-pay or paid-tier conversion benchmarks for this entrant.",
     "binding_payment_constraint_explanation": "The payment-capture constraint is the free-to-paid conversion economics — industry benchmarks of 4-6% conversion exist for the consumer subscription category, but the packet does not yet evidence what conversion this specific entrant would achieve at the stressed-knowledge-worker segment.",
-    "direction": "Movement above this band would require evidence of paid-tier conversion rates from comparable products at the stressed-knowledge-worker segment, not industry-benchmark conversion claims at the broader consumer category.",
+    "direction": "Category-level subscription pricing exists (Headspace, Calm) but the packet's payment evidence stops at that category level rather than the stressed-knowledge-worker segment, holding the result mid-band. It would move higher with paid-tier conversion rates from comparable products at that specific segment, not industry-benchmark claims at the broad consumer category.",
     "_internal": {
       "monetization_archetype": "founder_articulated",
       "archetype_band": "2.8-4.3",
@@ -873,7 +877,7 @@ Output:
     "score": 4.3,
     "diagnosis": "Restaurant tech has paid SaaS infrastructure with category-level pricing precedent (Toast, 7shifts at $50-150/month per location for operations), but the packet evidences that independent restaurant operators sustain free workarounds for inventory specifically — Square's free tier and spreadsheet tracking cover the named job at the named segment.",
     "binding_payment_constraint_explanation": "The payment-capture constraint is free-substitute pressure at the inventory job — independent restaurant operators have paid budgets for POS and operations, but inventory specifically faces sustained free alternatives that the proposed $79/month must displace.",
-    "direction": "The next payment-capture proof would be evidence that comparable restaurant inventory products at this price class sustain paid adoption at the independent-restaurant segment, displacing the free-tier and spreadsheet workarounds.",
+    "direction": "Toast and 7shifts show restaurant-tech payment precedent, but not paid adoption for the inventory job specifically, which places this at the lower end of the band. The next payment proof would be comparable restaurant-inventory products at this price class sustaining paid adoption among independent operators.",
     "_internal": {
       "monetization_archetype": "category_grounded",
       "archetype_band": "4.3-5.4",
@@ -921,7 +925,7 @@ Output:
     "score": 6.0,
     "diagnosis": "Compliance officers at SMB SaaS sustain paid adoption of compliance automation tools (Vanta, Drata, Secureframe) at $99-300/month — close-precedent payment infrastructure exists for the named payer + job + shape, with industry-data segment penetration evidenced.",
     "binding_payment_constraint_explanation": "The payment-capture constraint is price defensibility — the proposed $499/month sits materially above the $99-300 sustained at comparable shape, with no evidence in the packet justifying the price-class premium against established alternatives.",
-    "direction": "Movement above this band would require evidence that comparable products at the $499 price class sustain paid adoption at SMB SaaS specifically, or evidence of differentiated value attribution that justifies the price-class premium beyond AI-specific framing.",
+    "direction": "Close-precedent payment is grounded at the exact segment and shape (Vanta, Drata at $99-300) but the proposed $499 sits above that evidenced price class, holding the result mid-band. It would move higher with evidence that products at the $499 class sustain paid adoption at SMB SaaS, or documented buyer evidence that this job supports payment at that class.",
     "_internal": {
       "monetization_archetype": "partial_segment_grounded",
       "archetype_band": "5.4-6.5",
@@ -969,7 +973,7 @@ Output:
     "score": 7.0,
     "diagnosis": "Telehealth MAT through Medicaid has close-precedent payment infrastructure — Bicycle Health and Ophelia evidence sustained reimbursement at comparable price class across MAT-covering states, with CPT codes and state-by-state credentialing documented for the named patient segment.",
     "binding_payment_constraint_explanation": "The payment-capture constraint is regulated payment friction — Medicaid reimbursement requires state-by-state credentialing, CPT-code billing infrastructure, and reimbursement-rate variation that gates payment flow, with the payer (Medicaid) and beneficiary (patient) operating on separate decision criteria.",
-    "direction": "Movement above this band would require evidence of segment-specific value attribution at this exact reimbursement structure — sustained adoption metrics from comparable platforms naming Medicaid-MAT-covering-state outcomes rather than category-level reimbursement availability.",
+    "direction": "Direct reimbursement precedent exists at a comparable price class (Bicycle Health, Ophelia across MAT-covering states), but the evidence is still category availability rather than documented paid adoption for this exact Medicaid-MAT reimbursement structure. It would move higher with sustained paid adoption metrics from comparable MAT platforms in Medicaid-covering states.",
     "_internal": {
       "monetization_archetype": "direct_precedent_grounded",
       "archetype_band": "6.5-7.5",
