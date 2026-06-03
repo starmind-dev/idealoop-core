@@ -775,9 +775,9 @@ After committing to all predicates and computing the score, generate four prose 
 - differentiation_basis_diagnosis: Operation 1 — what is actually different about this case (basis identification)
 - defensibility_diagnosis: Operation 2 — is the differentiation defensible (defensibility assessment)
 - binding_constraint_explanation: what primary exposure constrains OR position
-- direction: what evidence threshold would move OR higher
+- direction: why the result sits where it does within the band, then what evidence threshold would move OR higher (current-position + next-evidence)
 
-Each field is normally one sentence but may contain two short sentences when rich evidence would otherwise force overloaded clauses. Direction is one sentence with max ~60 words.
+Each field is normally one sentence but may contain two short sentences when rich evidence would otherwise force overloaded clauses. Direction now carries a current-position reason and a next-evidence threshold and may run to two short sentences, max ~70 words.
 
 --- PROSE GENERATION SEQUENCE ---
 
@@ -786,7 +786,7 @@ Each field is normally one sentence but may contain two short sentences when ric
 3. Draft differentiation_basis_diagnosis using case-specific source vocabulary, naming the committed component(s) or their absence in case-specific terms (NOT enum vocabulary).
 4. Draft defensibility_diagnosis applying register rules per archetype tier (see register rules below).
 5. Draft binding_constraint_explanation naming the primary exposure in case-specific language without enum vocabulary.
-6. Draft direction targeting the direction anchor with specific evidence threshold language, varied opener.
+6. Draft direction per the TWO-PART STRUCTURE below: a current-position reason (why the case sits toward the lower/middle/upper of the band, from how well the evidence fits the current position and how operationally deep the committed component is) then the next-evidence threshold (reaching the direction anchor per the hierarchy above).
 7. Verify all constraints before finalizing.
 
 --- ARCHETYPE COGNITIVE PICTURES (for prose, never named) ---
@@ -846,6 +846,21 @@ A6 EXCEPTION: no next archetype exists. Direction identifies either (a) the sust
 CAP-BOUND CASE EXCEPTION: if an active CAP limited the archetype (e.g., fully_substitutable capped at A4), direction targets the CAP condition. For the fully-substitutable cap, direction must describe what evidence would show that the committed component makes generic, manual, or adjacent substitutes materially worse for the named job — in user-facing language, not enum vocabulary. Generic next-archetype evidence references are inadequate.
 
 STATIC-CEILING CASE EXCEPTION (A5-β patterns): for A5 static regulatory cases where no realistic compounding path is evidenced, direction may say the current structure has a ceiling rather than inventing an improvement path. Honest acknowledgment beats invented compounding language.
+
+--- DIRECTION: TWO-PART STRUCTURE (conceptual roles, not a sentence template) ---
+
+direction does two jobs: it tells the user why the result sits where it does inside the current band, and what evidence threshold would move it higher. These are conceptual roles, not a fixed visible template — vary the sentence and do not let a single scaffold become the default across cases. Do not make every direction begin with the band-position phrase; when it reads more naturally, lead with the case-specific evidence and let the position follow.
+
+CURRENT-POSITION job: why the case sits toward the lower, middle, or upper part of the band. Source it ONLY from how well the evidence fits the current position and how operationally deep the committed component is. Name what fit/depth the case does show as well as what it does not yet show, so it reads as calibration, not pure absence. TRANSLATE, do not transport — never write predicate names, level enums, "sub-position," or SP-A/B/C; use natural score-position language (e.g. "closer to the lower edge," "near the center of this range," "the upper part of this band" — never "tier," which is internal) and prioritize case-specific phrasing over any fixed phrase.
+  EXPOSURE FENCE (load-bearing for OR): must NOT draw on or restate the binding exposure / substitution / replication threat — binding_constraint_explanation owns that, and restating it triple-says the exposure. Do not source the current-position job from exposure-resolution reasoning.
+  TIER FENCE: describe within-position degree (e.g. "established across multiple accounts but not yet sustained"), never the tier-level defensibility claim itself — defensibility_diagnosis owns that. Degree, not defensibility claim.
+  A1 / NO-COMPONENT: when no defensibility component is committed, the current-position job explains the absence of a defensibility source, not component depth.
+
+NEXT-EVIDENCE job: the evidence threshold that would move OR higher, per the DIRECTION ANCHOR HIERARCHY above (default weakest-predicate, A1 honest exit, A6 sustainment, CAP-bound, static-ceiling). Use the DIRECTION OPENERS below. NO COMPONENT MENU: name the specific evidence threshold for the committed or missing component in this case — never a generic list of defensibility options (proprietary data, integration, certification, network density). The A1 / A6 / CAP-bound / static-ceiling exceptions govern this job; in those cases the current-position job still states the within-band position in fit/depth (or, at A1, absence) terms.
+
+SPARSE / LOW-BAND (incl. A1): the current-position job may be absence-based, but it must name the specific missing defensibility evidence (no committed component, no operational evidence, segment positioning only) — never generic "limited evidence" filler.
+
+Hold the whole field to one or two short sentences, max ~70 words. For opener variety on the current-position job, rotate the shape — position-first, fit-first, or present-then-gap — never the same shape every case.
 
 --- DIRECTION OPENERS (rotate based on what reads naturally) ---
 
@@ -1209,7 +1224,7 @@ This schema uses an internal/user-facing split. The five top-level fields (score
     "differentiation_basis_diagnosis": "<one or two sentences, case-specific, no labels>",
     "defensibility_diagnosis": "<one or two sentences, case-specific, no labels>",
     "binding_constraint_explanation": "<one or two sentences, case-specific, no labels>",
-    "direction": "<one sentence, varied opener, targets direction anchor per Section 8 hierarchy>",
+    "direction": "<one or two short sentences: why the result sits where it does in the band (fit + component depth only, never the exposure) + what evidence threshold moves it higher; no internal labels; max ~70 words>",
     "_internal": {
       "schema_version": "stage_or_v5",
       "originality_archetype": "<one of: no_defensibility_component, articulated_defensibility, emerging_defensibility, established_defensibility, sustained_defensibility, self_reinforcing_defensibility>",

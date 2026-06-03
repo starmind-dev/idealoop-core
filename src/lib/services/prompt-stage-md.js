@@ -511,7 +511,7 @@ The decimal at the (archetype, sub_position) lookup IS the score. Do not pick a 
 After committing to all predicates and computing the score, generate three prose fields:
 - diagnosis: what demand case this is, in case-specific language
 - binding_friction_explanation: what stands between this buyer and adoption
-- direction: what evidence would move the score higher
+- direction: why the result sits where it does within the band, then what evidence would move it higher (current-position + next-evidence)
 
 Each field is normally one sentence but may contain two short sentences when rich evidence would otherwise force overloaded clauses.
 
@@ -521,7 +521,7 @@ Each field is normally one sentence but may contain two short sentences when ric
 2. Identify the weakest predicate among your demand-predicate commitments — the one preventing the next-higher archetype. Direction will target evidence that would strengthen this predicate.
 3. Draft diagnosis using case-specific source vocabulary, conveying the archetype's cognitive picture without naming the archetype.
 4. Draft binding_friction_explanation connecting to diagnosis, naming the friction mechanism in case-specific language without naming the friction subtype.
-5. Draft direction targeting the weakest predicate with specific evidence type, varied opener.
+5. Draft direction per the TWO-PART STRUCTURE below: a current-position reason (why the demand evidence places the result toward the lower/middle/upper of the band) then the next-evidence threshold (the specific demand evidence that would move the result toward the next band, targeting the weakest demand predicate).
 6. Verify all constraints before finalizing.
 
 --- ARCHETYPE COGNITIVE PICTURES (for prose, never named) ---
@@ -557,6 +557,20 @@ DIRECT ABSENCE LANGUAGE REQUIRED where evidence is absent: "the packet does not 
 NO MARKETING LANGUAGE: banned: "promising," "exciting," "compelling," "strong potential," "significant opportunity."
 
 ONE LOAD-BEARING CLAIM PER CLAUSE: no stacking more than three evidence elements in a single sentence. Split into two clauses or prioritize highest-leverage evidence when rich.
+
+--- DIRECTION: TWO-PART STRUCTURE (conceptual roles, not a sentence template) ---
+
+direction does two jobs: it tells the user why the result sits where it does inside the current band, and what evidence would move it higher. These are conceptual roles, not a fixed visible template — vary the sentence and do not let a single scaffold become the default across cases. Do not make every direction begin with the band-position phrase; when it reads more naturally, lead with the case-specific evidence and let the position follow.
+
+CURRENT-POSITION job: why the demand evidence places this result toward the lower, middle, or upper part of the band. Draw it from how direct and target-specific the strongest positive demand evidence is, and how broadly the demand case is corroborated — the evidence-maturity of the demand shown. Name what the evidence does show as well as what it does not yet show, so it reads as calibration, not pure absence. TRANSLATE, do not transport — never write predicate names, level enums, "sub-position," or SP-A/B/C; use natural score-position language (e.g. "closer to the lower edge," "near the center of this range," "the upper part of this band") and prioritize case-specific phrasing over any fixed phrase.
+  NO-DIAGNOSIS-REPEAT: explain why THIS position via evidence maturity/directness/corroboration; do not restate the demand condition diagnosis already names.
+  FRICTION FENCE: may note in a bare backward-looking phrase that survival past the friction is not yet shown, but must NOT re-name or re-explain the friction mechanism (binding_friction_explanation owns that) and must NOT state what would resolve it (the next-evidence job owns that).
+
+NEXT-EVIDENCE job: the specific demand evidence that would move the result toward the next band, targeting the weakest demand predicate. Use the DIRECTION OPENERS below.
+
+SPARSE / LOW-BAND: when evidence is thin, the current-position job may be absence-based, but it must name the specific missing demand evidence (no coherent buyer, no named pain cost, no current behavior) — never generic "limited evidence" filler.
+
+Hold the whole field to one or two sentences. For opener variety on the current-position job, rotate the shape — position-first, evidence-first, or present-then-gap — never the same shape every case.
 
 --- DIRECTION OPENERS (rotate based on what reads naturally) ---
 
@@ -738,7 +752,7 @@ The four top-level fields (score, diagnosis, binding_friction_explanation, direc
     "score": <exact decimal from lookup[demand_archetype][sub_position], not an arbitrary decimal>,
     "diagnosis": "<one or two sentences, case-specific, no labels>",
     "binding_friction_explanation": "<one or two sentences, case-specific, no labels>",
-    "direction": "<one or two sentences, varied opener, targets weakest predicate, max ~60 words>",
+    "direction": "<one or two sentences: why the result sits where it does in the band + what evidence moves it higher; no internal labels; max ~60 words>",
     "_internal": {
       "schema_version": "stage_md_v5",
       "demand_archetype": "<one of: speculative_need, category_validated_entrant_unspecific, clear_pain_weak_pull, specific_buyer_unresolved_adoption_friction, specific_buyer_with_active_trigger, demonstrated_pull_with_friction_survival, demonstrated_pull_with_capturable_density>",

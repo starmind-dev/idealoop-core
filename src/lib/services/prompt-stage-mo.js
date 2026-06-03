@@ -622,7 +622,7 @@ The decimal at the (archetype, sub_position) lookup IS the score. Do not pick a 
 After committing to all predicates and computing the score, generate three prose fields:
 - diagnosis: what payment-capture case this is, in case-specific language
 - binding_payment_constraint_explanation: what stands between this case and durable payment capture
-- direction: what evidence would move the score higher
+- direction: why the result sits where it does within the band, then what evidence would move it higher (current-position + next-evidence)
 
 Each field is normally one sentence but may contain two short sentences when rich evidence would otherwise force overloaded clauses.
 
@@ -632,7 +632,7 @@ Each field is normally one sentence but may contain two short sentences when ric
 2. Identify the weakest predicate among your payment-capture commitments — the one preventing the next-higher archetype. Direction will target evidence that would strengthen this predicate.
 3. Draft diagnosis using case-specific source vocabulary, conveying the archetype's cognitive picture without naming the archetype. Sacred distinction check: diagnosis describes payment-capture evidence, not business-model articulation.
 4. Draft binding_payment_constraint_explanation connecting to diagnosis, naming the primary binding mechanism in case-specific language without naming the mechanism subtype. Surface secondary mechanism only when materially shaping the case.
-5. Draft direction targeting the weakest predicate with specific evidence type, varied opener.
+5. Draft direction per the TWO-PART STRUCTURE below: a current-position reason (why the payment-capture evidence places the result toward the lower/middle/upper of the band) then the next-evidence threshold (the specific payment evidence that would move the result toward the next band, targeting the weakest payment-capture predicate).
 6. Verify all constraints before finalizing.
 
 --- ARCHETYPE COGNITIVE PICTURES (for prose, never named) ---
@@ -685,7 +685,7 @@ NO TEMPLATING: case-specific vocabulary required. Test: if the payer/shape/price
 
 NO CROSS-METRIC FRAMING: MO prose stays in MO's lane. No comparing to MD/OR/Stage 2c/Stage 3 territory.
 
-NO FOUNDER-COACHING: MO describes what packet shows. Does not advise founder what to do. "You should price lower" is coaching (banned). "The score would move higher if comparable products at this price class evidenced sustained adoption" is direction (required form).
+NO FOUNDER-COACHING: MO describes what packet shows. Does not advise founder what to do. "You should price lower" is coaching (banned). "The score would move higher if comparable products at this price class evidenced sustained adoption" is direction (required form). NO PRICING/GTM PRESCRIPTION (hard ban, both direction jobs): never instruct the founder to change price, packaging, bundling, offer structure, pricing model, or target segment — banned phrasings include "charge more," "raise/lower your price," "price lower," "improve/increase pricing," "switch pricing model," "change packaging," "bundle differently," "adjust the offer," "move upmarket," "target larger customers," "change segment." If payer segment matters, phrase it as missing payment evidence from that payer type, not as advice. Direction uses payment-evidence-threshold language only.
 
 NO HEDGING: banned: "it seems," "might suggest," "potentially indicates," "perhaps," "may indicate," "could possibly," "appears to."
 
@@ -696,6 +696,21 @@ NO MARKETING LANGUAGE: banned: "promising," "exciting," "compelling," "strong po
 NO BUSINESS-MODEL DESCRIPTION (sacred distinction enforcement): diagnosis describes payment-capture EVIDENCE, not the business model itself. Banned phrasing: "The business model is a freemium SaaS subscription," "The monetization strategy is take-rate marketplace," "Revenue comes from per-seat licensing." Required phrasing: "[segment] sustains paid adoption of comparable [shape] at [price class]" (evidence-shape language).
 
 ONE LOAD-BEARING CLAIM PER CLAUSE: no stacking more than three evidence elements in a single sentence. Split into two clauses or prioritize highest-leverage evidence when rich.
+
+--- DIRECTION: TWO-PART STRUCTURE (conceptual roles, not a sentence template) ---
+
+direction does two jobs: it tells the user why the result sits where it does inside the current band, and what evidence would move it higher. These are conceptual roles, not a fixed visible template — vary the sentence and do not let a single scaffold become the default across cases. Do not make every direction begin with the band-position phrase; when it reads more naturally, lead with the case-specific evidence and let the position follow.
+
+CURRENT-POSITION job: why the payment-capture evidence places this result toward the lower, middle, or upper part of the band. Draw it from how directly grounded the strongest payment-capture evidence is (founder-described vs externally grounded vs documented sustained adoption at the payer + job + shape + price class) and how broadly the case is corroborated. Name what the evidence does show as well as what it does not yet show, so it reads as calibration, not pure absence. TRANSLATE, do not transport — never write predicate names, level enums, "sub-position," or SP-A/B/C; use natural score-position language and prioritize case-specific phrasing over any fixed phrase.
+  NO-DIAGNOSIS-REPEAT: explain why THIS position via payment-evidence directness/grounding/corroboration; do not restate the payment-capture condition diagnosis already names.
+  CONSTRAINT FENCE: may note in a bare backward-looking phrase that durable payment capture is not yet evidenced, but must NOT re-name or re-explain the binding payment mechanism (binding_payment_constraint_explanation owns that) and must NOT state what would resolve it (the next-evidence job owns that).
+  PRESCRIPTION FENCE: payment-evidence language only — never pricing, packaging, bundling, offer-structure, pricing-model, or target-segment advice (see NO PRICING/GTM PRESCRIPTION above).
+
+NEXT-EVIDENCE job: the specific payment evidence that would move the result toward the next band, targeting the weakest payment-capture predicate. Use the DIRECTION OPENERS and the per-weakest-predicate patterns below.
+
+SPARSE / LOW-BAND: when evidence is thin, the current-position job may be absence-based, but it must name the specific missing payment-capture evidence (no named payer with authority, no payment-shape grounding, no comparable paid precedent) — never generic "limited evidence" filler.
+
+Hold the whole field to one or two sentences. For opener variety on the current-position job, rotate the shape — position-first, evidence-first, or present-then-gap — never the same shape every case.
 
 --- DIRECTION OPENERS (rotate based on what reads naturally) ---
 
@@ -1032,7 +1047,7 @@ The four top-level fields (score, diagnosis, binding_payment_constraint_explanat
     "score": <exact decimal from lookup[monetization_archetype][sub_position], not an arbitrary decimal>,
     "diagnosis": "<one or two sentences, case-specific, no labels>",
     "binding_payment_constraint_explanation": "<one or two sentences, case-specific, no labels>",
-    "direction": "<one or two sentences, varied opener, targets weakest predicate, max ~60 words>",
+    "direction": "<one or two sentences: why the result sits where it does in the band + what evidence moves it higher; no internal labels; no pricing/packaging/segment prescription; max ~60 words>",
     "_internal": {
       "schema_version": "stage_mo_v5",
       "monetization_archetype": "<one of: insufficient_evidence, founder_articulated, category_grounded, partial_segment_grounded, direct_precedent_grounded, sustained_adoption_evidenced>",
