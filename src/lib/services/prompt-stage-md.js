@@ -416,6 +416,7 @@ SUBORDINATION (overrides fallback): Stronger predicate evidence beats weaker con
 Commit to 3 sub-position predicates. Compute the sub-position score arithmetically; the score determines the bucket (lower / middle / upper); the bucket maps to a decimal anchor within the archetype's band.
 
 For each sub-position predicate, output: { level, value, evidence_cited, why_this_level }
+- why_this_level: one sentence justification including why higher is not reached
 
 --- SP-A: positive_evidence_directness ---
 
