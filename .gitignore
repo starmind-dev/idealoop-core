@@ -50,3 +50,22 @@ runners/*-preflight-failure.json
 # Populated by cache-on-miss during verification runs with IDEALOOP_USE_FIXTURES=1
 # .gitkeep retained to preserve directory in repo
 runners/fixtures/data/*.json
+
+# Local test corpora, runners, and verification outputs (never deployed)
+B10a-*
+v50-*
+cases.js
+syn-cases.js
+archetype-cases.js
+audit-*
+delta_vs_*
+b10a-*.log
+run-b*.js
+run-archetypes.js
+run-audit.js
+run-variance.js
+rescore-*.js
+/runners/
+run-v50.js
+attribute-stage1.js
+populate-search.js
