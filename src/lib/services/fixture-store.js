@@ -26,10 +26,14 @@
 // verification runner. Cache repopulates from live API calls on miss.
 // No automatic invalidation — fixtures stay valid until you delete them.
 //
-// Not cached: keyword extraction (Haiku, deterministic at temperature=0
-// per empirical observation in B10a Run 1 vs Run 2 keywords identical).
-// Stage 1+ LLM stages (already deterministic via Bundle 2 sampler
-// hardening). If new non-determinism surfaces, add it here.
+// Cached: Serper + GitHub search responses, and (as of the V5.0 freeze arc)
+// keyword extraction — Haiku is NON-deterministic at temperature=0 on dense
+// multi-clause inputs, so keywords are frozen upstream to stabilize the search
+// cache (see keywords.js header). This supersedes the original Bundle 3.75 note
+// that keyword extraction was deterministic (a 2-run spot check on stable cases).
+// Not frozen here: Stage 1 LLM non-determinism (the attribution arc identified
+// Stage 1 as the irreducible variance source); isolating it would need a
+// Stage-1-output freeze, deliberately left unbuilt.
 // ============================================
 
 import fs from "fs";
