@@ -1,84 +1,24 @@
 // ============================================
-// STAGE MD PROMPT — MARKET DEMAND (ISOLATED)
-// V5.0 ARCHITECTURAL REDESIGN (May 24, 2026)
-// FINAL OUTPUT-CONTRACT VERSION (Option B schema split)
+// STAGE MD PROMPT — MARKET DEMAND (ISOLATED)  [V5.0]
 // ============================================
-// Paid-tier chained pipeline: replaces MD scoring in Stage 2b cluster
-// Purpose: Score Market Demand from Stage 2a MD evidence packet
-// Input: Idea description + Stage 2a MD evidence packet (V5.0 shape)
-// Output: market_demand object with top-level user-facing fields
-//         (score + 3 prose sentences) and nested _internal block for
-//         traceability/logging/debugging.
+// Role: scores Market Demand from the Stage 2a MD evidence packet. One of the
+// three isolated metric scorers (MD / MO / OR) that replaced the former
+// Stage 2b. Rationale + mechanism-class history live in MasterReference /
+// NarrativeContract — not duplicated here.
 //
-// OUTPUT SCHEMA DECISION (Option B):
-// Top-level user-facing fields: score, diagnosis, binding_friction_explanation,
-//   direction. Frontend reads these directly.
-// Nested _internal block: demand_archetype, archetype_band, sub_position,
-//   sub_position_sum, binding_friction (full object), predicate_commitments
-//   (all 18). For logging, debugging, arithmetic validation, future use.
-// Current pipeline reading: Stage 2c reads only .score (matches existing
-//   Stage 2b pattern — Stage 2c synthesizes from Stage 2a packets, not
-//   from scoring-stage internals). Stage 3 reads only .score and Stage 2c's
-//   failure_risks output. Neither stage reads _internal.
-// Frontend reads: top-level score + three prose sentences. Never renders
-//   _internal enum strings (demand_archetype, sub_position, binding_friction.subtype)
-//   to users in raw form. If a "why this score" debug view is built,
-//   _internal can power it with translated language.
-// Logging/auditing/debugging: full _internal block. Validators can run against
-//   _internal to catch arithmetic drift (verify score matches
-//   lookup[demand_archetype][sub_position], verify sub_position_sum =
-//   SP-A.value + SP-B.value + SP-C.value). Consistency checks across reruns
-//   can compare _internal predicate_commitments to detect predicate drift.
-// Future Option C (deferred, viable): expose _internal.demand_archetype and
-//   _internal.binding_friction.subtype to Stage 2c for archetype-aware
-//   synthesis. Requires Stage 2c prompt update; not in V5.0 scope.
-// MO and OR mirror: MO mirrors this top-level shape (score + three prose fields)
-//   with monetization-specific _internal content. OR has its own four-prose-field
-//   shape (differentiation_basis_diagnosis, defensibility_diagnosis,
-//   binding_constraint_explanation, direction) reflecting its two-operation
-//   architecture; OR's _internal mirrors the Option B pattern with originality-
-//   specific reasoning artifacts. All three metrics emit wrapper key matching
-//   the ev key directly (market_demand, monetization, originality).
+// Input:  idea description + Stage 2a MD evidence packet (V5.0 shape)
+// Output: market_demand object —
+//   top-level (user-facing): score, diagnosis, binding_friction_explanation, direction
+//   nested _internal (traceability/validation, NOT user-facing): demand_archetype,
+//     archetype_band, sub_position, sub_position_sum, binding_friction,
+//     predicate_commitments (18)
 //
-// WHY THIS IS A REPLACEMENT FOR STAGE 2b MD:
-// Stage 2b's score-then-prose architecture produced a 17% spike rate that
-// V4S29-V4S33 patches could not eliminate. The disease was structural: model
-// formed a holistic gestalt, emitted a score matching the gestalt, then wrote
-// prose that rationalized the gestalt. Wide choice spaces at every decision
-// point produced rerun drift. Evidence transfer (category evidence treated as
-// target-specific) inflated scores.
-//
-// V5.0 REPLACES with predicate-driven architecture:
-//   - Six demand predicates with closed enums and INVALID ANSWERS lists
-//   - Three-field predicate output (level / evidence_cited / not_higher)
-//   - Mechanical archetype derivation from predicate commitments
-//   - Mechanical friction subtype selection via friction predicates
-//   - Three sub-position predicates producing three sub-positions per archetype
-//   - Arithmetic decimal computation from archetype band + sub-position
-//   - Case-specific prose with no archetype/friction/predicate labels exposed
-//   - B.5 target-specificity rule against evidence transfer
-//   - SP-B FRICTION_SURVIVAL offset matrix (prevents double-penalty for
-//     friction already evidenced as crossed)
-//
-// MECHANICAL DERIVATION PATTERN (like TC's base_score + adjustment_value):
-//   1. Model commits to 6 demand predicates with evidence
-//   2. Predicate combinations determine archetype (top-down lookup)
-//   3. Model commits to 9 friction predicates; tiebreaker rules select binding friction
-//   4. Model commits to 3 sub-position predicates
-//   5. Sub-position arithmetic: weighted sum → bucket → decimal anchor per archetype
-//   6. Final score is the decimal anchor (21 total decimal anchors across architecture)
-//   7. Prose is generated from the locked predicate/archetype/friction commitments
-//
-// The model MUST follow the derivation in order. The score is computed from
-// the predicates, not chosen freely. Prose describes the locked structure.
-//
-// KEY ARCHITECTURAL DIFFERENCES FROM STAGE 2b:
-//   - No score_basis templates (Stage 2b's wide choice space)
-//   - No primary_limiting_rule_id (replaced by friction predicate tiebreakers)
-//   - No override_evidence (replaced by B.5 target-specificity at predicate
-//     commitment time)
-//   - No applicable_rules array (replaced by mechanical predicate combinations)
-//   - Prose generated AFTER score is locked (no rationalization surface)
+// Consumers: Stage 2c + Stage 3 read .score only; frontend reads top-level
+//   score + prose (never raw _internal enums). No downstream stage reads
+//   _internal — it exists for logging, arithmetic validation, and the future
+//   explain-difference feature. Validators check
+//   score == lookup[demand_archetype][sub_position] and
+//   sub_position_sum == SP-A + SP-B + SP-C.
 
 export const STAGE_MD_SYSTEM_PROMPT = `You are an AI market demand evaluator. The user will give you their digital product idea plus a Stage 2a evidence packet containing facts about the market, competitors, and domain signals.
 

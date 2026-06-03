@@ -20,63 +20,20 @@ import { calculateOverallScore } from "../../../lib/services/scoring";
 // ============================================
 // MAIN API HANDLER — PAID TIER CHAINED PIPELINE
 // ============================================
-// Orchestrates: Keywords → Search → Stage 1 (Discover) → [Stage 2a + Stage TC in parallel] → Stage 2b-Adj → Stage 2b-Score → [V4S32 PROSECUTOR+REPAIR] → Stage 2c (Synthesis) → Stage 3 (Act) → Assembly
+// Orchestrates: Keywords → Search → Stage 1 (Discover) → [Stage 2a + Stage TC
+// in parallel] → [Stage MD + Stage MO + Stage OR scorers in parallel] →
+// Stage 2c (Synthesis) → Stage 3 (Act) → Assembly
 //
-// V4S32 PROSECUTOR + REPAIR LAYER (May 19-20, 2026):
-// New quality-control layer inserted between Stage 2b-Score and Stage 2c.
-// Audits whether each metric's explanation+adjudication survives adversarial
-// review by a packet-grounded prosecutor; if FAIL, runs a constrained repair
-// stage that regenerates score + explanation + score_adjudication; if the
-// repair re-prosecutes PASS, the repaired output replaces the original in ev.
-//
-// Validated across two probes (V4S31 + B10a): prosecutor 5/6 spike recall +
-// 23/231 (10%) clean B10a rate; repair 7/7 + 21/21 success, 0 double-fails.
-// See orchestrator file header + prompt-stage2b-prosecutor.js / -repair.js
-// for full calibration history.
-//
-// Architecture:
-//   - Sequential before Stage 2c (Stage 2c sees post-repair scores, not pre)
-//   - Per-metric parallelization within the layer (MD/MO/OR independent)
-//   - Repair regenerates score_adjudication too (not just prose) so the
-//     post-QC adjudication restored to the frontend payload reflects the
-//     corrected reasoning chain (not the flawed pre-repair one)
-//   - QC layer failures NEVER block the pipeline (safety-layer principle)
-//   - Feature-flagged via STAGE2B_QC_MODE = off | log_only | repair
-//     (defaults to 'repair' per locked architecture decision)
-//
-// Stage 2c boundary discipline (mirrors V4S31 score_adjudication strip):
-//   - Stage 2c NEVER sees quality_control metadata
-//   - Stage 2c eventually may see repaired score_adjudication (deferred
-//     to M3 — same Option 2 staging as V4S31)
-//   - quality_control restored at final assembly for frontend payload
-//
-// Supabase logging: every prosecutor invocation that produces a real verdict
-// (PASS / FAIL_REPAIRED / BORDERLINE / DOUBLE_FAIL / QC_UNAVAILABLE) is
-// logged fire-and-forget to public.stage2b_qc_events. Skipped metrics are
-// not logged. See migration file + log-qc-events.js for table schema.
-//
-// V4S31 TWO-CALL STAGE 2b (May 19, 2026):
-// Stage 2b is now physically separated into two sequential calls:
-//   Call 1 (Stage 2b-Adj): produces score_adjudication + evidence_strength.
-//     No score, no explanation. The model has no downstream score commitment
-//     to protect — adjudication is made honestly on packet evidence.
-//   Call 2 (Stage 2b-Score): receives Call 1's adjudication as locked
-//     structured input (mirrors Stage 2a → Stage 2b pattern). Produces
-//     score (constrained to score_basis range; code-side clamping enforces)
-//     and explanation (must reflect locked adjudication).
-//
-// Rationale: V4S30 externalized score_adjudication into Stage 2b's output
-// schema, achieving 100% structural compliance but only 1/4 watch zones
-// closed. Empirical analysis identified the failure mode: single-call
-// adjudication still allows the model to rationalize resolution=overridden
-// with actor-mismatched override evidence (the trigger_buyer_match_verified
-// disease on A3-class cases). Physical separation removes the score-anchoring
-// pressure that drives the rationalization.
-//
-// score_adjudication is preserved across the two calls and restored to the
-// final payload for the frontend (future popup feature). Stage 2c and
-// Stage 3 do NOT receive score_adjudication in V4S31 (Option 2 staging:
-// downstream pass-through is a follow-on session with separate verification).
+// V5.0 SCORING (replaces V4S31 two-call Stage 2b + V4S32 prosecutor/repair):
+// Three isolated metric scorers (MD/MO/OR) each read ONLY their own Stage 2a
+// packet and emit score as a mechanical lookup[archetype][sub_position] from
+// committed predicates, with prose generated after the score token. The former
+// two-call adjudicate→score flow and the prosecutor+repair QC layer are removed
+// entirely — the score-rationalization disease they targeted is structurally
+// unreachable when score is a lookup, not a generated choice. Each scorer's
+// full reasoning trail lives in a nested _internal block, stripped before
+// Stage 2c/3 and restored at the final payload boundary; downstream stages
+// never consume _internal.
 //
 // V4S28 S1+S2+S3 (Bundle B1):
 // Stage 2c (NEW) sits between Stage 2b and Stage 3, sequential. It synthesizes
@@ -128,11 +85,11 @@ export async function POST(request) {
       );
     }
 
-    // V4S32 — Generate evaluation correlation ID. Used as the join key for
-    // QC event logging (public.stage2b_qc_events.evaluation_id) and surfaced
-    // in the response so the frontend can use the same ID when persisting
-    // the evaluation to its own table. crypto.randomUUID is available in
-    // Node 14.17+ / all Next.js runtimes.
+    // Generate evaluation correlation ID, surfaced in the response so the
+    // frontend can use the same ID when persisting the evaluation to its own
+    // table. crypto.randomUUID is available in Node 14.17+ / all Next.js
+    // runtimes. (Pre-V5.0 this was also the join key for the QC-events table,
+    // removed with the prosecutor/repair layer.)
     const evaluationId = crypto.randomUUID();
 
     // Create a readable stream for SSE

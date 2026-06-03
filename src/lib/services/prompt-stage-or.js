@@ -1,144 +1,37 @@
 // ============================================
-// STAGE OR PROMPT — ORIGINALITY / DEFENSIBILITY (ISOLATED)
-// V1.0 ARCHITECTURAL DESIGN (May 27, 2026)
-// FINAL OUTPUT-CONTRACT VERSION (Option B schema split, MD/MO mirror)
+// STAGE OR PROMPT — ORIGINALITY / DEFENSIBILITY (ISOLATED)  [V5.0]
 // ============================================
-// Paid-tier chained pipeline: replaces OR scoring in Stage 2b cluster
-// Purpose: Score Originality / Defensibility from Stage 2a OR evidence packet
-// Input: Idea description + Stage 2a OR evidence packet
-// Output: originality object with top-level user-facing fields
-//         (score + 4 prose sentences) and nested _internal block for
-//         traceability/logging/debugging.
+// Role: scores Originality / Defensibility from the Stage 2a OR evidence packet. One
+// of the three isolated metric scorers (MD / MO / OR) that replaced the former Stage
+// 2b. Rationale + mechanism-class history live in MasterReference / NarrativeContract.
 //
-// OUTPUT SCHEMA DECISION (Option B, MD/MO mirror):
-// Top-level user-facing fields: score, differentiation_basis_diagnosis,
-//   defensibility_diagnosis, binding_constraint_explanation, direction.
-//   Frontend reads these directly. OR has FOUR prose fields (not three like
-//   MD/MO) because the two-operation architecture requires Operation 1
-//   (basis identification) and Operation 2 (defensibility assessment) to be
-//   surfaced separately.
-// Nested _internal block: originality_archetype, archetype_band, sub_position,
-//   sub_position_sum, components_committed, binding_constraint (full object
-//   with primary subtype + variant + evidence_cited + secondary + why_primary),
-//   predicate_commitments (all 8). For logging, debugging, validation, future use.
-// Current pipeline reading: Stage 2c reads only .score (matches MD/MO pattern).
-//   Stage 3 reads .score and Stage 2c-derived failure_risks. Neither stage
-//   reads _internal.
+// Core invariants (load-bearing):
+//   - Defensibility != novelty. OR scores defensibility; novelty signals are
+//     inadmissible unless they trace to a closed-list component.
+//   - Defensibility derives ONLY from a closed list of 6 components (proprietary_data,
+//     regulatory_certification, two_sided_liquidity_or_network_density,
+//     workflow_integration_depth, aggregated_workflow_signals, distribution_access_privilege).
+//     "Better UX / smarter prompts / team experience / first-mover" are NOT components.
+//   Both enforced in the prompt body; full statements in NarrativeContract.
 //
-// WHY THIS IS A REPLACEMENT FOR STAGE 2b OR:
-// Stage 2b's score-then-prose architecture produced score inflation and prose
-// rationalization. Defensibility cases were especially prone to founder-
-// claimed flywheels and "data network effects" inflating scores without
-// component evidence. The disease was structural: model formed a gestalt
-// from competitor counts and category-level signals, emitted a score, then
-// rationalized with prose. Wide choice spaces at every decision point produced
-// rerun drift.
+// Two-operation shape: OR separates Operation 1 (what is differentiated?) from
+//   Operation 2 (is it defensible?) — hence FOUR user-facing prose fields, not three.
 //
-// V1.0 REPLACES with predicate-driven architecture:
-//   - Five defensibility predicates with closed enums and INVALID ANSWERS lists
-//   - Three-field predicate output (level / evidence_cited / not_higher)
-//   - Six closed-list components (proprietary_data, regulatory_certification,
-//     two_sided_liquidity_or_network_density, workflow_integration_depth,
-//     aggregated_workflow_signals, distribution_access_privilege)
-//   - Mechanical archetype derivation from predicate commitments (A1-A6)
-//   - Mechanical exposure subtype selection via 4-step binding constraint
-//     hierarchy (acute > component-tied > score-relevant > fallback)
-//   - Three OR-native sub-position predicates (ARCHETYPE_FIT_STRENGTH,
-//     COMPONENT_OPERATIONAL_DEPTH, BINDING_EXPOSURE_RESOLUTION)
-//   - Arithmetic decimal computation from archetype band + sub-position
-//   - Case-specific prose with no archetype/exposure/predicate labels exposed
-//   - A6 four-evidence-requirement framework against false-flywheel inflation
-//   - A5-β no-flywheel discipline for static-defensibility cases
+// Input:  idea description + Stage 2a OR evidence packet
+// Output: originality object —
+//   top-level (user-facing): score, differentiation_basis_diagnosis,
+//     defensibility_diagnosis, binding_constraint_explanation, direction
+//   nested _internal (traceability/validation, NOT user-facing): originality_archetype,
+//     archetype_band, sub_position, sub_position_sum, components_committed,
+//     binding_constraint (primary subtype + variant + secondary + why_primary),
+//     predicate_commitments (8)
 //
-// TWO-OPERATION ARCHITECTURE (KEY DIVERGENCE FROM MD/MO):
-// OR uniquely separates Operation 1 (what is differentiated?) from Operation 2
-// (is the differentiation defensible?). MD measures one thing (adoption pull);
-// MO measures one thing (payment capture). OR measures two: differentiation
-// basis AND defensibility quality. Founders frequently confuse these — claiming
-// "we're different" (Operation 1) when asked "is it defensible?" (Operation 2),
-// or claiming "we have a moat" (Operation 2) when only Operation 1 is evidenced.
-// The 4-prose-field structure forces these to be surfaced separately.
-//
-// SACRED DISTINCTION (LOAD-BEARING):
-// Defensibility ≠ Novelty. A product can be highly original (no one else does
-// it this way) without being defensible (anyone can copy it cheaply). A product
-// can be highly defensible (regulated certification with multi-year approval
-// cycles) without being novel (everyone in the category needs the same cert).
-// OR scores DEFENSIBILITY, not novelty. Novelty signals are inadmissible as
-// defensibility evidence unless they trace to a closed-list component.
-//
-// CLOSED-LIST COMPONENT DISCIPLINE:
-// Defensibility derives from one of six components. If the packet does not
-// evidence at least one of these components (named, planned, or operational),
-// the case is in no_defensibility_component territory (A1). "Better UX,"
-// "smarter prompts," "faster execution," "team experience," "first-mover
-// timing," "category insight" are NOT defensibility components — they are
-// product/execution attributes that can be replicated by competitors at
-// comparable speed and cost.
-//
-// MECHANICAL DERIVATION PATTERN (like MD/MO):
-//   1. Model identifies named idea + enumerates component candidates from packet
-//   2. Model commits to 5 defensibility predicates with evidence
-//   3. Coherence filters fire (cascade rules, HARD_INVALIDs, CAPS)
-//   4. Predicate combinations determine archetype (top-down lookup A6 → A1)
-//   5. Model commits to 7 exposure subtype evidence checks
-//   6. 4-step binding constraint hierarchy selects primary + up to 2 secondary
-//   7. Model commits to 3 sub-position predicates
-//   8. Sub-position arithmetic: weighted sum → bucket → decimal anchor per archetype
-//   9. Final score is the decimal anchor (18 total decimal anchors)
-//   10. Prose is generated from the locked predicate/archetype/constraint commitments
-//
-// The model MUST follow the derivation in order. The score is computed from
-// the predicates, not chosen freely. Prose describes the locked structure.
-//
-// KEY ARCHITECTURAL DIFFERENCES FROM STAGE 2b OR:
-//   - No score_basis templates (Stage 2b's wide choice space)
-//   - No primary_limiting_rule_id (replaced by exposure subtype hierarchy)
-//   - No override_evidence (replaced by closed-list component anchoring at
-//     predicate commitment time)
-//   - No applicable_rules array (replaced by mechanical predicate combinations)
-//   - Prose generated AFTER score is locked (no rationalization surface)
-//
-// KEY DIVERGENCES FROM MD/MO:
-//   - Two-operation architecture (basis identification + defensibility) requires
-//     4 prose fields instead of 3
-//   - Closed-list of 6 components (MD/MO have no equivalent — adoption and
-//     payment are not component-decomposed)
-//   - Exposure subtypes have meaningful variants (e.g., platform_absorption_threat
-//     has incumbent_expansion vs adjacent_platform_expansion variants); MD/MO
-//     frictions/mechanisms are flat
-//   - Sub-position B labels are archetype-specific (A4's labels differ from
-//     A5's labels) because OR's component evidence semantics shift meaningfully
-//     across archetypes; MD/MO use uniform labels across archetypes
-//   - A6 requires FOUR specific evidence requirements (longitudinal data,
-//     widening competitive gap, feedback loop structure, competitor catch-up
-//     rate) — anti-inflation defense against false-flywheel claims
-//   - A5 has two patterns (A5-α compounding, A5-β static-regulatory) with
-//     different prose register rules (A5-β explicitly avoids flywheel language)
-//
-// MIRROR REQUIREMENT WITH MD V5.0 AND MO V1.0:
-// OR emits the same top-level shape (score + prose fields) and uses the same
-// 18-anchor decimal lookup table (A1 floor 1.0, A6 ceiling 8.5, identical
-// bucket boundaries to MO). The _internal block carries originality-specific
-// reasoning artifacts. Stage 2c can assemble all three metrics with uniform
-// parsing pattern.
-//
-// PIPELINE/FRONTEND CONTRACT (developer documentation, not in runtime prompt):
-// - Pipeline reads (Stage 2c, Stage 3): only top-level fields. Currently
-//   Stage 2c reads .score from this object; Stage 3 reads .score and
-//   Stage 2c-derived failure_risks. Neither reads _internal.
-// - Frontend reads: top-level score + four prose sentences. Never renders
-//   _internal enum strings to users in raw form.
-// - Logging/auditing/debugging: full _internal block. Validators can run
-//   against _internal to catch arithmetic drift — verify score matches
-//   lookup[originality_archetype][sub_position], verify sub_position_sum =
-//   SP-A.value + SP-B.value + SP-C.value, verify components_committed
-//   cardinality matches differentiation_basis level, verify variant
-//   compatibility per subtype-variant table, verify A6 four-evidence
-//   requirements when archetype = self_reinforcing_defensibility.
-// - 18-anchor decimal lookup table identical to MO V1.0: A1: 1.0/1.9/2.8;
-//   A2: 2.8/3.6/4.3; A3: 4.3/4.9/5.4; A4: 5.4/6.0/6.5; A5: 6.5/7.0/7.5;
-//   A6: 7.5/8.0/8.5.
+// Consumers: Stage 2c + Stage 3 read .score only; frontend reads top-level score +
+//   prose (never raw _internal enums). No downstream stage reads _internal. Validators
+//   check score == lookup[originality_archetype][sub_position], sub_position_sum ==
+//   SP-A + SP-B + SP-C, components_committed cardinality vs differentiation_basis level,
+//   variant compatibility, and A6 four-evidence presence. (18-anchor decimal lookup
+//   defined in the prompt body; identical grid to MO.)
 
 export const STAGE_OR_SYSTEM_PROMPT = `You are an AI defensibility evaluator. The user will give you their digital product idea plus a Stage 2a evidence packet containing facts about the market, competitors, and domain signals.
 

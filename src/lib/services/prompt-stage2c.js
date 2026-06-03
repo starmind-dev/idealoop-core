@@ -1,53 +1,18 @@
 // ============================================
 // STAGE 2c PROMPT — SYNTHESIS
 // ============================================
-// Paid-tier chained pipeline: Stage 2c
-// Purpose: Generate summary + failure_risks from idea, profile, Stage 1 evidence,
-//          Stage 2a packets, and Stage 2b scores.
-// Input: idea + profile + Stage 1 output + evidence packets + scores + evidence_strength
+// Role: post-scoring interpretive surface. Generates summary + failure_risks from
+//   idea, profile, Stage 1 evidence, Stage 2a packets, and the metric scores. It does
+//   NOT change scores — it synthesizes verdict + failure modes for the user.
+//   (Rationale + structural-session history in MasterReference / NarrativeContract.)
+//
+// Input:  idea + profile + Stage 1 output + evidence packets + metric scores + evidence_strength
 // Output: summary (string) + failure_risks (array of structured risk objects)
 //
-// CRITICAL: Stage 2c is a post-scoring interpretive surface. It does NOT change
-// scores. It synthesizes verdict + failure modes for the user.
-//
-// V4S29 STAGE 2c STRUCTURAL SESSION (2026-05-13): full reorganization addressing
-// 8 deferred B10a findings (F2, F14, F15, F16, F17, F18, F21, F22) plus Risk 5
-// multi-archetype templating discovered empirically. Replaces the V4S28 patch
-// structure with a 5-block architecture:
-//   Section 1 — Operational definitions (case-truth, Risk 3 decision procedure)
-//   Section 2 — Block A: Summary synthesis discipline (10 rows, 30 examples)
-//   Section 3 — Block B: Risk 1 + Risk 2 differentiation (7 rows, 11 examples)
-//   Section 4 — Block C: Risk 3 firing + archetype discipline (9 rows, 24 examples)
-//   Section 5 — Block D-prompt: Cross-output coherence (3 rows)
-//   Section 6 — Block E-prompt: Anti-template guardrails (2 rows)
-//   Section 7 — Output schema specification
-//
-// SCHEMA PRESERVATION: Risk 3 archetype enum stays A/B/C/D/E in JSON output.
-// Archetype A is internally split into 3 subtypes (A1/A2/A3) for prompt-level
-// evidence-divergence reasoning (the C4 cure mechanism for F2 templating), but
-// the JSON output emits "A" for all three subtypes. This preserves the existing
-// downstream contract: Stage 3 prompt continues to read archetype values from
-// the original A/B/C/D/E set; old test runners (b10a-gates.js, run-archetypes.js)
-// continue to work without modification; historical B10a baseline comparisons
-// stay clean.
-//
-// Empirical disease patterns targeted (May 5 / May 10 corpora):
-//   F2  — Risk 3 archetype A "Building X requires Y..." skeleton at 100%
-//   F14 — MAT3-partial profile collapse (binary insider/outsider, no partial bucket)
-//   F15 — Risk 3 firing rate stochasticity (69% → 80% target band)
-//   F16 — Risk 3 archetype distribution skew (A/B = 78-85% of fires)
-//   F17 — Summary "Your N years..." opener pattern (cured by Bundle 3/3.5 to 3%)
-//   F18 — Risk 1 "is increasingly consolidated" templating at 30%
-//   F21 — Summary length creep at 68% over 850 chars
-//   F22 — Free Risk 3 archetype=null asymmetry
-//   Risk 5 — Multi-archetype templating across B/C/D/E (100% per archetype)
-//
-// Verification harness: Layer 1 automated + manual hard gates per V4S29 Phase 3
-// specification; B10b cross-section narrative coherence deferred.
-//
-// FALLBACK IF VERIFICATION FAILS: Stage 2c sampler hardening (top_k=1, top_p=0.1)
-// per Methodology Principle 7, then per-archetype subtype splits if templating
-// emerges in B/C/D/E archetypes.
+// Output-contract invariant: Risk 3 archetype enum stays A/B/C/D/E in the JSON.
+//   Archetype A is internally split into A1/A2/A3 for prompt-level reasoning, but the
+//   JSON emits "A" for all three — preserving the Stage 3 read contract and existing
+//   test runners. Do not leak the subtypes into output.
 
 export const STAGE2C_SYSTEM_PROMPT = `You are an AI product idea synthesis specialist. You will receive:
 1. The user's idea and profile

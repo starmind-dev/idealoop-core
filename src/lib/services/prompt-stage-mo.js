@@ -1,99 +1,30 @@
 // ============================================
-// STAGE MO PROMPT — MONETIZATION POTENTIAL (ISOLATED)
-// V1.0 ARCHITECTURAL DESIGN (May 25, 2026)
-// MIRRORS STAGE MD V5.0 SHAPE WITH MO-SPECIFIC SUBSTANCE
+// STAGE MO PROMPT — MONETIZATION POTENTIAL (ISOLATED)  [V5.0]
 // ============================================
-// Paid-tier chained pipeline: replaces MO scoring in Stage 2b cluster
-// Purpose: Score Monetization Potential from Stage 2a MO evidence packet
-// Input: Idea description + Stage 2a MO evidence packet (V1.0 shape)
-// Output: monetization object with top-level user-facing fields
-//         (score + 3 prose sentences) and nested _internal block for
-//         traceability/logging/debugging.
+// Role: scores Monetization Potential from the Stage 2a MO evidence packet. One
+// of the three isolated metric scorers (MD / MO / OR) that replaced the former
+// Stage 2b. Rationale + mechanism-class history live in MasterReference /
+// NarrativeContract — not duplicated here.
 //
-// OUTPUT SCHEMA DECISION (mirrors MD V5.0 Option B):
-// Top-level user-facing fields: score, diagnosis,
-//   binding_payment_constraint_explanation, direction. Frontend reads these.
-// Nested _internal block: monetization_archetype, archetype_band, sub_position,
-//   sub_position_sum, binding_payment_constraint (full object with primary
-//   and secondary mechanisms), predicate_commitments. For logging, debugging,
-//   arithmetic validation.
-// Current pipeline reading: Stage 2c reads only .score. Stage 3 reads .score
-//   and Stage 2c's failure_risks output. Neither reads _internal.
-// Frontend reads: top-level score + three prose sentences. Never renders
-//   _internal enum strings to users in raw form.
-// Logging/auditing/debugging: full _internal block. Validators can run against
-//   _internal to catch arithmetic drift (verify score matches
-//   lookup[monetization_archetype][sub_position], verify sub_position_sum =
-//   SP-A.value + SP-B.value + SP-C.value).
-// MD/MO/OR mirror: this schema matches MD V5.0's top-level shape with
-//   monetization-specific _internal content. OR has its own four-prose-field
-//   shape reflecting its two-operation architecture. All three metrics emit
-//   wrapper key matching the ev key directly (market_demand, monetization,
-//   originality).
+// Core invariant (load-bearing): business-model articulation != payment-capture
+//   evidence. MO scores the specific named payer paying the specific price through
+//   the specific payment shape — not a coherent revenue model the founder describes.
+//   Enforced in the prompt body; full statement in NarrativeContract.
 //
-// WHY THIS REPLACES STAGE 2b MO:
-// Stage 2b's score-then-prose architecture produced same disease in MO that
-// V4S29-V4S33 patches could not eliminate in MD. The MO-specific disease was
-// business-model articulation rationalized as payment-capture evidence:
-// founder-asserted ROI, category-level pricing, incumbent existence, and
-// free-tier adoption all inflated MO scores. The five documented MO disease
-// vectors are the named historical failures the new architecture defends.
+// Scoring uses MO-specific payment-capture predicates + archetypes + binding-mechanism
+//   logic defined below; score is lookup-derived (not chosen) and validator-checked.
 //
-// V1.0 REPLACES with predicate-driven architecture:
-//   - Five payment-capture predicates with closed enums and INVALID ANSWERS
-//   - Three-field predicate output (level / evidence_cited / not_higher)
-//   - Mechanical archetype derivation from predicate commitments (top-down)
-//   - Mechanical binding mechanism selection via 4-step hierarchy
-//   - Primary + up to 2 secondary binding mechanisms (MO frequently has
-//     multiple genuinely-present payment constraints, unlike MD where
-//     friction is typically singular)
-//   - Three sub-position predicates producing three sub-positions per archetype
-//   - Arithmetic decimal computation from archetype band + sub-position
-//   - Case-specific prose with no archetype/mechanism/predicate labels exposed
-//   - B.5 payer-specificity rule against payment evidence transfer
-//   - Triple-match-plus-price-class requirement (payer + job + shape + price class)
-//   - SP-B PAYMENT_CAPTURE bounds matrix (prevents double-penalty for
-//     binding mechanisms already evidenced as crossed)
-//   - Sacred distinction: business-model articulation ≠ payment-capture evidence
+// Input:  idea description + Stage 2a MO evidence packet
+// Output: monetization object —
+//   top-level (user-facing): score, diagnosis, binding_payment_constraint_explanation, direction
+//   nested _internal (traceability/validation, NOT user-facing): monetization_archetype,
+//     archetype_band, sub_position, sub_position_sum, binding_payment_constraint
+//     (primary + up to 2 secondary), predicate_commitments
 //
-// SACRED DISTINCTION (load-bearing for all of MO):
-// Business-model articulation (a coherent revenue model the founder describes)
-// is NOT payment-capture evidence (the specific named payer paying the specific
-// price through the specific payment shape). The former is hypothesis; MO scores
-// the latter. This distinction underlies every predicate and every cross-level
-// rule. The architecture is explicitly designed to prevent the model from
-// rationalizing business-model coherence into payment-capture grounding.
-//
-// MECHANICAL DERIVATION PATTERN (like MD's, applied to MO):
-//   1. Model commits to 5 payment-capture predicates with evidence
-//   2. Predicate combinations determine archetype (top-down lookup)
-//   3. Model commits to 9 binding mechanism evidence checks; 4-step hierarchy
-//      selects primary binding mechanism (with up to 2 secondary)
-//   4. Model commits to 3 sub-position predicates
-//   5. Sub-position arithmetic: weighted sum → bucket → decimal anchor per archetype
-//   6. Final score is the decimal anchor (18 total decimal anchors across architecture)
-//   7. Prose is generated from the locked predicate/archetype/mechanism commitments
-//
-// The model MUST follow the derivation in order. The score is computed from
-// the predicates, not chosen freely. Prose describes the locked structure.
-//
-// KEY ARCHITECTURAL DIFFERENCES FROM MD:
-//   - 5 predicates (not 6) — MO doesn't need MD's separate trigger predicate;
-//     payment-capture evidence has different dimensions than adoption-pull evidence
-//   - 6 archetypes (not 7) — MO archetypes span 1.0-8.5 (not 3.0-8.5);
-//     MO can land lower than MD because no-payment-evidence is genuinely
-//     different from no-demand-evidence and warrants a wider lower band
-//   - Binding mechanism has primary + up to 2 secondary (not single binding friction);
-//     MO frequently has multiple genuinely-present payment constraints
-//   - 5 cross-level rules embedded across predicates (incumbent-existence x2,
-//     free-to-paid distinction, negative payer-side evidence ceiling,
-//     workflow-observability)
-//   - Triple-match-plus-price-class requirement (MD has triple-match;
-//     MO adds price-class as fourth dimension because comparable shape
-//     at different price class is not comparable payment evidence)
-//   - Mechanism-specific signals (marketplace liquidity, freemium conversion,
-//     regulated payment flow, multi-party payment split) surface specific
-//     evidence types beyond the 5 generic predicate dimensions
+// Consumers: Stage 2c + Stage 3 read .score only; frontend reads top-level score +
+//   prose (never raw _internal enums). No downstream stage reads _internal. Validators
+//   check score == lookup[monetization_archetype][sub_position] and
+//   sub_position_sum == SP-A + SP-B + SP-C.
 
 export const STAGE_MO_SYSTEM_PROMPT = `You are an AI monetization potential evaluator. The user will give you their digital product idea plus a Stage 2a evidence packet containing facts about the market, competitors, and domain signals.
 

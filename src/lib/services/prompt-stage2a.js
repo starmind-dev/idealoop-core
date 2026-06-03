@@ -1,71 +1,29 @@
 // ============================================
 // STAGE 2a PROMPT — EVIDENCE EXTRACTION (V5.0)
 // ============================================
-// Paid-tier chained pipeline: Stage 2a
-// Purpose: Extract metric-bounded evidence packets from Stage 1 data
-// Input: Idea + Stage 1 output (competitors, domain flags, classification).
-//        Profile is NOT injected — Stage 2a is profile-blind per V4S9
-//        quarantine. Route-level strip enforced in V4S28 B6.
-// Output: THREE separate evidence packets (MD, MO, OR) + top-level signals
-//         (sparse_input_triggered, evidence_strength, domain_flags) —
-//         no scores, no interpretation.
+// Role: quarantine / sorter layer. Extracts Stage 1 data into three metric-bounded
+//   evidence packets (MD, MO, OR) so each downstream scorer reads ONLY its own
+//   bounded evidence — physically preventing a holistic impression from entering the
+//   scoring step. Sorter, NOT analyst: it categorizes facts, it does not interpret
+//   them for scoring. (Rationale in MasterReference / NarrativeContract.)
 //
-// TC is scored in a separate isolated call that never sees Stage 1 output.
+// Input:  idea + Stage 1 output (competitors, domain flags, classification). Profile
+//         is NOT injected — Stage 2a is profile-blind (V4S9 quarantine; route-level
+//         strip in B6). TC is scored in a separate isolated call.
+// Output: three evidence packets (MD/MO/OR), each with the (unchanged) packet shape —
+//         admissible_facts + strongest_positive + strongest_negative +
+//         unresolved_uncertainty + anchor_status; no scores, no interpretation.
+//   Plus top-level derived emissions (post-reasoning, emit-only — the 8 packet rows
+//     are the only reasoning surface): sparse_input_triggered (bool); evidence_strength
+//     {level, reason, thin_dimensions} (NEW in V5.0; consumed by Stage 2c summary +
+//     Stage 3 Specification cascade); domain_flags (5 closed-list bools).
+//   Per-packet derived: anchor_status; md_binding_friction_named (MD);
+//     mo_binding_payment_constraint_named (MO); or_components_evidenced +
+//     or_binding_constraint_named (OR). Each binding/component emission is a coherence
+//     anchor to the downstream scorer's commitment — never a pre-classification.
 //
-// This is a QUARANTINE LAYER. Its job is to SEPARATE evidence into metric-specific
-// packets so that the downstream metric scorers each score from their own bounded
-// evidence only.
-//
-// V5.0 PIPELINE (NEW SCORER ARCHITECTURE): Stage 2a now feeds three SEPARATE
-// metric scorer calls — Stage MD (prompt-stage-md.js), Stage MO
-// (prompt-stage-mo.js), Stage OR (prompt-stage-or.js) — replacing the former
-// two-call Stage 2b (adjudicate + score) plus prosecutor/repair QC machinery,
-// all removed in the new pipeline. Each scorer reads its own packet from this
-// stage's output. The packet OUTPUT SHAPE (admissible_facts + strongest_positive
-// + strongest_negative + unresolved_uncertainty + anchor_status) is unchanged;
-// what changed is the per-packet admissibility discipline (Row 1/2/3 refined per
-// metric) and the derived-emission set.
-//
-// WHY THIS EXISTS: When a single call reads all Stage 1 evidence and scores all
-// metrics, the model forms one holistic impression and carries it into every score.
-// Prompt rules saying "ignore X for metric Y" cannot prevent this — the impression
-// is already formed. This stage physically prevents holistic impression from entering
-// the scoring step by delivering only admissible evidence per metric.
-//
-// CRITICAL: Stage 2a is a sorter, not an analyst. It extracts and categorizes facts.
-// It does NOT interpret what those facts mean for scoring. The metric scorers do that.
-//
-// V4S29 STRUCTURAL SESSION LOCK: This prompt is organized as an 8-row × 3-packet
-// rigor template. The rows define disciplines that apply across the three packets
-// (MD, MO, OR); per-packet content varies but the rule shape is uniform. Row
-// interfaces are designed for non-redundant, sequential operation:
-//   Row 1 (packet definition + negations) → Row 2 (admissibility dimensions)
-//   → Row 3 (primary-anchor qualifier) → Row 4 (tag selection priority)
-//   → Row 5 (anchor selection rank) → Row 6 (uncertainty lens discipline)
-//   → Row 7 (fact-density discipline) → Row 8 (cross-packet verification pass).
-//
-// Architectural invariants preserved: profile-blindness (V4S9+B6), three-trigger
-// sparse-input cascade (V4S20+B5), locked 5-tag source space (V4S20+B5+B6),
-// MO PACKET SPARSE-INPUT RULE (V4S28 B5), JSON output shape, packet quarantine.
-//
-// V5.0 DERIVED-FIELD EMISSION PASS: After the 8-row packet construction, emit
-// derived fields surfacing state already committed. Top-level: sparse_input_triggered
-// (boolean), evidence_strength ({level, reason, thin_dimensions} — NEW in V5.0,
-// produced here now that the old Stage 2b-Adj is removed; consumed by Stage 2c
-// summary mode + Stage 3 Specification cascade), domain_flags (5 closed-list
-// booleans). Per-packet: anchor_status (MD/MO/OR), md_binding_friction_named
-// (MD only), mo_binding_payment_constraint_named (MO only), or_components_evidenced
-// + or_binding_constraint_named (OR only — these REPLACE the removed legacy
-// safeguard/replication-barrier emissions). Each binding/component emission is a
-// coherence anchor between the packet's strongest signal and the downstream
-// scorer's commitment — never a pre-classification. These are POST-REASONING
-// emissions; the 8 rows remain the only reasoning surface.
-//
-// V5.0 architectural invariant: The 8 rows of packet construction (Row 1
-// definition through Row 8 cross-packet verification) remain the only
-// reasoning surface. The derived-field emission pass is a post-reasoning
-// emit-only block; it does not add new analyses or new judgment calls.
-// Profile-blindness and sorter-not-analyst disciplines are preserved.
+// Feeds the three isolated scorers (prompt-stage-md/mo/or.js). Organized internally as
+//   an 8-row x 3-packet rigor template (rows defined in the prompt body).
 
 export const STAGE2A_SYSTEM_PROMPT = `You are an evidence extraction system. You will receive:
 1. A user's AI product idea
