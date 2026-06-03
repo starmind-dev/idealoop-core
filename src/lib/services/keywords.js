@@ -1,4 +1,28 @@
 import client from "./anthropic-client";
+// ============================================
+// VERIFICATION FIXTURE HOOK (June 2, 2026)
+// ============================================
+// Caches extractKeywords' output keyed by ideaText, gated by
+// IDEALOOP_USE_FIXTURES=1 (same Bundle 3.75 pattern as github.js / serper.js).
+//
+// Why: Haiku keyword extraction is NOT deterministic at temperature=0 on
+// dense, multi-clause inputs — the tail keywords (positions 3-5) churn
+// run-to-run (empirically ~15% of queries per pass on the v50 bank). Because
+// the search fixtures are keyed by the query STRING, a drifted query is a
+// guaranteed cache miss -> live search -> silent un-freeze. Freezing the
+// keyword output upstream stabilizes the queries so the search cache holds.
+// Supersedes the "Not cached: keyword extraction (deterministic)" note in
+// fixture-store.js, which was a 2-run spot check that landed on stable cases.
+//
+// PRODUCTION SAFETY: when IDEALOOP_USE_FIXTURES is unset (Vercel / normal
+// `npm run dev`), readFixture returns null and writeFixture is a silent no-op
+// that never touches the filesystem — extractKeywords behaves byte-for-byte as
+// before (live Haiku, live queries, live search). Real users are unaffected.
+// Only the successful-response paths (PASS / rescue / gate-FAIL) are cached;
+// the Haiku-error fallback is intentionally NOT cached, so a transient error
+// is never frozen into a fixture.
+// ============================================
+import { readFixture, writeFixture, isFixtureMode } from "./fixture-store.js";
 
 // ============================================
 // KEYWORD EXTRACTION + SPECIFICITY GATE (Claude Haiku)
@@ -310,6 +334,14 @@ function buildRescueKeywords(input) {
 
 export async function extractKeywords(ideaText) {
   try {
+    // Verification freeze: return cached keyword output if present. No-op in
+    // production — readFixture returns null whenever fixtures are disabled, so
+    // the live Haiku call below runs exactly as before.
+    if (isFixtureMode()) {
+      const cached = readFixture("keywords", ideaText);
+      if (cached) return cached;
+    }
+
     const response = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 400,
@@ -352,14 +384,18 @@ export async function extractKeywords(ideaText) {
       if (shouldOverrideCollapseFalseReject(ideaText, missingElements)) {
         // Override to PASS shape. Synthesize keywords from input since Haiku
         // didn't return any (it hit the FAIL branch).
-        return buildRescueKeywords(ideaText);
+        const rescueResult = buildRescueKeywords(ideaText);
+        if (isFixtureMode()) writeFixture("keywords", ideaText, rescueResult);
+        return rescueResult;
       }
 
-      return {
+      const failResult = {
         specificity_insufficient: true,
         missing_elements: missingElements,
         message: SPECIFICITY_FAIL_MESSAGE,
       };
+      if (isFixtureMode()) writeFixture("keywords", ideaText, failResult);
+      return failResult;
     }
 
     // PASS path — extract keywords + build queries
@@ -384,13 +420,15 @@ export async function extractKeywords(ideaText) {
     const serperQuery1 = keywords.slice(0, 3).join(" ") + " app OR startup";
     const serperQuery2 = keywords.slice(1, 4).join(" ") + " software OR product";
 
-    return {
+    const passResult = {
       keywords,
       githubQuery1,
       githubQuery2,
       serperQuery1,
       serperQuery2,
     };
+    if (isFixtureMode()) writeFixture("keywords", ideaText, passResult);
+    return passResult;
   } catch (error) {
     console.error("Keyword extraction failed:", error);
     // Fallback: heuristic keyword extraction. Returns a PASS-shape object so

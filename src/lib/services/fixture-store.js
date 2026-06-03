@@ -39,7 +39,7 @@ import crypto from "crypto";
 const FIXTURE_DIR = path.join(process.cwd(), "runners", "fixtures", "data");
 
 export function isFixtureMode() {
-  return process.env.IDEALOOP_USE_FIXTURES === "1";
+  return process.env.IDEALOOP_USE_FIXTURES === "1" && process.env.NODE_ENV !== "production";
 }
 
 function fixturePath(source, query) {
