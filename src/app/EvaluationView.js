@@ -16,6 +16,7 @@ import {
   BlurGate,
   PreviewBanner,
 } from "./components";
+import MetricProseDetail from "./MetricProseDetail";
 
 export default function EvaluationView({
   // Screen
@@ -653,86 +654,43 @@ export default function EvaluationView({
                       )}
                     </Card>
 
-                    {/* ===== PROSE CARD ===== */}
-                    <Card style={{ padding: "32px 32px 24px", marginBottom: 16 }} t={t}>
-                      {/* MD prose */}
-                      <div style={{ marginBottom: 26 }}>
-                        {renderProseSection({
-                          name: "Market Demand",
-                          score: ev.market_demand.score,
-                          weight: "37.5% weight",
-                          explanation: ev.market_demand.explanation,
-                          notes: [
-                            ev.market_demand.geographic_note,
-                            ev.market_demand.trajectory_note,
-                          ].filter(Boolean),
-                          colorFn: getScoreColor,
-                        })}
-                      </div>
+                    {/* ===== PER-METRIC CARDS (one card each, separated) ===== */}
+                    <Card style={{ padding: "26px 30px", marginBottom: 14 }} t={t}>
+                      <MetricProseDetail
+                        metricKey="market_demand"
+                        metric={ev.market_demand}
+                        name="Market Demand"
+                        weight="37.5% weight"
+                        notes={[ev.market_demand.geographic_note, ev.market_demand.trajectory_note]}
+                        t={t}
+                      />
+                    </Card>
 
-                      {/* MO prose */}
-                      <div style={{ marginBottom: 26 }}>
-                        {!isGated ? (
-                          renderProseSection({
-                            name: ev.monetization.label || "Monetization Potential",
-                            score: ev.monetization.score,
-                            weight: "31.25% weight",
-                            explanation: ev.monetization.explanation,
-                            colorFn: getScoreColor,
-                          })
-                        ) : (
-                          // Gated free-preview: pill header only, no explanation
-                          <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
-                            <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0, color: t.text }}>
-                              {ev.monetization.label || "Monetization Potential"}
-                            </h3>
-                            <span style={{
-                              padding: "2px 8px",
-                              background: `${getScoreColor(ev.monetization.score)}1A`,
-                              borderRadius: 100,
-                              fontSize: 11,
-                              color: getScoreColor(ev.monetization.score),
-                              fontWeight: 600,
-                              fontFamily: "monospace",
-                            }}>
-                              {ev.monetization.score.toFixed(1)}/10
-                            </span>
-                            <span style={{ fontSize: 11, color: t.mut }}>31.25% weight</span>
-                          </div>
-                        )}
-                      </div>
+                    <Card style={{ padding: "26px 30px", marginBottom: 14 }} t={t}>
+                      <MetricProseDetail
+                        metricKey="monetization"
+                        metric={ev.monetization}
+                        name={ev.monetization.label || "Monetization Potential"}
+                        weight="31.25% weight"
+                        isGated={isGated}
+                        t={t}
+                      />
+                    </Card>
 
-                      {/* OR prose */}
-                      <div style={{ marginBottom: 0 }}>
-                        {!isGated ? (
-                          renderProseSection({
-                            name: "Originality",
-                            score: ev.originality.score,
-                            weight: "31.25% weight",
-                            explanation: ev.originality.explanation,
-                            colorFn: getScoreColor,
-                          })
-                        ) : (
-                          <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
-                            <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0, color: t.text }}>Originality</h3>
-                            <span style={{
-                              padding: "2px 8px",
-                              background: `${getScoreColor(ev.originality.score)}1A`,
-                              borderRadius: 100,
-                              fontSize: 11,
-                              color: getScoreColor(ev.originality.score),
-                              fontWeight: 600,
-                              fontFamily: "monospace",
-                            }}>
-                              {ev.originality.score.toFixed(1)}/10
-                            </span>
-                            <span style={{ fontSize: 11, color: t.mut }}>31.25% weight</span>
-                          </div>
-                        )}
-                      </div>
+                    <Card style={{ padding: "26px 30px", marginBottom: 14 }} t={t}>
+                      <MetricProseDetail
+                        metricKey="originality"
+                        metric={ev.originality}
+                        name="Originality"
+                        weight="31.25% weight"
+                        isGated={isGated}
+                        t={t}
+                      />
+                    </Card>
 
-                      {/* EXECUTION CONTEXT divider */}
-                      <div style={{ margin: "36px 0 24px" }}>
+                    {/* TC card — execution context, not in the overall */}
+                    <Card style={{ padding: "26px 30px", marginBottom: 16 }} t={t}>
+                      <div style={{ margin: "0 0 22px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                           <div style={{ height: "0.5px", flex: 1, background: t.divider }} />
                           <div style={{ fontSize: 9, color: t.mut, letterSpacing: "1.2px", fontWeight: 600 }}>
@@ -742,53 +700,41 @@ export default function EvaluationView({
                         </div>
                       </div>
 
-                      {/* TC floating tinted container — extends past prose edges
-                          via negative margins; content stays aligned with metric
-                          headings above via internal padding. */}
-                      <div style={{
-                        background: t.surfAlt,
-                        borderRadius: 8,
-                        padding: "22px 16px",
-                        margin: "0 -16px",
-                      }}>
-                        <div style={{ padding: "0 16px" }}>
-                          {!isGated ? (
-                            renderProseSection({
-                              name: "Technical Complexity",
-                              score: ev.technical_complexity.score,
-                              subLabel: "build difficulty",
-                              explanation: [
-                                ev.technical_complexity.base_score_explanation,
-                                ev.technical_complexity.adjustment_explanation,
-                                ev.technical_complexity.explanation,
-                              ].filter(Boolean).join(" "),
-                              notes: ev.technical_complexity.incremental_note
-                                ? [ev.technical_complexity.incremental_note]
-                                : null,
-                              colorFn: getTcColor,
-                            })
-                          ) : (
-                            <>
-                              <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
-                                <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0, color: t.text }}>Technical Complexity</h3>
-                                <span style={{
-                                  padding: "2px 8px",
-                                  background: `${getTcColor(ev.technical_complexity.score)}1A`,
-                                  borderRadius: 100,
-                                  fontSize: 11,
-                                  color: getTcColor(ev.technical_complexity.score),
-                                  fontWeight: 600,
-                                  fontFamily: "monospace",
-                                }}>
-                                  {ev.technical_complexity.score.toFixed(1)}/10
-                                </span>
-                                <span style={{ fontSize: 11, color: t.mut }}>build difficulty</span>
-                              </div>
-                              <GateCTA text="Unlock full metric analysis — including your personalized technical assessment" t={t} />
-                            </>
-                          )}
-                        </div>
-                      </div>
+                      {!isGated ? (
+                        renderProseSection({
+                          name: "Technical Complexity",
+                          score: ev.technical_complexity.score,
+                          subLabel: "build difficulty",
+                          explanation: [
+                            ev.technical_complexity.base_score_explanation,
+                            ev.technical_complexity.adjustment_explanation,
+                            ev.technical_complexity.explanation,
+                          ].filter(Boolean).join(" "),
+                          notes: ev.technical_complexity.incremental_note
+                            ? [ev.technical_complexity.incremental_note]
+                            : null,
+                          colorFn: getTcColor,
+                        })
+                      ) : (
+                        <>
+                          <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+                            <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0, color: t.text }}>Technical Complexity</h3>
+                            <span style={{
+                              padding: "2px 8px",
+                              background: `${getTcColor(ev.technical_complexity.score)}1A`,
+                              borderRadius: 100,
+                              fontSize: 11,
+                              color: getTcColor(ev.technical_complexity.score),
+                              fontWeight: 600,
+                              fontFamily: "monospace",
+                            }}>
+                              {ev.technical_complexity.score.toFixed(1)}/10
+                            </span>
+                            <span style={{ fontSize: 11, color: t.mut }}>build difficulty</span>
+                          </div>
+                          <GateCTA text="Unlock full metric analysis — including your personalized technical assessment" t={t} />
+                        </>
+                      )}
                     </Card>
                   </>
                 );

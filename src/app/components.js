@@ -42,7 +42,7 @@ export const T = {
   },
   dark: {
     mode: "dark",
-    bg: "#0a0a0a", surface: "rgba(20,20,20,0.95)", surfAlt: "rgba(30,30,30,0.8)",
+    bg: "#0a0d13", surface: "#0e1117", surfAlt: "rgba(30,30,30,0.8)",
     border: "rgba(55,55,55,0.4)", text: "#f0f0f0", sec: "#a0a0a0", mut: "#666666",
     shadow: "0 2px 8px rgba(0,0,0,0.4)",
     headerBg: "rgba(8,8,8,0.97)", headerBorder: "rgba(55,55,55,0.3)",
