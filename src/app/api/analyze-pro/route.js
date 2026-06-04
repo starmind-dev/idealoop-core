@@ -15,7 +15,7 @@ import { STAGE_OR_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage-or";
 import { STAGE2C_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage2c";
 import { STAGE_TC_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage-tc";
 import { STAGE3_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage3";
-import { calculateOverallScore } from "../../../lib/services/scoring";
+import { calculateOverallScore, computeMoDisplayScore } from "../../../lib/services/scoring";
 
 // ============================================
 // MAIN API HANDLER — PAID TIER CHAINED PIPELINE
@@ -840,6 +840,22 @@ ${JSON.stringify({ evaluation: ev })}`;
             if (preservedInternal[metricKey] && ev[metricKey]) {
               ev[metricKey]._internal = preservedInternal[metricKey];
             }
+          }
+
+          // V5.10 — MO FINE DISPLAY SCORE (code-side, frontend-only)
+          // Computed HERE, at final assembly: AFTER overall_score, AFTER Stage 2c,
+          // AFTER Stage 3, AFTER the _internal restore above. It is therefore a
+          // pure final decoration — it cannot reach calculateOverallScore, Stage
+          // 2c's overall_score band gates, or Stage 3's "low MD or MO < 5.0"
+          // modifier, all of which read mo.score (left untouched). The model
+          // commits MO judgment (archetype + SP levels) and prose; code computes
+          // the finer monetization number from those committed predicates. Falls
+          // back to mo.score on override / arithmetic-inconsistency / missing
+          // _internal (see computeMoDisplayScore). Frontend renders
+          // display_score ?? score. MD and OR are intentionally NOT fine-scored
+          // (MD is multi-axis; OR is an honest-equivalence floor).
+          if (ev.monetization) {
+            ev.monetization.display_score = computeMoDisplayScore(ev.monetization);
           }
 
           // SANITY CHECK REMOVED (V5.0): the old heuristic flagged
