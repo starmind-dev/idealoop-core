@@ -15,7 +15,7 @@ import { STAGE_OR_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage-or";
 import { STAGE2C_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage2c";
 import { STAGE_TC_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage-tc";
 import { STAGE3_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage3";
-import { calculateOverallScore, computeMoDisplayScore } from "../../../lib/services/scoring";
+import { calculateOverallScore, computeMoDisplayScore, computeMoOverrideTrace } from "../../../lib/services/scoring";
 
 // ============================================
 // MAIN API HANDLER — PAID TIER CHAINED PIPELINE
@@ -856,6 +856,22 @@ ${JSON.stringify({ evaluation: ev })}`;
           // (MD is multi-axis; OR is an honest-equivalence floor).
           if (ev.monetization) {
             ev.monetization.display_score = computeMoDisplayScore(ev.monetization);
+          }
+
+          // V5.9 (12b) — EXPLICIT MO OVERRIDE TRACE (code-side, into _internal)
+          // When a bucket-changing override fired (PRIORITY_PULL / GLOBAL_SP_CAP),
+          // record it explicitly in _internal.override_applied so the override is
+          // TRACEABLE rather than a silent score move the validator reads as
+          // off-lookup, and so the explain-difference feature can surface WHY the
+          // bucket moved. Computed from committed SP values only — it does NOT read
+          // or rewrite the model's declared sub_position (no silent relabeling);
+          // downstream reads effective_bucket = override_applied?.final_bucket ??
+          // sub_position. null when no override fired or _internal is absent. Same
+          // override logic as the display score (shared computeMoOverrideTrace), so
+          // the two can never disagree.
+          if (ev.monetization && ev.monetization._internal) {
+            ev.monetization._internal.override_applied =
+              computeMoOverrideTrace(ev.monetization);
           }
 
           // SANITY CHECK REMOVED (V5.0): the old heuristic flagged

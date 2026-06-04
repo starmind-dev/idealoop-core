@@ -121,6 +121,56 @@ function crosses5(a, b) {
   return (a < 5.0 && b >= 5.0) || (a >= 5.0 && b < 5.0);
 }
 
+// ── OVERRIDE TRACE (12b) — single source of truth for MO's bucket overrides ──
+// The MO prompt has exactly two bucket-changing overrides (verbatim, prompt
+// lines 597-601). This function is the ONE place they are encoded; the
+// diagnostic below consumes it, and route.js writes its result into
+// `_internal.override_applied` at assembly so the override is EXPLICIT and
+// TRACEABLE rather than a silent score move the validator reads as off-lookup.
+//
+// It is computed purely from the committed SP values + primary mechanism — it
+// does NOT read the model's declared sub_position, so it stays correct even
+// when the model failed to reconcile sub_position to the override (the 12b
+// defect). We never rewrite sub_position; we record the override instead, so
+// downstream reads effective_bucket = override?.final_bucket ?? sub_position.
+//
+// Returns null when no override fired, or when _internal/SP is absent/malformed
+// (graceful — there is nothing to trace).
+export function computeMoOverrideTrace(mo) {
+  const internal = mo?._internal;
+  const sp = internal?.predicate_commitments?.sub_position_predicates;
+  if (!internal || !sp) return null;
+
+  const spA = sp.spA_positive_evidence_directness?.value;
+  const spB = sp.spB_payment_capture_confidence?.value;
+  const spC = sp.spC_score_relevant_corroboration?.value;
+  if (!isFiniteInt(spA) || !isFiniteInt(spB) || !isFiniteInt(spC)) return null;
+
+  const arithmeticBucket = moBucketFromSum(spA + spB + spC);
+  const mechanism = internal.binding_payment_constraint?.primary_mechanism;
+
+  // PRIORITY-BASED PULL: SP-B = critical_unresolved (-2) AND arithmetic middle → lower.
+  if (spB === -2 && arithmeticBucket === "middle") {
+    return {
+      rule: "PRIORITY_PULL",
+      arithmetic_bucket: "middle",
+      final_bucket: "lower",
+      trigger: "spB_critical_unresolved",
+    };
+  }
+  // GLOBAL SP RULE: none_or_minimal mechanism AND SP-A weak/concrete (<=1) AND
+  // arithmetic upper → cannot reach upper; cap at middle.
+  if (mechanism === "none_or_minimal" && spA <= 1 && arithmeticBucket === "upper") {
+    return {
+      rule: "GLOBAL_SP_CAP",
+      arithmetic_bucket: "upper",
+      final_bucket: "middle",
+      trigger: "none_or_minimal_mechanism_weak_spA",
+    };
+  }
+  return null;
+}
+
 // ── DIAGNOSTIC CORE ──────────────────────────────────────────────────────
 // Single source of truth for the MO fine score. Returns the full breakdown so
 // the production wrapper (computeMoDisplayScore) and the migration-decision
@@ -175,26 +225,16 @@ export function computeMoScoreDiagnostic(mo) {
   // the model's declared sub_position_sum.
   const sum = spA + spB + spC;
 
-  // Raw bucket, then the two bucket-changing overrides, verbatim from prompt.
+  // Raw bucket, then apply the bucket-changing overrides via the SHARED trace
+  // function (single source of truth — see computeMoOverrideTrace). This is the
+  // same override the explicit _internal.override_applied field records, so the
+  // display score and the traced override can never disagree.
   // (ANTI-DOUBLE-PENALTY is a no-op at bucket level: the SP-B bounds matrix is
   // already baked into the committed spB value.)
   let bucket = moBucketFromSum(sum);
-  let overrideFired = false;
-
-  // PRIORITY-BASED PULL: SP-B = critical_unresolved (-2) AND arithmetic middle → lower
-  if (spB === -2 && bucket === "middle") {
-    bucket = "lower";
-    overrideFired = true;
-  }
-  // GLOBAL SP RULE: primary mechanism none_or_minimal AND SP-A weak/concrete (<=1)
-  // AND bucket would be upper → cannot reach upper; cap at middle. (Arithmetically
-  // unreachable when spA<=1, since max sum is then 1+1+2=4=middle — kept for
-  // fidelity to the prompt's explicit rule.)
-  const mechanism = internal.binding_payment_constraint?.primary_mechanism;
-  if (mechanism === "none_or_minimal" && spA <= 1 && bucket === "upper") {
-    bucket = "middle";
-    overrideFired = true;
-  }
+  const overrideTrace = computeMoOverrideTrace(mo);
+  const overrideFired = overrideTrace !== null;
+  if (overrideFired) bucket = overrideTrace.final_bucket;
 
   // CONSISTENCY GUARD: the `direction` prose describes the model's committed
   // sub_position. If code's recomputed bucket disagrees, the model miscounted
