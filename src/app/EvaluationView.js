@@ -12,11 +12,12 @@ import {
   getScoreColor,
   getTcColor,
   getMainBottleneckColor,
+  MainBottleneckIcon,
   GateCTA,
   BlurGate,
   PreviewBanner,
 } from "./components";
-import MetricProseDetail from "./MetricProseDetail";
+import MetricProseDetail, { MetricProseBody } from "./MetricProseDetail";
 
 export default function EvaluationView({
   // Screen
@@ -1085,7 +1086,9 @@ export default function EvaluationView({
                         </p>
                         {mb && mbColor ? (
                           <span style={{
-                            display: "inline-block",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
                             fontSize: 14,
                             fontWeight: 700,
                             padding: "6px 14px",
@@ -1095,6 +1098,7 @@ export default function EvaluationView({
                             border: `1px solid ${mbColor.border}`,
                             whiteSpace: "nowrap",
                           }}>
+                            <MainBottleneckIcon value={mb} size={14} />
                             {mb}
                           </span>
                         ) : (
@@ -1104,7 +1108,15 @@ export default function EvaluationView({
                     </div>
                   );
                 })()}
-                <BlurGate isGated={isGated} text={analysis.estimates.explanation} t={t} />
+                {!isGated ? (
+                  <MetricProseBody
+                    metricKey="execution_reality"
+                    metric={analysis.estimates}
+                    t={t}
+                  />
+                ) : (
+                  <BlurGate isGated={isGated} text={analysis.estimates.explanation} t={t} />
+                )}
               </Card>
               {isGated && (
                 <div style={{ marginTop: 16 }}>

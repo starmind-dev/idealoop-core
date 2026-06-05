@@ -931,6 +931,27 @@ ${JSON.stringify({ evaluation: ev })}`;
             message: "Stage 3 complete",
           });
 
+          // ---- Synthesize estimates.explanation from the four Execution-Reality
+          // prose fields (mirrors the per-metric joinProse above). Stage 3 emits the
+          // labelled fields (constraint_diagnosis / commitment_explanation /
+          // profile_calibration / position_basis); we join them into a single
+          // .explanation so the gated teaser, older saved analyses, and any non-split
+          // UI still read naturally. The raw fields are retained on the estimates
+          // object so MetricProseDetail can render the four-question split. Sparse
+          // (Specification) cases emit fewer fields and/or .explanation directly —
+          // the join is applied only when it produces non-empty prose, so the
+          // model's own sparse explanation is preserved.
+          if (stage3Result && stage3Result.estimates) {
+            const est = stage3Result.estimates;
+            const joinedExec = [
+              est.constraint_diagnosis,
+              est.commitment_explanation,
+              est.profile_calibration,
+              est.position_basis,
+            ].filter(Boolean).map((s) => String(s).trim()).filter(Boolean).join(" ");
+            if (joinedExec) est.explanation = joinedExec;
+          }
+
           // ============================
           // ASSEMBLY: Combine all stages into unified output
           // Must match the same JSON schema as free tier

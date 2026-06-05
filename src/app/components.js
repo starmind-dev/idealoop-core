@@ -136,7 +136,7 @@ export const getTcColor = (s) => {
 //   Compliance           → slate (cool, institutional)
 //   Distribution         → pink
 //   Data acquisition     → cyan
-//   Category maturation  → sage  (gray-green; muted, "weathered/considered")
+//   Capital/runway       → amber (resource/funding)
 //   Specification        → stone (warm gray; muted edge state for sparse input)
 //
 // Each entry returns {bg, color, border} for the chip rendering.
@@ -165,9 +165,9 @@ export const MAIN_BOTTLENECK_COLORS = {
     dark:  { bg: "rgba(6,182,212,0.14)",   color: "#67e8f9", border: "rgba(6,182,212,0.32)" },
     light: { bg: "rgba(6,182,212,0.10)",   color: "#0e7490", border: "rgba(6,182,212,0.28)" },
   },
-  "Category maturation": {
-    dark:  { bg: "rgba(132,169,140,0.16)", color: "#b8d4be", border: "rgba(132,169,140,0.36)" },
-    light: { bg: "rgba(132,169,140,0.12)", color: "#4d6b53", border: "rgba(132,169,140,0.32)" },
+  "Capital/runway": {
+    dark:  { bg: "rgba(245,158,11,0.14)",  color: "#fcd34d", border: "rgba(245,158,11,0.32)" },
+    light: { bg: "rgba(245,158,11,0.10)",  color: "#b45309", border: "rgba(245,158,11,0.28)" },
   },
   "Specification": {
     dark:  { bg: "rgba(168,162,158,0.14)", color: "#d6d3d1", border: "rgba(168,162,158,0.32)" },
@@ -185,6 +185,100 @@ export function getMainBottleneckColor(value, themeMode) {
     return MAIN_BOTTLENECK_COLORS["Specification"][mode];
   }
   return palette[mode];
+}
+
+// ============================================
+// MAIN BOTTLENECK ICONS — one small line-glyph per enum, rendered inside the MB
+// chip (and beside the "binding constraint" prose beat). DISPLAY-ONLY. The glyph
+// inherits the chip's MB colour via stroke="currentColor", so it reads as one unit
+// with the pill, never as a bolted-on mark. Stroke style matches the existing
+// inline shield SVG in MetricProseDetail. Unknown / null values fall back to the
+// Specification glyph, mirroring getMainBottleneckColor.
+//
+//   Technical build   → wrench        Distribution      → share nodes
+//   Buyer access      → key           Data acquisition  → database
+//   Trust/credibility → award badge   Capital/runway    → coins
+//   Compliance        → clipboard ✓   Specification     → described file
+const MAIN_BOTTLENECK_ICON_PATHS = {
+  "Technical build": (
+    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+  ),
+  "Buyer access": (
+    <>
+      <circle cx="7.5" cy="15.5" r="5.5" />
+      <path d="m21 2-9.6 9.6" />
+      <path d="m15.5 7.5 3 3L22 7l-3-3" />
+    </>
+  ),
+  "Trust/credibility": (
+    <>
+      <circle cx="12" cy="8" r="6" />
+      <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
+    </>
+  ),
+  "Compliance": (
+    <>
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+      <rect x="8" y="2" width="8" height="4" rx="1" />
+      <path d="m9 14 2 2 4-4" />
+    </>
+  ),
+  "Distribution": (
+    <>
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <path d="m8.59 13.51 6.83 3.98" />
+      <path d="m15.41 6.51-6.82 3.98" />
+    </>
+  ),
+  "Data acquisition": (
+    <>
+      <ellipse cx="12" cy="5" rx="9" ry="3" />
+      <path d="M3 5v14a9 3 0 0 0 18 0V5" />
+      <path d="M3 12a9 3 0 0 0 18 0" />
+    </>
+  ),
+  "Capital/runway": (
+    <>
+      <circle cx="8" cy="8" r="6" />
+      <path d="M18.09 10.37A6 6 0 1 1 10.34 18" />
+      <path d="M7 6h1v4" />
+      <path d="m16.71 13.88.7.71-.71.71" />
+    </>
+  ),
+  "Specification": (
+    <>
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z" />
+      <path d="M14 2v5h5" />
+      <path d="M16 13H8" />
+      <path d="M16 17H8" />
+      <path d="M10 9H8" />
+    </>
+  ),
+};
+
+// Returns an <svg> glyph for an MB enum value. size in px (default 14). Colour
+// comes from the parent via currentColor — set the chip's `color` and the icon
+// follows. Falls back to the Specification glyph for unknown / null values.
+export function MainBottleneckIcon({ value, size = 14 }) {
+  const inner = MAIN_BOTTLENECK_ICON_PATHS[value] || MAIN_BOTTLENECK_ICON_PATHS["Specification"];
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ flexShrink: 0 }}
+      aria-hidden="true"
+    >
+      {inner}
+    </svg>
+  );
 }
 
 // ============================================

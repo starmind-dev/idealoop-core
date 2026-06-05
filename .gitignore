@@ -75,3 +75,6 @@ populate-search.js
 /verify-*.mjs
 /mock-*.mjs
 /analyze-*.mjs
+/run-mb-*.js
+/mb-baseline-*
+/mb-run1-*

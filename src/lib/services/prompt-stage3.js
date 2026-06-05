@@ -380,6 +380,27 @@ If only one candidate survives Step 2, select it.
 
 If extremely rare zero-candidate case occurs (high-evidence input with no clear idea-intrinsic binding and no founder-fit gap), apply the first-action reshape test against the broader candidate set including weakly-signaling enums. Do NOT default to Trust/credibility or Specification.
 
+=== CLOSE-CALL CAPTURE (MB AMBIGUITY EMISSION) ===
+
+After MB is finally selected by any path above (Master Selection Steps 1-6 or the NULL / zero-fire determinant), and ONLY after the single pick is locked, record whether that selection was a genuine close call. This is a record of what selection already decided — it does NOT change the pick. The reductive-single-pick principle is unchanged: main_bottleneck remains exactly one enum, the one wall the user focuses on. This block only surfaces the runner-up that selection already weighed and set aside.
+
+Determine is_close_call by the MECHANICAL selection event, not by how ambiguous the case feels:
+
+- Set is_close_call = true ONLY when the final pick was made by deciding BETWEEN TWO OR MORE candidates whose substantive fire-conditions BOTH (or all) held against the case evidence — i.e. Master Selection Step 4 applied a tiebreaker between multiple substantively-firing enums, OR the NULL / zero-fire determinant Step 3 first-action-reshape selected among two or more surviving candidates. In these cases a real runner-up exists: the candidate that lost the tiebreaker or the reshape comparison.
+
+- Set is_close_call = false in every other case: exactly one enum fired substantively (Step 3 single-fire exit), the binary regulatory gate routed to Compliance (Step 2), evidence_strength routed to Specification (Step 1), or only one candidate survived the determinant. When false, no contested runner-up exists — do not invent one.
+
+A candidate is NOT a runner-up merely because its enum is "adjacent" or "plausible-sounding." It is a runner-up only if its fire-conditions substantively held against THIS case's evidence and it lost the tiebreaker or reshape to the selected MB. If you cannot name the specific case evidence that made the runner-up's conditions hold, is_close_call is false. Do not treat a case as close to satisfy this section — most cases are not close, and an honest false is the correct and expected output for them.
+
+When is_close_call = true, record:
+- runner_up: the single enum (verbatim from the 8 values) that lost the tiebreaker/reshape. If three or more candidates were contested, name the one that came closest to winning (the last eliminated).
+- runner_up_rationale: ONE sentence naming the specific case-truth (evidence, profile fact, or idea structure) under which the runner_up would be the binding constraint. Phrasing original to this case; do not template across cases.
+- tipping_signal: ONE sentence naming the single fact that, if it were different, would flip the pick from the selected MB to the runner_up. This is the discriminating evidence the tiebreaker turned on.
+
+When is_close_call = false: runner_up = null, runner_up_rationale = "", tipping_signal = "".
+
+This capture never alters main_bottleneck, main_bottleneck_explanation, duration, difficulty, or explanation. Those are emitted exactly as the single pick produced them.
+
 === MB-RISK 3 RELATIONAL FRAMING ===
 
 After MB selection, identify the relationship between the selected MB and Stage 2c's Risk 3 archetype. The relational case determines the framing of MB explanation prose. Three cases:
@@ -750,62 +771,41 @@ For sparse-input cases:
 - Do not guess the likely product.
 - Do not add a commitment-shape beat.
 
-=== ESTIMATES.EXPLANATION PROSE COMPOSITION ===
+=== EXECUTION REALITY PROSE FIELDS (FOUR LABELLED FIELDS) ===
 
-estimates.explanation is a 3-5 sentence prose composition (2-3 sentences for sparse-input cases). It opens with an MB-anchored statement (inheriting the skeleton family discipline from MB explanation), explains the calibration in the middle, and closes with a commitment-shape beat.
+Estimates emits the commitment narrative as FOUR labelled prose fields, not one paragraph. Each field answers one user-facing question and owns exactly one beat. This mirrors the MD/MO/OR metric surfaces, which emit labelled fields the frontend renders as question -> answer blocks. (For continuity, the four fields are joined downstream into a single explanation string for the gated teaser and older saved analyses — but the field is the unit of composition; do not write a separate paragraph.)
 
-The prose composition has three structural slots:
+LENGTH (all four fields): each is normally ONE sentence, and may run to two short sentences only when rich evidence would otherwise force overloaded clauses. This length discipline is what keeps the surface scannable rather than a wall of text — do not write multi-sentence paragraphs into any single field.
 
-SLOT 1 — Opening sentence (MB-anchored, inherits skeleton family discipline)
+OWNERSHIP FENCES (anti-redundancy): each field owns its beat and must not restate another field's content. Do not re-name the constraint outside constraint_diagnosis; do not re-explain the workstreams outside commitment_explanation; do not re-narrate founder fit outside profile_calibration; do not restate the duration/difficulty rationale outside position_basis. Four fields that paraphrase one another is the failure mode.
 
-The opening sentence anchors estimates.explanation to the selected MB. Select an MB-8 skeleton family as the cognitive operation for the opening; realize it in case-specific prose. Apply the family applicability map from the skeleton family library to select the family that fits this case's MB + relational case (ALIGNMENT / LAYERED / NULL).
+VARY THE SCAFFOLD: these are conceptual roles, not fixed visible templates. Do not let a single opening phrase become the default across cases for any field. A user evaluating many ideas under one fixed profile must not read the same opener repeated across their ideas.
 
-The same opening family may be used for both main_bottleneck_explanation and estimates.explanation when the case data supports it, BUT prefer a different family when the two outputs would otherwise sound adjacent or repetitive. Same family is allowed only when the second realization changes the cognitive function clearly: main_bottleneck_explanation explains why the bottleneck binds; estimates.explanation opens with the binding mechanism but transitions into calibration explanation.
+SHARED VOICE BANS (all four fields, matching the metric surfaces):
+- NO FOUNDER-COACHING: describe the commitment the case implies; do not instruct the founder what to do ("you should hire...", "first validate with..." — banned).
+- NO HEDGING: banned — "it seems," "might suggest," "potentially indicates," "perhaps," "may indicate," "appears to."
+- NO MARKETING LANGUAGE: banned — "promising," "exciting," "compelling," "strong potential."
 
-ANTI-TEMPLATE DISCIPLINE (inherited from MB explanation):
+THE FOUR FIELDS:
 
-- "Building the platform itself drives the timeline here" — BANNED
-- "[X] drives this timeline more than [technical-build-reference]" — Use this family only when the case genuinely requires correcting a tempting misread. Do not use it as the default contrast frame.
-- "The binding constraint is clinical [X]" — BANNED for non-clinical cases
-- Domain anchoring — rotate domains across cases within enum
+constraint_diagnosis — "What's the binding constraint here?"
+Names why the selected MB is the wall that gates the next credible step, in case-specific prose. Inherits the skeleton family discipline: select an MB-8 skeleton family as the cognitive operation and realize it in case-specific language; rotate families across cases; do not default to one contrast frame. BANNED openers (inherited): "Building the platform itself drives the timeline here"; "The binding constraint is clinical [X]" for non-clinical cases. This field carries the MB-anchored opening that the single explanation paragraph used to open with.
 
-Do NOT create separate opening realizations for estimates.explanation. The skeleton family library above is the single skeleton source for both main_bottleneck_explanation and estimates.explanation openings.
+commitment_explanation — "What does clearing it actually take?"
+Names the real workstreams that consume the calendar time the MB implies (pilot cycles, regulatory sequencing, fundraising, relationship building, the build streams, etc.). Do NOT re-derive the per-MB calibration matrix or expose month-addition logic; reference the workstreams, not the arithmetic. Fence: does not re-name the constraint (constraint_diagnosis owns that); does not restate scores.
 
-SLOT 2 — Middle sentences (calibration explanation, 1-3 sentences)
+profile_calibration — "How does your background change the work?"
+Names how the founder's profile calibrates the commitment — what their background eases or what capability the path requires them to acquire or partner for. Calibration only. Fence: does NOT re-diagnose the founder-fit gap (Stage 2c Risk 3 owns that) and does not moralize. In the NULL/founder-fit case, name the founder-fit asset briefly; do not manufacture repeated reassurance across cases.
 
-The middle sentences explain why the calibrated duration + difficulty follows from the MB by naming the real workstreams that consume time. Do not expose the calibration matrix or month-addition logic. Reference the per-MB calibration band from above without re-deriving it in prose.
-
-Middle sentence content should include:
-- Why the binding constraint produces this calendar duration (which workstreams determine timing — pilot cycles, regulatory sequencing, fundraising cycles, relationship building, etc.)
-- How profile relates to the commitment (calibration-only; not founder-fit re-diagnosis)
-- What external factors (regulatory cycles, pilot work, fundraising, partnership negotiations) determine the timeline rather than engineering speed
-
-Middle sentence content should NOT include:
-- Re-derivation of the per-MB calibration matrix ("Trust binding adds 3-6 months because pilots take time...")
-- Re-narration of Stage 2c Risk 3 founder-fit gap
-- Action prescriptions ("first you should validate with X...")
-- Score restatements ("the TC of 7.5 combined with...")
-
-Length within middle slot: 1 sentence for simple aligned cases; 2-3 sentences for layered cases where both idea-intrinsic and founder-specific dimensions contribute substantively to the timeline.
-
-SLOT 3 — Closing commitment beat
-
-The closing sentence is the commitment-shape beat. See the closing beat discipline below. The prose composition must transition smoothly into the commitment beat without prescribing action or restating MB explanation content.
-
-OVERALL LENGTH CALIBRATION:
-
-- 3 sentences: simple aligned cases (MB matches archetype expectation, founder-fit aligned, single binding clearly identified)
-- 4 sentences: standard cases (most cases — opening + 2 middle + closing)
-- 5 sentences: layered or complex cases (LAYERED relational case, dual bindings, complex profile-MB interaction)
-
-Length is determined by content density, not by minimum/maximum targets. Do not pad cases to reach 4 sentences; do not truncate cases to fit 3 sentences. Composition serves the case shape.
+position_basis — "Why this timeline and difficulty?"
+The commitment-shape beat that justifies the duration band and difficulty level shown in the chips above it. See the closing beat discipline below. Names why the work lands at this calendar band and this difficulty, given the MB and the workstreams. This field is position-justification, NOT a "what would move it higher" beat — duration and difficulty are commitment facts, not scores to improve toward. Fence: does not prescribe action; does not restate constraint_diagnosis.
 
 SPARSE-INPUT CASES (MB = "Specification"):
 
-Per the sparse-input output specification above, sparse-input cases get 2-3 sentences with different structural slots:
-- Slot 1 (1 sentence): name the specification gap directly using one of the 4 gap-naming variants
-- Slot 2 (1-2 sentences): explain that calibration is not possible without inventing a product shape; suggest refinement direction
-- No closing commitment beat
+Sparse-input cases cannot produce a commitment shape. Emit:
+- constraint_diagnosis (1 sentence): name the specification gap directly using one of the 4 gap-naming variants.
+- commitment_explanation, profile_calibration, position_basis: empty string "". (Calibration is not possible without inventing a product shape; do not invent one.)
+The downstream join will surface constraint_diagnosis alone as the explanation — which is the correct sparse output.
 
 === CLOSING COMMITMENT BEAT DISCIPLINE ===
 
@@ -912,15 +912,27 @@ Failure protocol: first apply the compatibility test to each risk. If no materia
     "difficulty": "Easy | Moderate | Hard | Very Hard  (or \\"N/A\\" under LOW evidence strength)",
     "main_bottleneck": "Technical build | Buyer access | Trust/credibility | Compliance | Distribution | Data acquisition | Capital/runway | Specification",
     "main_bottleneck_explanation": "1-2 sentences. Why this enum value is the binding constraint for THIS idea + profile pair. Names the constraint mechanism directly. Cross-references the founder gap or founder fit in natural prose (no section names).",
-    "explanation": "3-5 sentences (2-3 for sparse-input). Opens following the skeleton family discipline (foreground the bottleneck, not TC, unless main_bottleneck is Technical build and TC dominates). Middle sentences explain workstream-level calibration (not matrix re-derivation). Closes with descriptive commitment beat. References founder fit (or names founder-fit asset in the null case) in natural prose."
+    "constraint_diagnosis": "1 sentence (2 short max). 'What's the binding constraint here?' — why the selected MB is the wall that gates the next step, in case-specific prose, inheriting the skeleton family discipline. Empty cases: never.",
+    "commitment_explanation": "1 sentence (2 short max). 'What does clearing it actually take?' — the real workstreams that consume the calendar time. No matrix re-derivation, no score restatement. \"\" for sparse (Specification) cases.",
+    "profile_calibration": "1 sentence (2 short max). 'How does your background change the work?' — how the founder's profile calibrates the commitment (eases it, or names capability to acquire/partner for). Calibration only, not Risk 3 re-diagnosis. \"\" for sparse cases.",
+    "position_basis": "1 sentence (2 short max). 'Why this timeline and difficulty?' — the commitment-shape beat justifying the duration band and difficulty shown in the chips. Position-justification, not a 'move it higher' beat. \"\" for sparse cases.",
+    "mb_ambiguity": {
+      "is_close_call": false,
+      "runner_up": null,
+      "runner_up_rationale": "",
+      "tipping_signal": ""
+    }
   }
 }
+
+mb_ambiguity shows its false/default shape above. Populate it per the CLOSE-CALL CAPTURE block: is_close_call = true only when a tiebreaker/reshape decided between two or more substantively-firing candidates, in which case runner_up is the losing enum (verbatim) and the two string fields each hold ONE original sentence; otherwise emit it exactly as shown (false / null / empty strings).
 
 === ADDITIONAL RULES ===
 
 - Time estimates must account for the FULL commitment journey implied by the Main Bottleneck, not just coding time.
 - main_bottleneck must be one of the 8 enum values verbatim. No invented values, no combined values.
+- mb_ambiguity is a record of the selection's close-call state, not a second decision. is_close_call follows the mechanical rule in CLOSE-CALL CAPTURE: true only when a tiebreaker/reshape decided between two or more substantively-firing candidates. When false, runner_up is null and both string fields are empty. mb_ambiguity NEVER changes main_bottleneck or any estimates field. Under Specification (LOW evidence) and binary-gate Compliance routing, is_close_call is always false — these are deterministic single-pick exits, not contested selections.
 - main_bottleneck_explanation must be 1-2 sentences, focused on the classification rationale.
-- estimates.explanation must be 3-5 sentences (2-3 for sparse-input), follow the skeleton family discipline and closing commitment beat discipline, and never include section-name references.
+- The four Execution Reality fields (constraint_diagnosis, commitment_explanation, profile_calibration, position_basis) each must be 1 sentence (2 short max), obey the ownership fences and shared voice bans, vary the scaffold across cases, and never include section-name references. They are joined downstream into one explanation string — but compose each field as its own beat, not as a paragraph split four ways. For sparse (Specification) cases, emit constraint_diagnosis only and set the other three to "".
 - Under evidence_strength === "LOW": main_bottleneck = "Specification", duration = "Cannot estimate until the product is specified", difficulty = "N/A". Do not produce numeric estimates for unspecified products.
 - Write explanation prose that is specific, causally clear, and proportionate to the evidence. Avoid overstated conclusions or judgments stronger than the data supports. Stages 1 and 2 have already identified risks and barriers — your job is to produce the most honest classification of the binding constraint given those realities and the commitment shape it implies. Be realistic about difficulty but constructive about path.`;

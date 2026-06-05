@@ -79,6 +79,17 @@ const QUESTION_SETS = {
     { q: "What primary exposure constrains the position?", field: "binding_constraint_explanation" },
     { q: "Why does it sit here, and what would move it higher?", field: "direction" },
   ],
+  // Stage 3 Execution Reality — same Q→A shape as the metrics, but the source
+  // object is `estimates` (not a scored metric) and there is no HeaderFeature
+  // (the duration/difficulty/MB chip row is the header, rendered by EvaluationView).
+  // Degrades to the joined estimates.explanation (route.js joinProse) for sparse
+  // cases and older saved analyses, exactly like the metric surfaces.
+  execution_reality: [
+    { q: "What's the binding constraint here?", field: "constraint_diagnosis" },
+    { q: "What does clearing it actually take?", field: "commitment_explanation" },
+    { q: "How does your background change the work?", field: "profile_calibration" },
+    { q: "Why this timeline and difficulty?", field: "position_basis" },
+  ],
 };
 
 const hasText = (v) => typeof v === "string" && v.trim().length > 0;
