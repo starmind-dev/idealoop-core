@@ -348,10 +348,10 @@ export function MbCloseCallAffordance({ ambiguity, primary, t }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b93e8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true">
-                  <path d="M16 3h5v5" />
-                  <path d="M8 3H3v5" />
-                  <path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3" />
-                  <path d="m15 9 6-6" />
+                  <path d="M21 17h-8l-3.5-5h-6.5" />
+                  <path d="M21 7h-8l-3.495 5" />
+                  <path d="M18 10l3-3l-3-3" />
+                  <path d="M18 20l3-3l-3-3" />
                 </svg>
                 <h3 style={{ fontSize: 16, fontWeight: 600, color: t.text, margin: 0 }}>Why this was a close call</h3>
               </div>
