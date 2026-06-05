@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getScoreColor, getTcColor, getMainBottleneckColor } from "./components";
+import { MetricProseBody } from "./MetricProseDetail";
 
 // ============================================
 // DATA PREPARATION
@@ -17,10 +18,10 @@ function prepareComparisonData(ideaA, ideaB) {
   const sharedNames = new Set([...namesA].filter(n => namesB.has(n)));
 
   const metrics = [
-    { key: "md", label: "Market demand", scoreA: a.evaluation.market_demand.score, scoreB: b.evaluation.market_demand.score, explA: a.evaluation.market_demand.explanation, explB: b.evaluation.market_demand.explanation },
-    { key: "mo", label: "Monetization", scoreA: a.evaluation.monetization.score, scoreB: b.evaluation.monetization.score, explA: a.evaluation.monetization.explanation, explB: b.evaluation.monetization.explanation },
-    { key: "or", label: "Originality", scoreA: a.evaluation.originality.score, scoreB: b.evaluation.originality.score, explA: a.evaluation.originality.explanation, explB: b.evaluation.originality.explanation },
-    { key: "tc", label: "Technical complexity", scoreA: a.evaluation.technical_complexity.score, scoreB: b.evaluation.technical_complexity.score, explA: a.evaluation.technical_complexity.explanation, explB: b.evaluation.technical_complexity.explanation, isTC: true },
+    { key: "md", label: "Market demand", proseKey: "market_demand", metricA: a.evaluation.market_demand, metricB: b.evaluation.market_demand, scoreA: a.evaluation.market_demand.score, scoreB: b.evaluation.market_demand.score, explA: a.evaluation.market_demand.explanation, explB: b.evaluation.market_demand.explanation },
+    { key: "mo", label: "Monetization", proseKey: "monetization", metricA: a.evaluation.monetization, metricB: b.evaluation.monetization, scoreA: a.evaluation.monetization.score, scoreB: b.evaluation.monetization.score, explA: a.evaluation.monetization.explanation, explB: b.evaluation.monetization.explanation },
+    { key: "or", label: "Originality", proseKey: "originality", metricA: a.evaluation.originality, metricB: b.evaluation.originality, scoreA: a.evaluation.originality.score, scoreB: b.evaluation.originality.score, explA: a.evaluation.originality.explanation, explB: b.evaluation.originality.explanation },
+    { key: "tc", label: "Technical complexity", proseKey: "technical_complexity", metricA: a.evaluation.technical_complexity, metricB: b.evaluation.technical_complexity, scoreA: a.evaluation.technical_complexity.score, scoreB: b.evaluation.technical_complexity.score, explA: a.evaluation.technical_complexity.explanation, explB: b.evaluation.technical_complexity.explanation, isTC: true },
   ];
 
   const fs = t => { if (!t) return ""; const m = t.match(/^[^.!?]+[.!?]/); return m ? m[0].trim() : t.substring(0, 120).trim(); };
@@ -198,7 +199,13 @@ function ScoresScreen({ data, isMobile, activeTab, t }) {
         <div style={{ width: "100%", height: 6, background: t.barBg, borderRadius: 3, overflow: "hidden" }}>
           <div style={{ height: "100%", width: `${(score / 10) * 100}%`, background: getBarColor(score, m.isTC), borderRadius: 3 }} />
         </div>
-        <p style={{ fontSize: 12, color: t.mut, marginTop: 6, lineHeight: 1.5 }}>{expl}</p>
+        <div style={{ marginTop: 12 }}>
+          <MetricProseBody
+            metricKey={m.proseKey}
+            metric={side === "a" ? m.metricA : m.metricB}
+            t={t}
+          />
+        </div>
       </div>
     );
   };

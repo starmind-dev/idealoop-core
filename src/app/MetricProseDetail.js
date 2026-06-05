@@ -171,6 +171,42 @@ function HeaderFeature({ metricKey, metric, color, t }) {
   return null;
 }
 
+// ============================================================== shared prose body
+// Header feature (ladder / capture-case / exposure) + the labelled question→answer
+// split, degrading to the single joined paragraph when raw fields are absent.
+// No score header — each caller supplies its own (the evaluation view uses the
+// pill header; the comparison view uses its A/B score + delta header). Shared so
+// the two surfaces render metric prose identically and can't drift apart.
+export function MetricProseBody({ metricKey, metric, notes = [], t }) {
+  const set = QUESTION_SETS[metricKey];
+  const canSplit = set && set.every(({ field }) => hasText(metric[field]));
+
+  return (
+    <>
+      <HeaderFeature metricKey={metricKey} metric={metric} color={null} t={t} />
+
+      {canSplit ? (
+        set.map(({ q, field }, i) => (
+          <div key={field} style={{ marginBottom: i === set.length - 1 ? 0 : 22 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 7 }}>
+              <span style={{ fontSize: 13, color: t.mut, lineHeight: 1 }} aria-hidden="true">→</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: t.text }}>{q}</span>
+            </div>
+            <p style={{ fontSize: 13.5, lineHeight: 1.65, color: t.sec, margin: 0 }}>{metric[field]}</p>
+          </div>
+        ))
+      ) : (
+        // degrade: raw fields missing -> the single joined paragraph, as before
+        <p style={{ fontSize: 13, color: t.sec, lineHeight: 1.65, margin: 0 }}>{metric.explanation}</p>
+      )}
+
+      {notes && notes.filter(Boolean).map((note, i) => (
+        <p key={i} style={{ fontSize: 12, color: t.mut, marginTop: 8, lineHeight: 1.4, fontStyle: "italic" }}>{note}</p>
+      ))}
+    </>
+  );
+}
+
 // ============================================================== main component
 export default function MetricProseDetail({ metricKey, metric, name, weight, notes = [], isGated = false, t }) {
   const coarse = metric.score;
@@ -192,32 +228,10 @@ export default function MetricProseDetail({ metricKey, metric, name, weight, not
   // gated free-preview: header pill only (matches prior behaviour)
   if (isGated) return header;
 
-  const set = QUESTION_SETS[metricKey];
-  const canSplit = set && set.every(({ field }) => hasText(metric[field]));
-
   return (
     <>
       {header}
-      <HeaderFeature metricKey={metricKey} metric={metric} color={color} t={t} />
-
-      {canSplit ? (
-        set.map(({ q, field }, i) => (
-          <div key={field} style={{ marginBottom: i === set.length - 1 ? 0 : 22 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 7 }}>
-              <span style={{ fontSize: 13, color: t.mut, lineHeight: 1 }} aria-hidden="true">→</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: t.text }}>{q}</span>
-            </div>
-            <p style={{ fontSize: 13.5, lineHeight: 1.65, color: t.sec, margin: 0 }}>{metric[field]}</p>
-          </div>
-        ))
-      ) : (
-        // degrade: raw fields missing -> the single joined paragraph, as before
-        <p style={{ fontSize: 13, color: t.sec, lineHeight: 1.65, margin: 0 }}>{metric.explanation}</p>
-      )}
-
-      {notes && notes.filter(Boolean).map((note, i) => (
-        <p key={i} style={{ fontSize: 12, color: t.mut, marginTop: 8, lineHeight: 1.4, fontStyle: "italic" }}>{note}</p>
-      ))}
+      <MetricProseBody metricKey={metricKey} metric={metric} notes={notes} t={t} />
     </>
   );
 }
