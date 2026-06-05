@@ -339,13 +339,22 @@ export function MbCloseCallAffordance({ ambiguity, primary, t }) {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: t.modalBg, border: `1px solid ${t.modalBorder}`, borderRadius: 16,
+              background: `linear-gradient(rgba(124,140,240,0.06), rgba(124,140,240,0.06)), ${t.modalBg}`,
+              border: `1px solid rgba(124,140,240,0.35)`, borderRadius: 16,
               padding: 24, maxWidth: 440, width: "100%", maxHeight: "80vh", overflowY: "auto",
               textAlign: "left",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600, color: t.text, margin: 0 }}>Why this was a close call</h3>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b93e8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true">
+                  <path d="M16 3h5v5" />
+                  <path d="M8 3H3v5" />
+                  <path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3" />
+                  <path d="m15 9 6-6" />
+                </svg>
+                <h3 style={{ fontSize: 16, fontWeight: 600, color: t.text, margin: 0 }}>Why this was a close call</h3>
+              </div>
               <button
                 onClick={() => setOpen(false)}
                 aria-label="Close"
