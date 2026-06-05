@@ -2283,12 +2283,12 @@ export default function Home() {
                     fontSize: 14,
                     fontWeight: 600,
                     border: "none",
-                    background: "#fff",
+                    background: t.ctaBg,
                     color: t.ctaText,
                     cursor: "pointer",
                   }}
                 >
-                  Evaluate an Idea
+                  Run an Evaluation
                 </button>
               </Card>
             ) : (
