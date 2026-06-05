@@ -2930,7 +2930,7 @@ export default function Home() {
                     <p style={{ fontSize: 11, color: t.mut, fontWeight: 500, margin: "0 0 6px" }}>Top risks</p>
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                       {reEvalContextSnapshot.failure_risks.slice(0, 2).map((risk, i) => (
-                        <p key={i} style={{ fontSize: 12, color: t.sec, margin: 0, lineHeight: 1.4 }}>• {risk}</p>
+                        <p key={i} style={{ fontSize: 12, color: t.sec, margin: 0, lineHeight: 1.4 }}>• {typeof risk === "string" ? risk : (risk?.text || "")}</p>
                       ))}
                     </div>
                   </div>
