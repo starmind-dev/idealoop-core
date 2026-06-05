@@ -76,7 +76,8 @@ import { calculateOverallScore, computeMoDisplayScore, computeMoOverrideTrace } 
 // Returns { min, max } or null if score_basis is unrecognized (clamping skipped).
 export async function POST(request) {
   try {
-    const { idea, profile } = await request.json();
+    const body = await request.json();
+    const { idea, profile } = body;
 
     if (!idea || !idea.trim()) {
       return NextResponse.json(
@@ -84,6 +85,25 @@ export async function POST(request) {
         { status: 400 }
       );
     }
+
+    // ── LOCAL-ONLY TEST FAULT INJECTION (F4 harness support) ──
+    // Drives runners/run-f4-failure-harness-http.js. Reads an optional
+    // _test_fault directive from the request body to force the exact conditions
+    // F4 handles — a transient model-call throw (recover / fatal) and a Stage 2c
+    // degrade — with no real outage and no server restart.
+    //
+    // STRUCTURALLY INERT IN PRODUCTION: the NODE_ENV guard makes testFault null
+    // whenever NODE_ENV === "production", so no request can trigger a synthetic
+    // fault on the live site, regardless of what it sends. Same safety model as
+    // the fixture-mode guard in keywords.js. Recognized values:
+    //   "retry_recover"     — first model call throws once, recovers on retry
+    //   "retry_recover_all" — every model call throws once, all recover on retry
+    //   "retry_fatal"       — first model call throws on BOTH attempts (double-fail)
+    //   "degrade_2c"        — Stage 2c takes its degrade branch (empty synthesis)
+    const testFault =
+      process.env.NODE_ENV !== "production" && typeof body._test_fault === "string"
+        ? body._test_fault
+        : null;
 
     // Generate evaluation correlation ID, surfaced in the response so the
     // frontend can use the same ID when persisting the evaluation to its own
@@ -160,6 +180,79 @@ export async function POST(request) {
               return trimmed;
             }
             return trimmed.slice(firstBrace, lastBrace + 1);
+          }
+
+          // ============================
+          // F4/B — TRANSIENT-FAILURE RESILIENCE (retry-once wrapper)
+          // ============================
+          // Every Sonnet call in this pipeline is a network request that can
+          // stumble on a transient fault — timeout, 5xx, rate-limit, connection
+          // reset — that would succeed on a second attempt a moment later.
+          // Before this wrapper, ANY such stumble on ANY of the eight model
+          // calls threw straight to the outer catch and discarded the entire
+          // ~80s / paid evaluation with a single generic "Analysis failed"
+          // message. That punished a paying user for a momentary blip.
+          //
+          // callWithRetry makes one quiet second attempt after a short backoff.
+          // When the first attempt fails it emits a CALM, NON-ERROR progress
+          // event ("retry") so the live pipeline panel can show an honest
+          // "hit a snag — retrying" line (the user is already watching the
+          // steps tick by; silence during the extra wait would be worse than a
+          // word). If the SECOND attempt also throws, the error propagates
+          // UNCHANGED to the caller's existing per-stage handling / outer catch
+          // — so genuine double-failures still surface exactly as before.
+          //
+          // SCOPE NOTE: this wraps the model CALL only (the transient-network
+          // case). It does NOT retry JSON PARSE failures — those keep their
+          // existing per-stage handling. A parse failure means the model
+          // returned malformed JSON; at temp 0 a re-call tends to reproduce the
+          // same output, so retrying it mostly just spends the user's time to
+          // fail the same way. This changes failure HANDLING only — it touches
+          // no prompt, no scoring, no stage output.
+          const RETRY_BACKOFF_MS = 1200;
+
+          // ── F4 harness fault flags (derived from the NODE_ENV-gated testFault;
+          // all false in production). _faultTripped tracks which labels have
+          // already been force-thrown this request so a single forced throw is
+          // followed by a real, succeeding retry. ──
+          const TEST_RETRY_RECOVER_ALL = testFault === "retry_recover_all";
+          const TEST_RETRY_RECOVER = testFault === "retry_recover" || TEST_RETRY_RECOVER_ALL;
+          const TEST_RETRY_FATAL = testFault === "retry_fatal";
+          const TEST_DEGRADE_2C = testFault === "degrade_2c";
+          const _faultTripped = new Set();
+          function _shouldForceAttempt1(label) {
+            if (_faultTripped.has(label)) return false;       // each label trips at most once
+            if (TEST_RETRY_RECOVER_ALL) return true;          // every stage trips
+            return _faultTripped.size === 0;                  // recover/fatal: first stage only
+          }
+
+          async function callWithRetry(callConfig, label) {
+            try {
+              // Harness: force a synthetic attempt-1 throw (no real call spent).
+              if ((TEST_RETRY_RECOVER || TEST_RETRY_FATAL) && _shouldForceAttempt1(label)) {
+                _faultTripped.add(label);
+                throw new Error(`[TEST] forced attempt-1 fault: ${label}`);
+              }
+              return await client.messages.create(callConfig);
+            } catch (firstError) {
+              console.error(
+                `${label} model call failed (attempt 1 of 2), retrying:`,
+                firstError?.message || firstError
+              );
+              sendEvent({
+                step: "retry",
+                message: `${label} hit a snag — retrying, thanks for your patience.`,
+              });
+              await new Promise((resolve) => setTimeout(resolve, RETRY_BACKOFF_MS));
+              // Harness: under the FATAL flag, fail the second attempt too, so the
+              // double-failure path (propagate → existing error handling) is exercised.
+              if (TEST_RETRY_FATAL && _faultTripped.has(label)) {
+                throw new Error(`[TEST] forced attempt-2 fault: ${label}`);
+              }
+              // Second and final attempt. If this throws, it is intentionally
+              // NOT caught here — the caller's existing error path handles it.
+              return await client.messages.create(callConfig);
+            }
           }
 
           // ============================
@@ -288,7 +381,7 @@ USER PROFILE:
           const stage1UserMessage = `USER'S AI PRODUCT IDEA:
 ${idea}`;
 
-          const stage1Response = await client.messages.create({
+          const stage1Response = await callWithRetry({
             model: "claude-sonnet-4-20250514",
             max_tokens: 3000,
             temperature: 0,
@@ -306,7 +399,7 @@ ${idea}`;
             top_p: 0.1,
             system: stage1SystemPrompt,
             messages: [{ role: "user", content: stage1UserMessage }],
-          });
+          }, "Competitive analysis");
 
           const stage1Text = stage1Response.content[0].text;
 
@@ -359,7 +452,7 @@ ${idea}`;
 
           // Run Stage 2a and Stage TC in parallel
           const [stage2aResponse, stageTcResponse] = await Promise.all([
-            client.messages.create({
+            callWithRetry({
               model: "claude-sonnet-4-20250514",
               max_tokens: 2000,
               temperature: 0,
@@ -390,8 +483,8 @@ ${idea}`;
               top_p: 0.1,
               system: STAGE2A_SYSTEM_PROMPT,
               messages: [{ role: "user", content: stage2aUserMessage }],
-            }),
-            client.messages.create({
+            }, "Evidence extraction"),
+            callWithRetry({
               model: "claude-sonnet-4-20250514",
               max_tokens: 1000,
               temperature: 0,
@@ -402,7 +495,7 @@ ${idea}`;
               top_p: 0.1,
               system: STAGE_TC_SYSTEM_PROMPT,
               messages: [{ role: "user", content: stageTcUserMessage }],
-            }),
+            }, "Technical complexity scoring"),
           ]);
 
           const stage2aText = stage2aResponse.content[0].text;
@@ -503,21 +596,21 @@ ${JSON.stringify({
           };
 
           const [stageMdResponse, stageMoResponse, stageOrResponse] = await Promise.all([
-            client.messages.create({
+            callWithRetry({
               ...scorerCallConfig,
               system: STAGE_MD_SYSTEM_PROMPT,
               messages: [{ role: "user", content: stageMdUserMessage }],
-            }),
-            client.messages.create({
+            }, "Market Demand scoring"),
+            callWithRetry({
               ...scorerCallConfig,
               system: STAGE_MO_SYSTEM_PROMPT,
               messages: [{ role: "user", content: stageMoUserMessage }],
-            }),
-            client.messages.create({
+            }, "Monetization scoring"),
+            callWithRetry({
               ...scorerCallConfig,
               system: STAGE_OR_SYSTEM_PROMPT,
               messages: [{ role: "user", content: stageOrUserMessage }],
-            }),
+            }, "Originality scoring"),
           ]);
 
           let stageMdResult, stageMoResult, stageOrResult;
@@ -732,25 +825,39 @@ ${JSON.stringify({
             overall_score: overallScoreForStage2c,
           })}`;
 
-          const stage2cResponse = await client.messages.create({
+          const stage2cResponse = await callWithRetry({
             model: "claude-sonnet-4-20250514",
             max_tokens: 4096,
             temperature: 0,
             system: STAGE2C_SYSTEM_PROMPT,
             messages: [{ role: "user", content: stage2cUserMessage }],
-          });
+          }, "Summary & risk synthesis");
 
           const stage2cText = stage2cResponse.content[0].text;
+
+          // F4/A — track degrade in a LOCAL, not on ev, so the presentational
+          // flag does not ride into Stage 3's input. ev.synthesis_degraded is
+          // set at final assembly below (alongside overall_score / display_score
+          // / _internal restore), keeping Stage 3's input byte-identical to the
+          // pre-F4 pipeline. summary + failure_risks DO stay on ev here — Stage 3
+          // genuinely reads failure_risks; only the flag is presentational.
+          let synthesisDegraded = false;
 
           // Graceful degradation per S3 lock: if Stage 2c parse fails, set
           // summary + failure_risks empty and proceed to Stage 3 with empty
           // failure_risks input. Evaluation still produces scores.
           try {
+            // Harness: force the degrade branch without a real malformed response.
+            if (TEST_DEGRADE_2C) {
+              throw new Error("[TEST] forced Stage 2c degrade");
+            }
             const stage2cResult = JSON.parse(cleanJsonResponse(stage2cText));
             ev.summary = stage2cResult.summary || "";
             ev.failure_risks = Array.isArray(stage2cResult.failure_risks)
               ? stage2cResult.failure_risks
               : [];
+            // F4/A — full synthesis present.
+            synthesisDegraded = false;
             sendEvent({
               step: "stage2c_done",
               message: "Stage 2c complete: Summary and failure risks generated",
@@ -759,6 +866,14 @@ ${JSON.stringify({
             console.error("Stage 2c parse failed (graceful degradation engaged):", stage2cText);
             ev.summary = "";
             ev.failure_risks = [];
+            // F4/A — RELIABILITY INVARIANT: a required narrative section did not
+            // generate. Mark it (via the local, applied to ev at assembly) so the
+            // section cannot SILENTLY disappear. Before this flag, a degraded run
+            // looked identical to a complete one (empty Summary box, vanished Key
+            // Risks, no signal) and even saved as if whole. The frontend reads the
+            // flag to render an honest "couldn't generate this — your scores are
+            // complete" note instead. Scores are intact; only synthesis is absent.
+            synthesisDegraded = true;
             sendEvent({
               step: "stage2c_done",
               message: "Stage 2c synthesis incomplete; proceeding with scores only",
@@ -787,7 +902,7 @@ ${JSON.stringify(stage1Result)}
 === STAGE 2 RESULTS: SCORING ===
 ${JSON.stringify({ evaluation: ev })}`;
 
-          const stage3Response = await client.messages.create({
+          const stage3Response = await callWithRetry({
             model: "claude-sonnet-4-20250514",
             // V4S28 B8 hotfix (May 1, 2026): bumped from 4096 → 8192. Stage 3
             // generates estimates. Elaborate inputs (~5000 char idea text) consistently
@@ -797,7 +912,7 @@ ${JSON.stringify({ evaluation: ev })}`;
             temperature: 0,
             system: STAGE3_SYSTEM_PROMPT,
             messages: [{ role: "user", content: stage3UserMessage }],
-          });
+          }, "Action plan");
 
           const stage3Text = stage3Response.content[0].text;
 
@@ -824,6 +939,11 @@ ${JSON.stringify({ evaluation: ev })}`;
           sendEvent({ step: "scoring", message: "Calculating final scores..." });
 
           ev.overall_score = calculateOverallScore(ev);
+
+          // F4/A — apply the degrade flag HERE (assembly), not in the Stage 2c
+          // branches, so it never entered Stage 3's input. Pure presentational
+          // metadata for the frontend's honest "synthesis didn't complete" note.
+          ev.synthesis_degraded = synthesisDegraded;
 
           // V4S28 B8 — restore thin_dimensions for frontend rendering
           // (was stripped before Stage 2c/3 to prevent downstream contamination;

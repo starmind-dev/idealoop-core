@@ -893,9 +893,23 @@ export default function EvaluationView({
               {/* Summary */}
               <Card style={{ padding: 32 }} t={t}>
                 <h3 style={{ fontSize: 14, fontWeight: 700, color: t.text, margin: "0 0 12px 0" }}>Summary</h3>
-                <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.7, margin: 0 }}>
-                  {analysis.evaluation.summary}
-                </p>
+                {/* F4/A — RELIABILITY INVARIANT (honest degrade). When Stage 2c
+                    synthesis didn't generate, the summary is empty and the Key
+                    Risks section vanishes. Rather than show a blank box with no
+                    explanation (a paying user left guessing), say so plainly and
+                    reassure them their scores are complete. Triggers on the
+                    explicit flag OR a missing summary, so it stays honest even on
+                    older saved analyses persisted before the flag existed. */}
+                {(analysis.evaluation.synthesis_degraded ||
+                  !(typeof analysis.evaluation.summary === "string" && analysis.evaluation.summary.trim())) ? (
+                  <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.7, margin: 0 }}>
+                    We couldn't generate the written summary and key-risks breakdown for this run — one synthesis step didn't complete. Your scores above are complete and unaffected by this. Re-running the evaluation will usually produce the full write-up.
+                  </p>
+                ) : (
+                  <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.7, margin: 0 }}>
+                    {analysis.evaluation.summary}
+                  </p>
+                )}
               </Card>
 
               {/* Disclaimer */}

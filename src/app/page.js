@@ -368,6 +368,19 @@ export default function Home() {
               finalAnalysis = event.data;
               // Add final step to display
               setStreamSteps((prev) => [...prev, { step: "complete", message: "Evaluation complete ✓", done: true }]);
+            } else if (event.step === "retry") {
+              // F4/B+ — soft transient-failure notice. This is NOT an error: the
+              // run is still going, a step stumbled and is being retried once.
+              // Append it as an in-progress line so the live pipeline panel shows
+              // an honest "hit a snag — retrying, thanks for your patience"
+              // message during the extra wait (the user is watching the steps, so
+              // silence would read worse than a word). It resolves to a checkmark
+              // in the final "mark remaining done" sweep when the run completes;
+              // if the retry ALSO fails, an "error" event follows and aborts as
+              // before. Must stay distinct from "error" — routing it through the
+              // error branch would throw and kill the very run it is reassuring
+              // the user about.
+              setStreamSteps((prev) => [...prev, { step: "retry", message: event.message, done: false }]);
             } else if (event.step.endsWith("_start")) {
               // In-progress step (no checkmark yet)
               // For stage starts, also mark previous stage as done

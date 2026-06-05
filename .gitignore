@@ -69,3 +69,9 @@ rescore-*.js
 run-v50.js
 attribute-stage1.js
 populate-search.js
+
+# F4 failure-mode harness + local verification scripts (root-level, never deployed)
+/run-f4-*.js
+/verify-*.mjs
+/mock-*.mjs
+/analyze-*.mjs
