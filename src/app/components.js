@@ -45,7 +45,7 @@ export const T = {
     bg: "#0a0d13", surface: "#0e1117", surfAlt: "rgba(30,30,30,0.8)",
     border: "rgba(55,55,55,0.4)", text: "#f0f0f0", sec: "#a0a0a0", mut: "#666666",
     shadow: "0 2px 8px rgba(0,0,0,0.4)",
-    headerBg: "rgba(8,8,8,0.97)", headerBorder: "rgba(55,55,55,0.3)",
+    headerBg: "rgba(10,13,19,0.97)", headerBorder: "rgba(40,46,58,0.4)",
     scoreRing: "#eab308", scoreGlow: true,
     barBg: "rgba(35,35,35,0.9)",
     stepDone: "#34d399", stepCurrent: "#ffffff", stepCurrentText: "#0a0a0a",
