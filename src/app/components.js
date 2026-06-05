@@ -282,6 +282,117 @@ export function MainBottleneckIcon({ value, size = 14 }) {
 }
 
 // ============================================
+// MB CLOSE-CALL AFFORDANCE — surfaces estimates.mb_ambiguity. When the Stage 3
+// selection was a genuine tiebreaker between two substantively-held candidates,
+// the single MB pick stays authoritative (the full chip is unchanged) and this
+// renders a SUBTLE secondary affordance beneath it: a "CLOSE CALL" label + a
+// ghosted dashed runner-up chip + a link that opens a pop-up explaining the
+// second framing. DISPLAY-ONLY — reads the committed mb_ambiguity payload, never
+// recomputes anything, never touches the pick.
+//
+// Renders nothing unless is_close_call === true AND a runner_up enum is present,
+// so the (large majority of) clean single-pick cases show the chip row exactly
+// as before. The pop-up shell mirrors the existing alternatives modal in page.js.
+export function MbCloseCallAffordance({ ambiguity, primary, t }) {
+  const [open, setOpen] = useState(false);
+  if (!ambiguity || ambiguity.is_close_call !== true || !ambiguity.runner_up) return null;
+
+  const runnerUp = ambiguity.runner_up;
+  const rationale = ambiguity.runner_up_rationale;
+  const tip = ambiguity.tipping_signal;
+  const primaryColor = getMainBottleneckColor(primary, t.mode);
+  const runnerColor = getMainBottleneckColor(runnerUp, t.mode);
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        aria-label={`This was a close call with ${runnerUp}. See the reasoning.`}
+        style={{
+          background: "none", border: "none", padding: 0, marginTop: 9, cursor: "pointer",
+          display: "flex", flexDirection: "column", alignItems: "center", gap: 6, width: "100%",
+        }}
+      >
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 10.5, color: t.mut, letterSpacing: "0.04em" }}>CLOSE CALL ·</span>
+          <span style={{
+            display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 400,
+            padding: "3px 10px", borderRadius: 9999, background: "transparent",
+            color: runnerColor.color, border: `1px dashed ${runnerColor.border}`, opacity: 0.9,
+          }}>
+            <MainBottleneckIcon value={runnerUp} size={12} />
+            {runnerUp}
+          </span>
+        </span>
+        <span style={{ fontSize: 11.5, color: t.link }}>see the reasoning →</span>
+      </button>
+
+      {open && (
+        <div
+          onClick={() => setOpen(false)}
+          style={{
+            position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+            background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center",
+            justifyContent: "center", zIndex: 1000, padding: 24,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: t.modalBg, border: `1px solid ${t.modalBorder}`, borderRadius: 16,
+              padding: 24, maxWidth: 440, width: "100%", maxHeight: "80vh", overflowY: "auto",
+              textAlign: "left",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 600, color: t.text, margin: 0 }}>Why this was a close call</h3>
+              <button
+                onClick={() => setOpen(false)}
+                aria-label="Close"
+                style={{ background: "none", border: "none", color: t.mut, fontSize: 18, cursor: "pointer", padding: 4, lineHeight: 1 }}
+              >
+                ✕
+              </button>
+            </div>
+            <p style={{ fontSize: 12.5, color: t.sec, margin: "0 0 16px", lineHeight: 1.5 }}>
+              This case sat between two valid framings of the binding constraint. The one on the left is what the report committed to.
+            </p>
+
+            <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: 150, border: `1px solid ${primaryColor.border}`, background: primaryColor.bg, borderRadius: 10, padding: "12px 14px" }}>
+                <div style={{ fontSize: 10, color: t.mut, letterSpacing: "0.06em", marginBottom: 7 }}>SELECTED</div>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: primaryColor.color }}>
+                  <MainBottleneckIcon value={primary} size={14} />{primary}
+                </span>
+              </div>
+              <div style={{ flex: 1, minWidth: 150, border: `1px dashed ${runnerColor.border}`, background: "transparent", borderRadius: 10, padding: "12px 14px" }}>
+                <div style={{ fontSize: 10, color: t.mut, letterSpacing: "0.06em", marginBottom: 7 }}>RUNNER-UP</div>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: runnerColor.color }}>
+                  <MainBottleneckIcon value={runnerUp} size={14} />{runnerUp}
+                </span>
+              </div>
+            </div>
+
+            {rationale && (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: t.text, marginBottom: 5 }}>Why {runnerUp} could bind instead</div>
+                <p style={{ fontSize: 13, lineHeight: 1.6, color: t.sec, margin: 0 }}>{rationale}</p>
+              </div>
+            )}
+            {tip && (
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: t.text, marginBottom: 5 }}>What would tip it the other way</div>
+                <p style={{ fontSize: 13, lineHeight: 1.6, color: t.sec, margin: 0 }}>{tip}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ============================================
 // STEP PROGRESS BAR
 // ============================================
 export function StepProgress({ currentStep, savedMode, branchMode, t }) {

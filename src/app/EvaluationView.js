@@ -13,6 +13,7 @@ import {
   getTcColor,
   getMainBottleneckColor,
   MainBottleneckIcon,
+  MbCloseCallAffordance,
   GateCTA,
   BlurGate,
   PreviewBanner,
@@ -1103,6 +1104,13 @@ export default function EvaluationView({
                           </span>
                         ) : (
                           <span style={{ fontSize: 14, fontWeight: 700, color: t.sec }}>—</span>
+                        )}
+                        {!isGated && analysis.estimates.mb_ambiguity && (
+                          <MbCloseCallAffordance
+                            ambiguity={analysis.estimates.mb_ambiguity}
+                            primary={mb}
+                            t={t}
+                          />
                         )}
                       </div>
                     </div>
