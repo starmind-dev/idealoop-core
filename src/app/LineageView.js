@@ -123,7 +123,7 @@ function StatusDropdown({ currentStatus, onSelect, onClose, t }) {
 // ============================================
 // NODE CARD
 // ============================================
-function NodeCard({ idea, isRoot, isSelected, comparing, onToggleSelect, onClickNode, onUpdateIdea, isLoading, t }) {
+function NodeCard({ idea, isRoot, isSelected, comparing, onToggleSelect, onClickNode, onUpdateIdea, onDelete, isLoading, t }) {
   const evals = idea.evaluations || [];
   const latestEval = evals.length > 0 ? evals[0] : null; // sorted desc by list route
   const score = latestEval?.weighted_overall_score || 0;
@@ -328,6 +328,28 @@ function NodeCard({ idea, isRoot, isSelected, comparing, onToggleSelect, onClick
               >
                 ✏️
               </span>
+              {onDelete && (
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (window.confirm("Delete this idea and all branches below it? This cannot be undone.")) {
+                      onDelete(idea.id);
+                    }
+                  }}
+                  style={{
+                    fontSize: 12,
+                    cursor: "pointer",
+                    flexShrink: 0,
+                    opacity: 0.5,
+                    transition: "opacity 0.15s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                  onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.5")}
+                  title="Delete idea (and its branches)"
+                >
+                  🗑
+                </span>
+              )}
             </>
           )}
         </div>
@@ -434,7 +456,7 @@ function NodeCard({ idea, isRoot, isSelected, comparing, onToggleSelect, onClick
 // ============================================
 // TREE NODE (recursive with connectors)
 // ============================================
-function TreeNode({ node, isRoot, selected, comparing, onToggleSelect, onClickNode, onUpdateIdea, loadingIdeaId, t }) {
+function TreeNode({ node, isRoot, selected, comparing, onToggleSelect, onClickNode, onUpdateIdea, onDelete, loadingIdeaId, t }) {
   const { idea, children } = node;
   const isSelected = selected.some((s) => s.ideaId === idea.id);
 
@@ -454,6 +476,7 @@ function TreeNode({ node, isRoot, selected, comparing, onToggleSelect, onClickNo
         onToggleSelect={onToggleSelect}
         onClickNode={onClickNode}
         onUpdateIdea={onUpdateIdea}
+        onDelete={onDelete}
         isLoading={idea.id === loadingIdeaId}
         t={t}
       />
@@ -530,6 +553,7 @@ function TreeNode({ node, isRoot, selected, comparing, onToggleSelect, onClickNo
                   onToggleSelect={onToggleSelect}
                   onClickNode={onClickNode}
                   onUpdateIdea={onUpdateIdea}
+                  onDelete={onDelete}
                   loadingIdeaId={loadingIdeaId}
                   t={t}
                 />
@@ -552,6 +576,7 @@ export default function LineageView({
   onViewIdea,
   onStartComparison,
   onUpdateIdea,
+  onDelete,
   loadingIdeaId,
   t,
 }) {
@@ -698,6 +723,7 @@ export default function LineageView({
             onToggleSelect={toggleSelect}
             onClickNode={(ideaId) => onViewIdea(ideaId)}
             onUpdateIdea={onUpdateIdea}
+            onDelete={onDelete}
             loadingIdeaId={loadingIdeaId}
             t={t}
           />

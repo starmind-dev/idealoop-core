@@ -251,7 +251,6 @@ export default function Home() {
       .select("*", { count: "exact", head: true })
       .eq("user_id", user.id)
       .eq("status", "active")
-      .is("parent_idea_id", null)
       .then(({ count, error }) => {
         if (!error && count !== null) setSavedIdeasCount(count);
       });
@@ -1985,6 +1984,25 @@ export default function Home() {
                 setLineageTargetId(null);
               }}
               onUpdateIdea={updateIdea}
+              onDelete={async (ideaId) => {
+                // Determine (from the current tree) whether the lineage node
+                // we're focused on is inside the subtree about to be deleted.
+                const willRemove = new Set([ideaId]);
+                let frontier = [ideaId];
+                while (frontier.length) {
+                  const kids = myIdeas
+                    .filter((i) => i.parent_idea_id && frontier.includes(i.parent_idea_id) && !willRemove.has(i.id))
+                    .map((i) => i.id);
+                  kids.forEach((id) => willRemove.add(id));
+                  frontier = kids;
+                }
+                await deleteSavedIdea(ideaId);
+                // If the lineage we're viewing is now gone, go back to the hub.
+                if (willRemove.has(lineageTargetId)) {
+                  setLineageMode(false);
+                  setLineageTargetId(null);
+                }
+              }}
               loadingIdeaId={loadingIdeaId}
             />
           </main>
@@ -2288,7 +2306,7 @@ export default function Home() {
                 </div>
 
                 {/* Compare button — enters selection mode (workflow feature, subscribers only) */}
-                {entitlements.canUseWorkflow && myIdeas.filter(i => !i.parent_idea_id || i.is_main_version).length >= 2 && !compareSelecting && (
+                {entitlements.canUseWorkflow && myIdeas.filter(i => !i.parent_idea_id || i.is_main_version || !myIdeas.some(p => p.id === i.parent_idea_id)).length >= 2 && !compareSelecting && (
                   <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
                     <button
                       onClick={() => { setCompareSelecting(true); setCompareSelected([]); }}
@@ -2346,7 +2364,7 @@ export default function Home() {
                     </div>
                   </div>
                 )}
-                {myIdeas.filter(i => !i.parent_idea_id || i.is_main_version).map((savedIdea) => {
+                {myIdeas.filter(i => !i.parent_idea_id || i.is_main_version || !myIdeas.some(p => p.id === i.parent_idea_id)).map((savedIdea) => {
                   const evals = savedIdea.evaluations || [];
                   const eval_ = evals.length > 0 ? evals[evals.length - 1] : null;
                   const score = eval_?.weighted_overall_score || 0;
