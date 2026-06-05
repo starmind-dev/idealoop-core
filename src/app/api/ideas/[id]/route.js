@@ -15,6 +15,36 @@ async function authenticate(request) {
   return user;
 }
 
+// Collect an idea + every descendant branch (walk DOWN the parent_idea_id tree).
+// Used so deleting a root/parent archives its whole lineage, not just the one row.
+async function collectSubtreeIds(rootId, userId) {
+  const ids = [rootId];
+  let frontier = [rootId];
+  const seen = new Set([rootId]); // safety against cycles
+
+  while (frontier.length > 0) {
+    const { data: children, error } = await supabaseAdmin
+      .from("ideas")
+      .select("id")
+      .eq("user_id", userId)
+      .in("parent_idea_id", frontier);
+
+    if (error || !children || children.length === 0) break;
+
+    const next = [];
+    for (const c of children) {
+      if (!seen.has(c.id)) {
+        seen.add(c.id);
+        ids.push(c.id);
+        next.push(c.id);
+      }
+    }
+    frontier = next;
+  }
+
+  return ids;
+}
+
 export async function GET(request, { params }) {
   try {
     const user = await authenticate(request);
@@ -133,11 +163,28 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: "Missing idea ID." }, { status: 400 });
     }
 
+    // Verify the idea exists and belongs to the user before touching anything.
+    const { data: target, error: targetError } = await supabaseAdmin
+      .from("ideas")
+      .select("id")
+      .eq("id", ideaId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (targetError || !target) {
+      return NextResponse.json({ error: "Idea not found." }, { status: 404 });
+    }
+
+    // Archive the idea AND all of its descendant branches in one update,
+    // so deleting a root/parent clears its whole lineage instead of leaving
+    // orphaned branches still active in the hub.
+    const subtreeIds = await collectSubtreeIds(ideaId, user.id);
+
     const { error: archiveError } = await supabaseAdmin
       .from("ideas")
       .update({ status: "archived", updated_at: new Date().toISOString() })
-      .eq("id", ideaId)
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .in("id", subtreeIds);
 
     if (archiveError) {
       return NextResponse.json(
@@ -146,7 +193,11 @@ export async function DELETE(request, { params }) {
       );
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      archived_ids: subtreeIds,
+      archived_count: subtreeIds.length,
+    });
   } catch (err) {
     console.error("Archive idea error:", err);
     return NextResponse.json({ error: "Something went wrong." }, { status: 500 });

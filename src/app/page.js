@@ -1123,9 +1123,11 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      // Remove from local list
-      setMyIdeas((prev) => prev.filter((i) => i.id !== ideaId));
-      setSavedIdeasCount((prev) => Math.max(0, prev - 1));
+      // Cascade-aware: the server archives the idea + all of its descendant
+      // branches and returns their ids, so remove the whole lineage locally.
+      const removed = new Set(data.archived_ids || [ideaId]);
+      setMyIdeas((prev) => prev.filter((i) => !removed.has(i.id)));
+      setSavedIdeasCount((prev) => Math.max(0, prev - (data.archived_count || 1)));
     } catch (err) {
       setMyIdeasError(err.message || "Failed to delete idea.");
     } finally {
