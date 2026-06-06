@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabase";
 import ComparisonView from "./ComparisonView";
 import LineageView from "./LineageView";
 import EvaluationView from "./EvaluationView";
+import ExecutionBriefView from "./ExecutionBriefView";
 import {
   StepProgress,
   StatusBadge,
@@ -106,14 +107,9 @@ export default function Home() {
   const [editingIdeaId, setEditingIdeaId] = useState(null);
   const [editingIdeaTitle, setEditingIdeaTitle] = useState("");
 
-  // Progress tracking state
+  // Evaluation / idea identity (persist targets)
   const [currentEvaluationId, setCurrentEvaluationId] = useState(null);
   const [currentIdeaId, setCurrentIdeaId] = useState(null);
-  const [phaseProgress, setPhaseProgress] = useState({}); // { phase_1: { completed, note }, ... }
-  const [progressLoading, setProgressLoading] = useState(false);
-  const [savingProgress, setSavingProgress] = useState({}); // tracks which phase_keys are currently saving
-  const [editingNotePhase, setEditingNotePhase] = useState(null); // which phase is having its note edited
-  const [noteText, setNoteText] = useState(""); // temp text for note editing
   const [dbNextResetTime, setDbNextResetTime] = useState(null); // DB-based reset time for logged-in users
 
   // Re-evaluation state
@@ -297,28 +293,42 @@ export default function Home() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState(null);
-  const [expandedPhases, setExpandedPhases] = useState({});
-  const [editingPhase, setEditingPhase] = useState(null);
-  const [editedPhases, setEditedPhases] = useState(null);
 
-  const togglePhase = (i) => setExpandedPhases((p) => ({ ...p, [i]: !p[i] }));
+  // ============================================
+  // EXECUTION BRIEF STATE (Screen 3 / step-4 handoff)
+  // ============================================
+  // briefSections : dict of blocks received so far, keyed by block id
+  //   (bet / prove_next / order / wont_count / gates / handoff) — the
+  //   PROGRESSIVE render source; each block renders the moment its section
+  //   event lands. Seeded whole from analysis.execution_brief on a saved load.
+  // briefStatus   : "idle" | "streaming" | "complete" | "error"
+  // briefError    : user-facing message when briefStatus === "error"
+  // briefRetrying : soft transient-retry notice (route retries the open once
+  //   before the first section) — distinct from error, never aborts.
+  // briefData     : the assembled six-block object — set on `complete` (or
+  //   seeded from a saved brief). This is the client-held copy threaded into
+  //   the normal-save body so a fresh → generate → save persists the brief.
+  const [briefSections, setBriefSections] = useState({});
+  const [briefStatus, setBriefStatus] = useState("idle");
+  const [briefError, setBriefError] = useState("");
+  const [briefRetrying, setBriefRetrying] = useState(false);
+  const [briefData, setBriefData] = useState(null);
 
-  const startEditingPhase = (i) => {
-    if (!editedPhases) setEditedPhases([...analysis.phases]);
-    setEditingPhase(i);
+  // Clear brief state when analysis switches to a fresh/different idea so a
+  // stale brief never bleeds across ideas. (Saved loads seed instead, in
+  // applyLoadedIdea.)
+  const resetExecutionBrief = () => {
+    setBriefSections({});
+    setBriefStatus("idle");
+    setBriefError("");
+    setBriefRetrying(false);
+    setBriefData(null);
   };
-
-  const savePhaseEdit = (i, field, value) => {
-    const updated = [...(editedPhases || analysis.phases)];
-    updated[i] = { ...updated[i], [field]: value };
-    setEditedPhases(updated);
-  };
-
-  const stopEditingPhase = () => setEditingPhase(null);
-  const currentPhases = editedPhases || (analysis ? analysis.phases : []);
 
   const getStepNumber = () => {
-    const map = { profile: 1, input: 2, myideas: 2, reeval: 5, results1: 3, results2: 4, delta: 5 };
+    // brief reuses step 4 "Execution" — it's an execution-facing screen like
+    // results2; not every screen needs to tick its own dot.
+    const map = { profile: 1, input: 2, myideas: 2, reeval: 5, results1: 3, results2: 4, brief: 4, delta: 5 };
     return map[currentScreen] || 1;
   };
 
@@ -500,7 +510,6 @@ export default function Home() {
     setIdeaName("");
     setCurrentEvaluationId(null);
     setCurrentIdeaId(null);
-    setPhaseProgress({});
     setViewingFromSaved(false);
     setIsReEvalResult(false);
     setReEvalRevisionNotes(null);
@@ -548,8 +557,7 @@ export default function Home() {
       }
 
       setAnalysis(result.analysis);
-      setEditedPhases(null);
-      setExpandedPhases({});
+      resetExecutionBrief();
       setCurrentScreen("results1");
     } catch (err) {
       setError(err.message);
@@ -652,9 +660,7 @@ export default function Home() {
 
       // Show results as FRESH evaluation (not saved, not viewing from saved)
       setAnalysis(result.analysis);
-      setEditedPhases(null);
-      setExpandedPhases({});
-      setPhaseProgress({});
+      resetExecutionBrief();
       setViewingFromSaved(false);
       setSaveStatus("idle");
       setSaveError("");
@@ -825,6 +831,10 @@ export default function Home() {
             idea_name: ideaName.trim(),
             profile,
             analysis,
+            // fresh → generate → save: persist the client-held brief with the
+            // new row (null when none was generated). Branch saves do NOT carry
+            // it — a branch persists its brief via generate-from-hub later.
+            execution_brief: briefData || null,
           }),
         });
 
@@ -878,13 +888,29 @@ export default function Home() {
   const applyLoadedIdea = (data, ideaId) => {
     setIdea(data.idea.raw_idea_text);
     setAnalysis(data.analysis);
-    setEditedPhases(null);
-    setExpandedPhases({});
     setSaveStatus("saved");
     setSavedIdeaId(ideaId);
     setCurrentIdeaId(ideaId);
     setCurrentEvaluationId(data.evaluation_id);
     setViewingFromSaved(true);
+
+    // Seed the execution-brief state from the loaded analysis. The [id] route
+    // surfaces a persisted brief as analysis.execution_brief; when present we
+    // mark it complete so opening the brief screen DISPLAYS it without a new
+    // generation. When absent, reset to idle so a stale brief can't bleed across
+    // ideas — the user can generate one fresh.
+    const loadedBrief = data.analysis?.execution_brief;
+    if (loadedBrief && Object.keys(loadedBrief).length > 0) {
+      setBriefSections(loadedBrief);
+      setBriefData(loadedBrief);
+      setBriefStatus("complete");
+    } else {
+      setBriefSections({});
+      setBriefData(null);
+      setBriefStatus("idle");
+    }
+    setBriefError("");
+    setBriefRetrying(false);
 
     // Reconstruct the full idea text including revisions
     let fullIdeaText = data.idea.raw_idea_text;
@@ -911,7 +937,6 @@ export default function Home() {
     if (!user) return;
     setMyIdeasError("");
     setShowAlternativesPopup(false);
-    setPhaseProgress({}); // Clear stale progress immediately so alternatives don't share state
     setDeltaData(null); // Clear previous delta
     setDeltaError("");
 
@@ -921,10 +946,6 @@ export default function Home() {
     if (evaluationCacheRef.current[cacheKey]) {
       const cached = evaluationCacheRef.current[cacheKey];
       applyLoadedIdea(cached, ideaId);
-      // Still refresh progress (lightweight)
-      if (cached.evaluation_id) {
-        fetchProgress(cached.evaluation_id);
-      }
       return;
     }
 
@@ -946,40 +967,10 @@ export default function Home() {
       evaluationCacheRef.current[cacheKey] = data;
 
       applyLoadedIdea(data, ideaId);
-
-      // Fetch progress for this evaluation
-      if (data.evaluation_id) {
-        fetchProgress(data.evaluation_id, session.access_token);
-      }
     } catch (err) {
       setMyIdeasError(err.message || "Failed to load idea.");
     } finally {
       setMyIdeasLoading(false);
-    }
-  };
-
-  // Fetch progress data for a specific evaluation
-  const fetchProgress = async (evaluationId, accessToken) => {
-    setProgressLoading(true);
-    try {
-      let token = accessToken;
-      if (!token) {
-        const { data: { session } } = await supabase.auth.getSession();
-        token = session?.access_token;
-      }
-      if (!token) return;
-
-      const res = await fetch(`/api/progress?evaluation_id=${evaluationId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setPhaseProgress(data.progress || {});
-      }
-    } catch (err) {
-      console.error("Failed to fetch progress:", err);
-    } finally {
-      setProgressLoading(false);
     }
   };
 
@@ -1021,103 +1012,166 @@ export default function Home() {
     }
   };
 
-  // Toggle a phase checkbox
-  const togglePhaseProgress = async (phaseKey) => {
-    if (!currentEvaluationId || !currentIdeaId) return;
+  // ============================================
+  // EXECUTION BRIEF — SSE consumer + entry
+  // ============================================
+  // Fresh consumer written against the brief route's OWN event contract
+  // (start / section / retry / error / complete) — deliberately NOT forked from
+  // analyzeWithStream, which switches on the pipeline's stage steps. Two hard
+  // differences from analyze: the brief route REQUIRES `Authorization: Bearer`,
+  // and sections are rendered PROGRESSIVELY (each `section` event paints its
+  // block immediately; we never wait for `complete` to show content).
+  //
+  // evaluationId is passed ONLY when a saved row exists (currentEvaluationId).
+  // Saved → the route persists to evaluations.execution_brief_json. Fresh/unsaved
+  // → omitted; the brief rides back on `complete` into briefData and persists
+  // later via the normal-save body. `currentEvaluationId || null` covers all
+  // cases: it's null on a fresh unsaved eval and set after load or save.
+  const streamExecutionBrief = async (evaluationId) => {
+    if (!analysis) return;
 
-    const current = phaseProgress[phaseKey];
-    const newCompleted = !(current?.completed);
-
-    // Optimistic update
-    setPhaseProgress((prev) => ({
-      ...prev,
-      [phaseKey]: {
-        ...prev[phaseKey],
-        completed: newCompleted,
-        completed_at: newCompleted ? new Date().toISOString() : null,
-      },
-    }));
-    setSavingProgress((prev) => ({ ...prev, [phaseKey]: true }));
+    setBriefStatus("streaming");
+    setBriefError("");
+    setBriefRetrying(false);
+    setBriefSections({});
+    setBriefData(null);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) {
+        setBriefStatus("error");
+        setBriefError("Session expired. Please log in again.");
+        return;
+      }
 
-      const res = await fetch("/api/progress", {
-        method: "PATCH",
+      const res = await fetch("/api/execution-brief", {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
-          evaluation_id: currentEvaluationId,
-          idea_id: currentIdeaId,
-          phase_key: phaseKey,
-          completed: newCompleted,
+          analysis,
+          ...(evaluationId ? { evaluation_id: evaluationId } : {}),
+          devMode,
         }),
       });
 
-      const data = await res.json();
-      if (res.ok) {
-        setPhaseProgress((prev) => ({
-          ...prev,
-          [phaseKey]: {
-            ...prev[phaseKey],
-            ...data.progress,
-          },
-        }));
+      // Non-stream failures arrive as a JSON error (401/400/402/422/5xx).
+      if (!res.ok || !res.body) {
+        const errData = await res.json().catch(() => ({}));
+        setBriefStatus("error");
+        setBriefError(
+          errData.error ||
+            (res.status === 422
+              ? "An execution brief isn't available for this analysis."
+              : "Couldn't generate the execution brief.")
+        );
+        return;
       }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || ""; // keep the incomplete trailing line
+
+        for (const line of lines) {
+          if (!line.startsWith("data:")) continue;
+          const payload = line.slice(5).trim();
+          if (!payload) continue;
+
+          let event;
+          try {
+            event = JSON.parse(payload);
+          } catch {
+            continue; // ignore keepalives / non-JSON
+          }
+
+          if (event.step === "start") {
+            // stream opened; nothing to paint yet (loading state shows)
+          } else if (event.step === "section") {
+            // progressive paint — render this block immediately
+            setBriefRetrying(false);
+            setBriefSections((prev) => ({ ...prev, [event.id]: event.data }));
+          } else if (event.step === "retry") {
+            // soft transient notice — the route is reopening before the first
+            // section. NOT an error; the run is still alive.
+            setBriefRetrying(true);
+          } else if (event.step === "error") {
+            setBriefStatus("error");
+            setBriefError(event.message || "Brief generation failed.");
+            return;
+          } else if (event.step === "complete") {
+            // authoritative assembled brief — store for save + mark done
+            const brief = event.brief || {};
+            setBriefSections(brief);
+            setBriefData(brief);
+            setBriefRetrying(false);
+            setBriefStatus("complete");
+          }
+        }
+      }
+
+      // Stream ended without a terminal event (defensive): if we never reached
+      // complete or error, treat a populated section set as done, else error.
+      setBriefStatus((prev) => {
+        if (prev === "complete" || prev === "error") return prev;
+        return "error";
+      });
     } catch (err) {
-      // Revert optimistic update on failure
-      setPhaseProgress((prev) => ({
-        ...prev,
-        [phaseKey]: current || { completed: false, note: "" },
-      }));
-      console.error("Failed to toggle progress:", err);
-    } finally {
-      setSavingProgress((prev) => ({ ...prev, [phaseKey]: false }));
+      setBriefStatus("error");
+      setBriefError(err?.message || "Couldn't generate the execution brief.");
     }
   };
 
-  // Save a note for a phase
-  const savePhaseNote = async (phaseKey, noteValue) => {
-    if (!currentEvaluationId || !currentIdeaId) return;
+  // Navigate to the brief screen. If a brief is already attached (saved idea
+  // loaded with execution_brief, or one generated this session), DISPLAY it —
+  // don't regenerate (that wastes a call and overwrites the saved artifact).
+  // Otherwise stream a fresh one, passing evaluation_id only when a row exists.
+  const openExecutionBrief = ({ regenerate = false } = {}) => {
+    if (!analysis) return;
+    setCurrentScreen("brief");
 
-    setSavingProgress((prev) => ({ ...prev, [phaseKey]: true }));
+    const hasBrief =
+      briefData ||
+      (analysis.execution_brief && Object.keys(analysis.execution_brief).length > 0);
 
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const res = await fetch("/api/progress", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          evaluation_id: currentEvaluationId,
-          idea_id: currentIdeaId,
-          phase_key: phaseKey,
-          note: noteValue,
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        setPhaseProgress((prev) => ({
-          ...prev,
-          [phaseKey]: {
-            ...prev[phaseKey],
-            ...data.progress,
-          },
-        }));
-      }
-    } catch (err) {
-      console.error("Failed to save note:", err);
-    } finally {
-      setSavingProgress((prev) => ({ ...prev, [phaseKey]: false }));
+    if (hasBrief && !regenerate) {
+      // already have it — make sure state reflects the attached brief, no stream
+      const existing = briefData || analysis.execution_brief;
+      setBriefSections(existing);
+      setBriefData(existing);
+      setBriefStatus("complete");
+      setBriefError("");
+      setBriefRetrying(false);
+      return;
     }
+
+    streamExecutionBrief(currentEvaluationId || null);
+  };
+
+  // "Save this idea →" from the brief screen. The brief has no independent save —
+  // it persists WITH the idea through the one canonical handleSaveIdea flow (the
+  // normal-save body already carries `execution_brief: briefData`). So this does
+  // NOT save here; it pre-opens results2's NORMAL naming form and routes there,
+  // so the action the user clicked continues visibly into the naming step.
+  // Only ever called on the fresh, non-re-eval path (the affordance is gated to
+  // it in ExecutionBriefView) — so setting "naming" opens the normal variant,
+  // never the branch form (which keys off isReEvalResult).
+  const openSaveFromBrief = () => {
+    if (saveStatus !== "saving" && saveStatus !== "saved" && saveStatus !== "naming") {
+      setSaveStatus("naming");
+      const firstLine = (idea || "").split(/[.!?\n]/)[0].trim();
+      setIdeaName(firstLine.length <= 60 ? firstLine : firstLine.substring(0, 57) + "...");
+    }
+    setCurrentScreen("results2");
   };
 
   // Delete a saved idea
@@ -1271,8 +1325,6 @@ export default function Home() {
     setCurrentScreen("input");
     setAnalysis(null);
     setIdea("");
-    setEditedPhases(null);
-    setExpandedPhases({});
     setEvalsRemaining(user ? evalsRemaining : getEvalsRemaining());
     setSaveStatus("idle");
     setSaveError("");
@@ -1280,21 +1332,17 @@ export default function Home() {
     setIdeaName("");
     setCurrentEvaluationId(null);
     setCurrentIdeaId(null);
-    setPhaseProgress({});
     setViewingFromSaved(false);
-    setEditingNotePhase(null);
-    setNoteText("");
+    resetExecutionBrief();
   };
 
   const onBackToMyIdeasCleanup = () => {
     setViewingFromSaved(false);
-    setPhaseProgress({});
     setCurrentEvaluationId(null);
     setCurrentIdeaId(null);
-    setEditingNotePhase(null);
-    setNoteText("");
     setDeltaData(null);
     setDeltaError("");
+    resetExecutionBrief();
     goToMyIdeas();
   };
 
@@ -2184,26 +2232,19 @@ export default function Home() {
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
                             <span style={{ fontSize: 11, color: t.mut }}>{evDate}</span>
-                            {ev.progress?.has_progress && (
-                              <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                                <div style={{ display: "flex", gap: 1 }}>
-                                  {Array.from({ length: ev.progress.total_phases || 0 }).map((_, idx) => {
-                                    const phaseKey = `phase_${idx + 1}`;
-                                    const isCompleted = (ev.progress.completed_phases || []).includes(phaseKey);
-                                    return (
-                                      <div key={idx} style={{
-                                        width: 10,
-                                        height: 3,
-                                        borderRadius: 1.5,
-                                        background: isCompleted ? "#10b981" : t.barBg,
-                                      }} />
-                                    );
-                                  })}
-                                </div>
-                                <span style={{ fontSize: 9, color: t.mut }}>
-                                  {ev.progress.completed}/{ev.progress.total_phases}
-                                </span>
-                              </div>
+                            {ev.has_brief && (
+                              <span style={{
+                                fontSize: 9,
+                                fontWeight: 600,
+                                letterSpacing: "0.04em",
+                                textTransform: "uppercase",
+                                color: "#9B82FF",
+                                border: "0.5px solid rgba(124,92,252,0.35)",
+                                borderRadius: 5,
+                                padding: "1px 5px",
+                              }}>
+                                Brief
+                              </span>
                             )}
                           </div>
                         </div>
@@ -2677,30 +2718,21 @@ export default function Home() {
                         justifyContent: "space-between",
                         alignItems: "center",
                       }}>
-                        {/* Progress indicator */}
-                        {savedIdea.progress?.has_progress ? (
-                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <div style={{ display: "flex", gap: 2 }}>
-                              {Array.from({ length: savedIdea.progress.total_phases || 0 }).map((_, idx) => {
-                                const phaseKey = `phase_${idx + 1}`;
-                                const isCompleted = (savedIdea.progress.completed_phases || []).includes(phaseKey);
-                                return (
-                                  <div key={idx} style={{
-                                    width: 16,
-                                    height: 4,
-                                    borderRadius: 2,
-                                    background: isCompleted ? "#10b981" : t.barBg,
-                                  }} />
-                                );
-                              })}
-                            </div>
-                            <span style={{ fontSize: 11, color: t.sec }}>
-                              {savedIdea.progress.completed}/{savedIdea.progress.total_phases}
-                            </span>
-                          </div>
-                        ) : savedIdea.progress?.total_phases > 0 ? (
-                          <span style={{ fontSize: 11, color: t.mut }}>
-                            {savedIdea.progress.total_phases} phases · no progress yet
+                        {/* Execution-brief indicator */}
+                        {savedIdea.has_brief ? (
+                          <span style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 5,
+                            fontSize: 11,
+                            fontWeight: 500,
+                            color: "#9B82FF",
+                            border: "0.5px solid rgba(124,92,252,0.3)",
+                            borderRadius: 7,
+                            padding: "3px 9px",
+                          }}>
+                            <span style={{ fontSize: 13, lineHeight: 1 }}>⚑</span>
+                            Execution brief
                           </span>
                         ) : (
                           <span />
@@ -3284,6 +3316,13 @@ export default function Home() {
   // SCREENS: ANALYSIS + EXECUTION PLAN (delegated to EvaluationView)
   // ==========================================
   if ((currentScreen === "results1" || currentScreen === "results2") && analysis) {
+    // A brief is "already attached" if one was generated this session (briefData)
+    // or persisted on a saved load (analysis.execution_brief). Drives the CTA
+    // label; openExecutionBrief decides display-vs-generate.
+    const hasExistingBrief = !!(
+      briefData ||
+      (analysis.execution_brief && Object.keys(analysis.execution_brief).length > 0)
+    );
     return (
       <EvaluationView
         screen={currentScreen}
@@ -3303,14 +3342,8 @@ export default function Home() {
         saveError={saveError}
         savedIdeasCount={savedIdeasCount}
         ideaName={ideaName}
-        currentPhases={currentPhases}
-        expandedPhases={expandedPhases}
-        editedPhases={editedPhases}
-        phaseProgress={phaseProgress}
-        editingNotePhase={editingNotePhase}
-        noteText={noteText}
-        savingProgress={savingProgress}
-        editingPhase={editingPhase}
+        openExecutionBrief={openExecutionBrief}
+        hasExecutionBrief={hasExistingBrief}
         currentEvaluationId={currentEvaluationId}
         currentIdeaId={currentIdeaId}
         myIdeas={myIdeas}
@@ -3333,19 +3366,11 @@ export default function Home() {
         setBranchReason={setBranchReason}
         setBranchDimensions={setBranchDimensions}
         setBranchSetAsMain={setBranchSetAsMain}
-        setEditingNotePhase={setEditingNotePhase}
-        setNoteText={setNoteText}
         setIsReEvalResult={setIsReEvalResult}
         goToMyIdeas={goToMyIdeas}
         handleLogout={handleLogout}
         handleSaveIdea={handleSaveIdea}
         startReEvaluation={startReEvaluation}
-        togglePhase={togglePhase}
-        togglePhaseProgress={togglePhaseProgress}
-        startEditingPhase={startEditingPhase}
-        stopEditingPhase={stopEditingPhase}
-        savePhaseEdit={savePhaseEdit}
-        savePhaseNote={savePhaseNote}
         getStepNumber={getStepNumber}
         onResetAndNewIdea={onResetAndNewIdea}
         onBackToMyIdeasCleanup={onBackToMyIdeasCleanup}
@@ -3356,6 +3381,38 @@ export default function Home() {
     );
   }
 
+  // ============================================
+  // SCREEN: EXECUTION BRIEF (results3 / step-4 handoff)
+  // ============================================
+  if (currentScreen === "brief" && analysis) {
+    return (
+      <ExecutionBriefView
+        t={t}
+        analysis={analysis}
+        sections={briefSections}
+        status={briefStatus}
+        error={briefError}
+        retrying={briefRetrying}
+        viewingFromSaved={viewingFromSaved}
+        isBranchIdea={isBranchIdea}
+        isReEvalResult={isReEvalResult}
+        saveStatus={saveStatus}
+        savedIdeaId={savedIdeaId}
+        profile={profile}
+        user={user}
+        authLoading={authLoading}
+        getStepNumber={getStepNumber}
+        setCurrentScreen={setCurrentScreen}
+        goToMyIdeas={goToMyIdeas}
+        handleLogout={handleLogout}
+        onRegenerate={() => openExecutionBrief({ regenerate: true })}
+        onSaveIdea={openSaveFromBrief}
+        onNewIdea={onResetAndNewIdea}
+        headerStyle={headerStyle}
+        footerStyle={footerStyle}
+      />
+    );
+  }
 
   // ============================================
   // SCREEN: DELTA EXPLANATION (branches only)
@@ -3690,13 +3747,11 @@ export default function Home() {
             <button
               onClick={() => {
                 setViewingFromSaved(false);
-                setPhaseProgress({});
                 setCurrentEvaluationId(null);
                 setCurrentIdeaId(null);
-                setEditingNotePhase(null);
-                setNoteText("");
                 setDeltaData(null);
                 setDeltaError("");
+                resetExecutionBrief();
                 goToMyIdeas();
               }}
               style={{

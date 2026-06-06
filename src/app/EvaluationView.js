@@ -45,15 +45,6 @@ export default function EvaluationView({
   saveError,
   savedIdeasCount,
   ideaName,
-  // Phase/progress state
-  currentPhases,
-  expandedPhases,
-  editedPhases,
-  phaseProgress,
-  editingNotePhase,
-  noteText,
-  savingProgress,
-  editingPhase,
   currentEvaluationId,
   currentIdeaId,
   myIdeas,
@@ -65,6 +56,9 @@ export default function EvaluationView({
   evalsRemaining,
   deltaData,
   deltaLoading,
+  // Execution Brief (Screen 3)
+  openExecutionBrief,
+  hasExecutionBrief,
   // Shared styles
   headerStyle,
   footerStyle,
@@ -80,20 +74,12 @@ export default function EvaluationView({
   setBranchReason,
   setBranchDimensions,
   setBranchSetAsMain,
-  setEditingNotePhase,
-  setNoteText,
   setIsReEvalResult,
   // Functions
   goToMyIdeas,
   handleLogout,
   handleSaveIdea,
   startReEvaluation,
-  togglePhase,
-  togglePhaseProgress,
-  startEditingPhase,
-  stopEditingPhase,
-  savePhaseEdit,
-  savePhaseNote,
   getStepNumber,
   // Wrapped callbacks (multi-setter operations)
   onResetAndNewIdea,
@@ -1132,6 +1118,40 @@ export default function EvaluationView({
                 </div>
               )}
             </section>
+
+            {/* Execution Brief CTA (Screen 3 / step-4 handoff).
+                Shown only when the brief is actually available — mirrors the
+                route's 422 guard (no Specification / no degraded synthesis) so
+                the user can't click into an error — and only for full-content
+                users (the brief is a paid surface, not part of the blurred
+                free preview). Label keys on whether a brief is already attached;
+                openExecutionBrief decides display-vs-generate. */}
+            {!isGated &&
+              analysis.estimates.main_bottleneck !== "Specification" &&
+              !analysis.evaluation.synthesis_degraded && (
+                <button
+                  onClick={() => openExecutionBrief && openExecutionBrief()}
+                  style={{
+                    width: "100%",
+                    padding: "16px 0",
+                    borderRadius: 12,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    border: "none",
+                    background: t.ctaBg,
+                    color: t.ctaText,
+                    cursor: "pointer",
+                    marginBottom: 16,
+                  }}
+                >
+                  {hasExecutionBrief ? "Continue to Execution Brief →" : "Generate Execution Brief →"}
+                  <span style={{ display: "block", fontSize: 12, fontWeight: 400, opacity: 0.75, marginTop: 4 }}>
+                    {hasExecutionBrief
+                      ? "Your handoff: the first move and what would prove it"
+                      : "Turn this diagnosis into a first-move handoff — where our read stops"}
+                  </span>
+                </button>
+              )}
 
             {/* Save / Decision block — shown after user has seen everything */}
             {!viewingFromSaved && (
