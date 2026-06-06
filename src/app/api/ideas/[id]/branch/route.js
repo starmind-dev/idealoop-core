@@ -1,3 +1,16 @@
+// src/app/api/ideas/[id]/branch/route.js
+// CHANGES vs current (both required for the migrated schema):
+//   - REMOVED roadmap_json / tools_json from the evaluation insert. Those columns
+//     were dropped from the DB this session; inserting into a non-existent column
+//     makes Postgres REJECT THE WHOLE INSERT, so every branch was failing (eval
+//     insert throws → idea row cleaned up → 500). This is the urgent fix.
+//   - ADDED execution_brief_json (null-safe). Branching is atomic — it creates the
+//     idea + evaluation row in one shot, so there is no generate-before-save moment
+//     for a branch (Option A: the brief is generated later from the hub against the
+//     branch's evaluation_id). execution_brief is therefore normally absent → null;
+//     accepting it keeps this insert's shape identical to the save route and is
+//     harmless if it's ever passed.
+
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -54,6 +67,7 @@ export async function POST(request, { params }) {
       analysis,
       profile,
       changed_fields,
+      execution_brief, // normally absent (Option A); null-safe below
     } = body;
 
     // Validate required fields
@@ -130,9 +144,12 @@ export async function POST(request, { params }) {
         classification: analysis.classification || "commercial",
         scope_warning: analysis.scope_warning || false,
         scoring_json: scoringJson,
-        roadmap_json: analysis.phases || [],
-        tools_json: analysis.tools || [],
+        // roadmap_json / tools_json REMOVED — columns dropped; inserting them
+        // rejected the whole insert and broke every branch.
         estimates_json: analysis.estimates || {},
+        // Normally null for a branch (Option A: generated later from the hub
+        // against this evaluation_id). Accepted for shape-parity with /save.
+        execution_brief_json: execution_brief || null,
         market_demand_score: analysis.evaluation?.market_demand?.score || 0,
         monetization_score: analysis.evaluation?.monetization?.score || 0,
         originality_score: analysis.evaluation?.originality?.score || 0,
