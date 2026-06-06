@@ -1,3 +1,20 @@
+// src/app/api/ideas/route.js  (hub list)
+// CHANGES:
+//   - Removed roadmap_json from the evaluations select (column dropped) — this
+//     was the hard-throw: PostgREST errors on selecting a non-existent column.
+//   - Retired the phase-progress feature (option 1): the progress table query
+//     and all total_phases / completed-phase math are gone. Phases came from the
+//     old roadmap concept the Execution Brief replaces; there are no phases now.
+//   - Added execution_brief_json to the select and surface a per-eval `has_brief`
+//     boolean (+ an idea-level `has_brief`) so the hub can show a brief indicator
+//     and the card can route to "Continue to Execution Brief" vs "Generate".
+//
+// FRONTEND FOLLOW-UP (no longer emitted by this route):
+//   The old `progress: { completed, total_phases, has_progress, completed_phases }`
+//   object on each idea/eval is GONE. Any hub-card UI reading idea.progress.* or
+//   ev.progress.* must be removed/updated, or it will read undefined. Replace any
+//   phase-progress chip with the `has_brief` signal (or nothing).
+
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -13,10 +30,7 @@ export async function GET(request) {
     // ------------------------------------------------
     const authHeader = request.headers.get("authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { error: "Not authenticated." },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
     }
 
     const token = authHeader.replace("Bearer ", "");
@@ -26,14 +40,12 @@ export async function GET(request) {
     } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !user) {
-      return NextResponse.json(
-        { error: "Invalid session." },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Invalid session." }, { status: 401 });
     }
 
     // ------------------------------------------------
     // 2. Fetch ideas with their evaluation scores
+    //    (roadmap_json removed; execution_brief_json added)
     // ------------------------------------------------
     const { data: ideas, error: fetchError } = await supabaseAdmin
       .from("ideas")
@@ -60,7 +72,7 @@ export async function GET(request) {
           classification,
           data_source,
           summary_text,
-          roadmap_json,
+          execution_brief_json,
           created_at
         )
       `)
@@ -77,85 +89,39 @@ export async function GET(request) {
     }
 
     // ------------------------------------------------
-    // 3. Fetch progress for all evaluations
+    // 3. Shape each idea: sort evals, surface has_brief, drop phase-progress
     // ------------------------------------------------
-    const evaluationIds = (ideas || [])
-      .flatMap((idea) => (idea.evaluations || []).map((e) => e.id))
-      .filter(Boolean);
-
-    let progressMap = {};
-    if (evaluationIds.length > 0) {
-      const { data: progressRows, error: progressError } = await supabaseAdmin
-        .from("progress")
-        .select("evaluation_id, phase_key, completed")
-        .eq("user_id", user.id)
-        .in("evaluation_id", evaluationIds);
-
-      if (!progressError && progressRows) {
-        progressRows.forEach((row) => {
-          if (!progressMap[row.evaluation_id]) {
-            progressMap[row.evaluation_id] = { completed: 0, total: 0, completed_phases: [] };
-          }
-          progressMap[row.evaluation_id].total++;
-          if (row.completed) {
-            progressMap[row.evaluation_id].completed++;
-            progressMap[row.evaluation_id].completed_phases.push(row.phase_key);
-          }
-        });
-      }
-    }
-
-    // ------------------------------------------------
-    // 4. Attach progress + total phases + eval count to each idea
-    // ------------------------------------------------
-    const ideasWithProgress = (ideas || []).map((idea) => {
-      // Sort evaluations by created_at descending (latest first)
+    const ideasWithMeta = (ideas || []).map((idea) => {
+      // latest eval first
       const sortedEvals = (idea.evaluations || []).sort(
         (a, b) => new Date(b.created_at) - new Date(a.created_at)
       );
 
-      // Attach per-evaluation progress for popup display
-      const evalsWithProgress = sortedEvals.map((ev) => {
-        const evProgress = progressMap[ev.id];
-        const totalPhases = ev.roadmap_json?.length || 0;
-        return {
-          ...ev,
-          progress: {
-            completed: evProgress?.completed || 0,
-            total_phases: totalPhases,
-            has_progress: (evProgress?.total || 0) > 0,
-            completed_phases: evProgress?.completed_phases || [],
-          },
-        };
+      // per-eval: replace heavy execution_brief_json with a light boolean so the
+      // hub payload stays small (the full brief loads via /api/ideas/[id]).
+      const evals = sortedEvals.map((ev) => {
+        const { execution_brief_json, ...rest } = ev;
+        return { ...rest, has_brief: execution_brief_json != null };
       });
 
-      // Use the Original (oldest) evaluation for hub card display
-      const eval_ = evalsWithProgress[evalsWithProgress.length - 1];
-      const totalPhases = eval_?.roadmap_json?.length || 0;
-      const evalProgress = eval_ ? progressMap[eval_.id] : null;
+      // idea-level has_brief = does the LATEST evaluation have a brief? (the hub
+      // card represents the current state of the idea)
+      const latest = evals[0] || null;
 
       return {
         ...idea,
-        evaluations: evalsWithProgress,
-        evaluation_count: evalsWithProgress.length,
-        progress: {
-          completed: evalProgress?.completed || 0,
-          total_phases: totalPhases,
-          has_progress: (evalProgress?.total || 0) > 0,
-          completed_phases: evalProgress?.completed_phases || [],
-        },
+        evaluations: evals,
+        evaluation_count: evals.length,
+        has_brief: latest ? latest.has_brief : false,
       };
     });
 
     return NextResponse.json({
-      ideas: ideasWithProgress,
-      count: ideasWithProgress.length,
+      ideas: ideasWithMeta,
+      count: ideasWithMeta.length,
     });
   } catch (err) {
     console.error("List ideas error:", err);
-    return NextResponse.json(
-      { error: "Something went wrong." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
   }
 }

@@ -1,3 +1,12 @@
+// src/app/api/ideas/save/route.js
+// CHANGE vs current: accepts `execution_brief` in the POST body and writes it to
+// evaluations.execution_brief_json. This is the ONLY change — everything else is
+// unchanged. It closes the fresh-generate-then-save path: if the user generated a
+// brief before saving, it rides in on this same POST (the client already holds it
+// from the brief route's `complete` event) and is persisted with the idea. If no
+// brief was generated, execution_brief is absent → the column is null, and the
+// user can generate it later from the hub (the brief route patches the row then).
+
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -38,7 +47,7 @@ export async function POST(request) {
     // 2. Parse request body
     // ------------------------------------------------
     const body = await request.json();
-    const { idea_text, idea_name, profile, analysis } = body;
+    const { idea_text, idea_name, profile, analysis, execution_brief } = body;
 
     if (!idea_text || !analysis) {
       return NextResponse.json(
@@ -143,6 +152,9 @@ export async function POST(request) {
           evidence_strength: eval_.evidence_strength || null,
         },
         estimates_json: analysis.estimates || {},
+        // NEW: the execution brief, when one was generated before saving.
+        // Absent → null → "generate" CTA shows on reload until one is made.
+        execution_brief_json: execution_brief || null,
         market_demand_score: eval_.market_demand?.score || 0,
         originality_score: eval_.originality?.score || 0,
         monetization_score: eval_.monetization?.score || 0,

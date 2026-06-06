@@ -1,3 +1,11 @@
+// src/app/api/ideas/[id]/route.js
+// CHANGE vs current: maps evaluation.execution_brief_json onto the returned
+// `analysis` object (one line in the GET handler's analysis assembly). The
+// evaluation is already fetched with select("*"), so the column rides back
+// automatically once it exists — no select change needed. This is what lets the
+// frontend decide, on a hub-loaded idea, whether to show "Continue to Execution
+// Brief" (brief present) or "Generate Execution Brief" (brief null).
+
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -131,12 +139,13 @@ export async function GET(request, { params }) {
         differentiation: evaluation.competition_summary || "",
         data_source: evaluation.data_source || "llm_generated",
       },
-      phases: evaluation.roadmap_json || [],
-      tools: evaluation.tools_json || [],
       estimates: evaluation.estimates_json || {},
       classification: evaluation.classification || "commercial",
       scope_warning: evaluation.scope_warning || false,
       _meta: evaluation.meta_json || {},
+      // NEW: the persisted execution brief (null when none generated yet). The
+      // frontend reads this to choose "Continue to Execution Brief" vs "Generate".
+      execution_brief: evaluation.execution_brief_json || null,
     };
 
     return NextResponse.json({
