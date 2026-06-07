@@ -385,9 +385,11 @@ function HandoffBlock({ sections, status, t }) {
   );
 }
 
-// Footer link: rounded-rect outline that lights to the primary purple on hover,
-// matching the Save CTA. Inline styles can't do :hover, so hover is tracked with
-// onMouseEnter/Leave and swapped on the same theme tokens (t.ctaBg / t.ctaText).
+// Footer link: rounded-rect outline that, on hover, lights to the primary purple
+// (matching the Save CTA) with a composed "poise" pop — a slight scale + 1px lift
+// on one restrained spring beat, plus a soft purple shadow. Inline styles can't do
+// :hover, so hover is tracked with onMouseEnter/Leave and swapped on the same
+// theme tokens (t.ctaBg / t.ctaText).
 function FootLink({ onClick, t, children }) {
   const [hover, setHover] = useState(false);
   return (
@@ -403,7 +405,11 @@ function FootLink({ onClick, t, children }) {
         borderRadius: 10,
         padding: "9px 18px",
         cursor: "pointer",
-        transition: "background .15s, color .15s, border-color .15s",
+        transform: hover ? "scale(1.03) translateY(-1px)" : "none",
+        boxShadow: hover ? "0 5px 14px rgba(124,58,237,0.42)" : "none",
+        transition:
+          "transform .34s cubic-bezier(.34,1.25,.64,1), box-shadow .3s ease, " +
+          "background-color .25s, color .25s, border-color .25s",
       }}
     >
       {children}
