@@ -385,6 +385,32 @@ function HandoffBlock({ sections, status, t }) {
   );
 }
 
+// Footer link: rounded-rect outline that lights to the primary purple on hover,
+// matching the Save CTA. Inline styles can't do :hover, so hover is tracked with
+// onMouseEnter/Leave and swapped on the same theme tokens (t.ctaBg / t.ctaText).
+function FootLink({ onClick, t, children }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        fontSize: 13,
+        color: hover ? t.ctaText : t.sec,
+        background: hover ? t.ctaBg : "none",
+        border: `1px solid ${hover ? t.ctaBg : t.border}`,
+        borderRadius: 10,
+        padding: "9px 18px",
+        cursor: "pointer",
+        transition: "background .15s, color .15s, border-color .15s",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
 // Terminal action row — the brief is the end of the flow, so it must never be a
 // dead end. The brief has NO independent save: it persists WITH the idea through
 // the canonical results2 save flow (the normal-save body carries briefData). So:
@@ -402,11 +428,6 @@ function BriefFooterActions({
   t, status, viewingFromSaved, isReEvalResult, saveStatus,
   onSaveIdea, onNewIdea, goToMyIdeas, setCurrentScreen, onRegenerate,
 }) {
-  const linkBtn = {
-    fontSize: 13, color: t.sec, background: "none",
-    border: `1px solid ${t.border}`, borderRadius: 9999,
-    padding: "9px 18px", cursor: "pointer",
-  };
   const primaryBtn = {
     fontSize: 14, fontWeight: 600, color: t.ctaText, background: t.ctaBg,
     border: "none", borderRadius: 12, padding: "13px 26px", cursor: "pointer",
@@ -437,18 +458,13 @@ function BriefFooterActions({
       )}
 
       <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-        <button onClick={() => setCurrentScreen("results2")} style={linkBtn}>← Back to analysis</button>
-        <button onClick={() => goToMyIdeas && goToMyIdeas()} style={linkBtn}>My Ideas</button>
+        <FootLink onClick={() => setCurrentScreen("results2")} t={t}>← Back to analysis</FootLink>
+        <FootLink onClick={() => goToMyIdeas && goToMyIdeas()} t={t}>My Ideas</FootLink>
         {onNewIdea && (
-          <button onClick={() => onNewIdea()} style={linkBtn}>Start a new idea</button>
+          <FootLink onClick={() => onNewIdea()} t={t}>Start a new idea</FootLink>
         )}
         {status === "complete" && onRegenerate && (
-          <button
-            onClick={() => onRegenerate()}
-            style={{ ...linkBtn, color: t.mut, border: `1px solid ${t.border}` }}
-          >
-            Regenerate brief
-          </button>
+          <FootLink onClick={() => onRegenerate()} t={t}>Regenerate brief</FootLink>
         )}
       </div>
     </div>
