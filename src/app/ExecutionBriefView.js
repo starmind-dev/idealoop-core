@@ -212,7 +212,6 @@ function StickyCrossing({ prog, reduce, barRef, t }) {
   const done = (prog || 0) >= 0.985;
   return (
     <div ref={barRef} style={{ position: "sticky", top: 0, zIndex: 20, background: t.bg, padding: "12px 0 11px", marginBottom: 18, borderBottom: `1px solid ${t.divider}` }}>
-      <style>{`@keyframes ebBreathe{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.7}50%{transform:translate(-50%,-50%) scale(1.22);opacity:1}}`}</style>
       <div style={{ position: "relative", height: 28 }}>
         <div style={{ position: "absolute", left: 28, right: 30, top: 0, bottom: 0 }}>
           <div style={{ position: "absolute", left: 0, right: 0, top: "50%", height: 2, transform: "translateY(-50%)", background: t.divider }} />
@@ -223,7 +222,6 @@ function StickyCrossing({ prog, reduce, barRef, t }) {
               <span key={i} style={{ position: "absolute", left: `${d.p}%`, top: "50%", width: 9, height: 9, borderRadius: "50%", background: lit ? d.c : t.surfAlt, border: lit ? "none" : `1px solid ${t.border}`, opacity: lit ? 1 : 0.7, transform: `translate(-50%,-50%) scale(${lit ? 1.15 : 1})`, transition: "all .2s" }} />
             );
           })}
-          <span style={{ position: "absolute", left: `${pct}%`, top: "50%", width: 11, height: 11, borderRadius: "50%", background: "#7F77DD", transform: "translate(-50%,-50%)", opacity: done ? 0 : 1, boxShadow: "0 0 0 4px rgba(127,119,221,0.16)", transition: "opacity .2s", animation: reduce ? "none" : "ebBreathe 1.5s ease-in-out infinite" }} />
         </div>
         <div style={{ position: "absolute", left: 14, top: "50%", transform: "translate(-50%,-50%)", width: 28, height: 28, borderRadius: "50%", background: PAL.idea.chipBg, border: `1px solid ${PAL.idea.edge}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <BriefIcon name="brain" size={15} color={PAL.idea.icon} />
