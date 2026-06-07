@@ -1144,7 +1144,11 @@ export default function EvaluationView({
                     marginBottom: 16,
                   }}
                 >
-                  {hasExecutionBrief ? "Continue to Execution Brief →" : "Generate Execution Brief →"}
+                  {viewingFromSaved && hasExecutionBrief
+                    ? "View Execution Brief →"
+                    : hasExecutionBrief
+                      ? "Continue to Execution Brief →"
+                      : "Generate Execution Brief →"}
                   <span style={{ display: "block", fontSize: 12, fontWeight: 400, opacity: 0.75, marginTop: 4 }}>
                     {hasExecutionBrief
                       ? "Your handoff: the first move and what would prove it"

@@ -214,7 +214,7 @@ function StickyCrossing({ prog, reduce, barRef, t }) {
     <div ref={barRef} style={{ position: "sticky", top: 0, zIndex: 20, background: t.bg, padding: "12px 0 11px", marginBottom: 18, borderBottom: `1px solid ${t.divider}` }}>
       <style>{`@keyframes ebBreathe{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.7}50%{transform:translate(-50%,-50%) scale(1.22);opacity:1}}`}</style>
       <div style={{ position: "relative", height: 28 }}>
-        <div style={{ position: "absolute", left: 14, right: 14, top: 0, bottom: 0 }}>
+        <div style={{ position: "absolute", left: 28, right: 30, top: 0, bottom: 0 }}>
           <div style={{ position: "absolute", left: 0, right: 0, top: "50%", height: 2, transform: "translateY(-50%)", background: t.divider }} />
           <div style={{ position: "absolute", left: 0, width: `${pct}%`, top: "50%", height: 2, transform: "translateY(-50%)", background: "#7F77DD" }} />
           {MAP_DOTS.map((d, i) => {
