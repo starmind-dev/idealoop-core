@@ -219,7 +219,7 @@ export default function EvaluationView({
                   border: "1px solid rgba(16,185,129,0.2)",
                 }}>
                   <span style={{ fontSize: 12, color: "#34d399", fontWeight: 600 }}>Verified Sources</span>
-                  <span style={{ fontSize: 11, color: t.sec }}>via GitHub & Google</span>
+                  <span style={{ fontSize: 11, color: t.sec }}>via GitHub, Tavily, Exa & Google</span>
                 </div>
               ) : (
                 <div style={{
@@ -240,6 +240,8 @@ export default function EvaluationView({
               {(() => {
                 const sourceColors = {
                   github: { bg: `${t.srcBadge.github}26`, color: t.srcBadge.github, border: `${t.srcBadge.github}4D`, label: "GitHub" },
+                  tavily: { bg: "#2dd4bf26", color: "#2dd4bf", border: "#2dd4bf4D", label: "Tavily" },
+                  exa: { bg: "#a78bfa26", color: "#a78bfa", border: "#a78bfa4D", label: "Exa" },
                   google: { bg: `${t.srcBadge.google}26`, color: t.srcBadge.google, border: `${t.srcBadge.google}4D`, label: "Google" },
                   llm: { bg: `${t.srcBadge.llm}26`, color: t.srcBadge.llm, border: `${t.srcBadge.llm}4D`, label: "AI" },
                 };

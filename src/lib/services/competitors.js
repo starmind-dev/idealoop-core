@@ -3,32 +3,46 @@
 // ============================================
 // Injects real competitor data into the system prompt so Claude
 // analyzes against verified products, not imagined ones.
+//
+// Generalized to a labeled source-list: each evidence source (GitHub,
+// Tavily web search, Exa semantic search, Google/Serper) contributes a
+// rendered block. Adding a new source = one more entry in the array
+// passed from route.js — the signature here does not change again.
+//
+// Each source entry: { type, header, intro, items }
+//   type  — "github" (repo render) or "web" (title/url/snippet render)
+//   items — the deduped results array for that source
 
-export function buildCompetitorContext(githubResults, serperResults) {
+function renderItems(items, type) {
+  let out = "";
+  if (type === "github") {
+    for (const repo of items) {
+      out += `- ${repo.name} (${repo.stars} stars, ${repo.language})\n`;
+      out += `  Description: ${repo.description}\n`;
+      out += `  URL: ${repo.url}\n`;
+      out += `  Last updated: ${repo.updated}\n\n`;
+    }
+  } else {
+    // web sources (tavily, exa, google) all share { title, url, snippet }
+    for (const result of items) {
+      out += `- ${result.title}\n`;
+      out += `  URL: ${result.url}\n`;
+      out += `  Description: ${result.snippet}\n\n`;
+    }
+  }
+  return out;
+}
+
+export function buildCompetitorContext(sources) {
   let context = "";
   let hasRealData = false;
 
-  if (githubResults.length > 0) {
+  for (const src of sources || []) {
+    if (!src || !src.items || src.items.length === 0) continue;
     hasRealData = true;
-    context += "\n=== REAL COMPETITOR DATA FROM GITHUB ===\n";
-    context += "These are real, verified GitHub repositories related to this idea:\n\n";
-    for (const repo of githubResults) {
-      context += `- ${repo.name} (${repo.stars} stars, ${repo.language})\n`;
-      context += `  Description: ${repo.description}\n`;
-      context += `  URL: ${repo.url}\n`;
-      context += `  Last updated: ${repo.updated}\n\n`;
-    }
-  }
-
-  if (serperResults.length > 0) {
-    hasRealData = true;
-    context += "\n=== REAL COMPETITOR DATA FROM GOOGLE SEARCH ===\n";
-    context += "These are real products and companies found via Google:\n\n";
-    for (const result of serperResults) {
-      context += `- ${result.title}\n`;
-      context += `  URL: ${result.url}\n`;
-      context += `  Description: ${result.snippet}\n\n`;
-    }
+    context += `\n=== ${src.header} ===\n`;
+    context += `${src.intro}\n\n`;
+    context += renderItems(src.items, src.type);
   }
 
   return { context, hasRealData };
@@ -38,10 +52,10 @@ export function buildCompetitorInstructions(hasRealData) {
   if (hasRealData) {
     return `
 === COMPETITOR DATA INSTRUCTIONS ===
-REAL competitor data from GitHub and Google has been provided above. You MUST:
+REAL competitor data from external searches has been provided above. You MUST:
 1. Use this real data as the PRIMARY basis for your competition analysis.
 2. Include the real competitors in your competitors list with their actual names and descriptions.
-3. Add "source": "github" or "source": "google" to each competitor entry.
+3. Add a "source" field to each competitor entry identifying which dataset it came from: "github", "tavily", "exa", or "google". Use "llm" only for the 1-2 competitors you add from your own knowledge (see rule 5).
 4. Add "url": "<actual URL>" to each competitor entry.
 5. You MAY add 1-2 additional competitors from your knowledge if highly relevant, marked with "source": "llm".
 6. Your differentiation analysis must reference the REAL competitors specifically.

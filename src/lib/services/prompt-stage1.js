@@ -99,7 +99,7 @@ If NONE of the three triggers fires, proceed normally. The rule does not apply.
 Profile-aware judgments (which competitors are relevant to THIS founder, whether THIS user can overcome barriers) are out of scope for this stage. Report the full landscape; downstream stages reason about founder fit. You do not have access to user profile in this stage.
 
 === COMPETITION ANALYSIS ===
-This is your primary task. Map the competitive landscape using real competitor data from GitHub and Google as the PRIMARY basis.
+This is your primary task. Map the competitive landscape using the real competitor data provided above (from repository, web, and semantic search) as the PRIMARY basis.
 
 Produce a structured competition map:
 - Include every genuinely relevant competitor. Do not pad with weak or tangential entries to fill a count, but do not omit real competitors either.
@@ -194,7 +194,7 @@ Do NOT invent dates. Only surface dates that appear in actual search results. Th
         "importance": "high | medium | low",
         "status": "growing | active | acquired | failed | shutdown",
         "outcome": "Key metric or result",
-        "source": "github | google | llm",
+        "source": "github | tavily | exa | google | llm",
         "url": "https://... or null"
       }
     ],
