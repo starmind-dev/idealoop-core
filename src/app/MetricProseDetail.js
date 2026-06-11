@@ -9,6 +9,11 @@
 //   (3) the prose split into labelled question -> answer blocks
 //       (MD/MO = 3 questions, OR = 4), read from the raw prose fields that
 //       route.js retains on each metric object alongside .explanation.
+//   (4) the SourcesStrip evidence bibliography (LL1 Part 2) at the card foot,
+//       resolving _internal's evidence_cited trail against Stage 1's
+//       competitors via the shared resolver. Evaluation-view ONLY — it lives
+//       in this default export, NOT in MetricProseBody, so the comparison
+//       view and execution_reality (correctly evidence-light) are untouched.
 //
 // DISPLAY-ONLY. Reads fields already on the payload (V9.28 raw-fields-retained +
 // V9.30 display_score + _internal restored at final assembly). Touches no score.
@@ -26,6 +31,7 @@
 
 import React from "react";
 import { getScoreColor } from "./components";
+import SourcesStrip from "./SourcesStrip";
 
 // ---- MD demand-type ladder: archetype name -> { tier (1..7), label } ----------
 const MD_ARCHETYPES = {
@@ -219,7 +225,7 @@ export function MetricProseBody({ metricKey, metric, notes = [], t }) {
 }
 
 // ============================================================== main component
-export default function MetricProseDetail({ metricKey, metric, name, weight, notes = [], isGated = false, t }) {
+export default function MetricProseDetail({ metricKey, metric, name, weight, notes = [], isGated = false, competitors = null, t }) {
   const coarse = metric.score;
   const shownScore = metricKey === "monetization" && typeof metric.display_score === "number"
     ? metric.display_score
@@ -243,6 +249,7 @@ export default function MetricProseDetail({ metricKey, metric, name, weight, not
     <>
       {header}
       <MetricProseBody metricKey={metricKey} metric={metric} notes={notes} t={t} />
+      <SourcesStrip internal={metric._internal} competitors={competitors} t={t} />
     </>
   );
 }

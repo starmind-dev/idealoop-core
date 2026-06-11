@@ -291,7 +291,7 @@ export async function POST(request) {
             data: { keywords },
           });
 
-          sendEvent({ step: "search_start", message: "Searching for competitors..." });
+          sendEvent({ step: "search_start", message: "Searching across GitHub, web, and semantic sources..." });
 
           const [
             githubResults1,
@@ -347,16 +347,32 @@ export async function POST(request) {
           sendEvent({
             step: "github_done",
             message: githubResults.length > 0
-              ? `GitHub: found ${githubResults.length} repositories`
-              : "GitHub: no matching repositories found",
+              ? `GitHub: ${githubResults.length} repositories`
+              : "GitHub: no matching repositories",
             data: { count: githubResults.length, results: githubResults },
+          });
+
+          sendEvent({
+            step: "tavily_done",
+            message: tavilyResults.length > 0
+              ? `Tavily: ${tavilyResults.length} results`
+              : "Tavily: no results",
+            data: { count: tavilyResults.length, results: tavilyResults },
+          });
+
+          sendEvent({
+            step: "exa_done",
+            message: exaResults.length > 0
+              ? `Exa: ${exaResults.length} results`
+              : "Exa: no results",
+            data: { count: exaResults.length, results: exaResults },
           });
 
           sendEvent({
             step: "serper_done",
             message: serperResults.length > 0
-              ? `Google: found ${serperResults.length} results`
-              : "Google: no matching results found",
+              ? `Google: ${serperResults.length} results`
+              : "Google: no results",
             data: { count: serperResults.length, results: serperResults },
           });
 
@@ -390,7 +406,7 @@ export async function POST(request) {
           const competitorInstructions = buildCompetitorInstructions(hasRealData);
 
           const dataSourceMsg = hasRealData
-            ? "Real competitor data injected into evaluation"
+            ? "Evidence assembled \u00b7 real market data"
             : "No verified data found — using AI knowledge base";
 
           sendEvent({

@@ -652,6 +652,7 @@ export default function EvaluationView({
                         name="Market Demand"
                         weight="37.5% weight"
                         notes={[ev.market_demand.geographic_note, ev.market_demand.trajectory_note]}
+                        competitors={analysis.competition?.competitors}
                         t={t}
                       />
                     </Card>
@@ -663,6 +664,7 @@ export default function EvaluationView({
                         name={ev.monetization.label || "Monetization Potential"}
                         weight="31.25% weight"
                         isGated={isGated}
+                        competitors={analysis.competition?.competitors}
                         t={t}
                       />
                     </Card>
@@ -674,6 +676,7 @@ export default function EvaluationView({
                         name="Originality"
                         weight="31.25% weight"
                         isGated={isGated}
+                        competitors={analysis.competition?.competitors}
                         t={t}
                       />
                     </Card>

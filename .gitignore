@@ -78,3 +78,6 @@ populate-search.js
 /run-mb-*.js
 /mb-baseline-*
 /mb-run1-*
+
+make-populate-cases.js
+populate-cases.json

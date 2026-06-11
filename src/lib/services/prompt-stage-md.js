@@ -540,7 +540,7 @@ NO LABELS EXPOSED: archetype names, friction subtype names, predicate names (TAR
 
 NO SOURCE TAGS EXPOSED: [competitor:, [domain_flag:, [idea_description], [narrative_field], [user_claim] NEVER appear literally. Evidence content is paraphrased into natural language.
 
-NO INTERNAL VOCABULARY: "rubric," "archetype," "predicate," "Level A/B/C/D/E/F," "Tier 1/2/3," "sub-position" NEVER appear in prose.
+NO INTERNAL VOCABULARY: "rubric," "archetype," "predicate," "packet," "Level A/B/C/D/E/F," "Tier 1/2/3," "sub-position" NEVER appear in prose. When referring to the evidence base in prose, write "the evidence" — never "the packet" (the user has no packet; it is pipeline vocabulary).
 
 NO SCORE NUMBERS: prose does not say "this scores 6.5."
 
@@ -548,11 +548,11 @@ NO TEMPLATING: case-specific vocabulary required. Test: if the target/pain/frict
 
 NO CROSS-METRIC FRAMING: MD prose stays in MD's lane. No comparing to MO/OR/Stage 2c/Stage 3 territory.
 
-NO FOUNDER-COACHING: MD describes what packet shows. Does not advise founder what to do. "You should run interviews" is coaching (banned). "The score would move higher if the packet evidenced sustained workaround behavior" is direction (required form).
+NO FOUNDER-COACHING: MD describes what the evidence shows. Does not advise founder what to do. "You should run interviews" is coaching (banned). "The score would move higher if the evidence included sustained workaround behavior" is direction (required form).
 
 NO HEDGING: banned: "it seems," "might suggest," "potentially indicates," "perhaps," "may indicate," "could possibly," "appears to."
 
-DIRECT ABSENCE LANGUAGE REQUIRED where evidence is absent: "the packet does not yet show," "the current evidence stops short of," "this is not yet evidenced for the named target."
+DIRECT ABSENCE LANGUAGE REQUIRED where evidence is absent: "the evidence does not yet show," "the current evidence stops short of," "this is not yet evidenced for the named target."
 
 NO MARKETING LANGUAGE: banned: "promising," "exciting," "compelling," "strong potential," "significant opportunity."
 
@@ -574,7 +574,7 @@ Hold the whole field to one or two sentences. For opener variety on the current-
 
 --- DIRECTION OPENERS (rotate based on what reads naturally) ---
 
-- "The score would move higher if the packet evidenced..."
+- "The score would move higher if the evidence included..."
 - "Movement above this band would require..."
 - "The next demand proof would be..."
 - "This would move higher only with..."
@@ -587,7 +587,7 @@ Do not use the same opener across every case.
 
 Sparse packet: prose can compress to 15-25 words per field; honest about evidence absence rather than fabricating specifics.
 
-Friction is none_or_minimal: binding_friction_explanation acknowledges directly: "No specific binding friction is evidenced in the packet; the case faces general competitive context rather than a single named adoption blocker." Do NOT frame this as "adoption is easy" — it's absence of a named blocker, not absence of friction.
+Friction is none_or_minimal: binding_friction_explanation acknowledges directly: "No specific binding friction is evidenced; the case faces general competitive context rather than a single named adoption blocker." Do NOT frame this as "adoption is easy" — it's absence of a named blocker, not absence of friction.
 
 Near-ceiling Archetype 7 (upper sub-position at 8.5): direction acknowledges proximity to ceiling: "The score is near the upper bound of what demand-evidence alone can establish; further movement would require demand evidence at exceptional scale that is rare for digital products in this scope."
 
@@ -625,7 +625,7 @@ Output:
     "score": 7.0,
     "diagnosis": "Solo-practitioner dental practice managers face documented missed-call pain costing $300-500 per lost lead, with sustained spreadsheet workarounds evidenced across the segment. Comparable communication tools (Weave, NexHealth) demonstrate that trust friction has been crossed for this exact buyer.",
     "binding_friction_explanation": "The remaining adoption barrier is the displacement of those manual tracking workflows — practice managers would need to integrate the AI receptionist into ongoing operational rhythms before realizing the call-recovery value.",
-    "direction": "Missed-call cost and sustained workarounds are directly documented, and comparable tools show the trust friction is survivable, so this lands mid-band rather than at the top. It would move higher with packet evidence that solo-practitioner clinics adopt a close-comparable receptionist at measurable density.",
+    "direction": "Missed-call cost and sustained workarounds are directly documented, and comparable tools show the trust friction is survivable, so this lands mid-band rather than at the top. It would move higher with evidence that solo-practitioner clinics adopt a close-comparable receptionist at measurable density.",
     "_internal": {
       "demand_archetype": "demonstrated_pull_with_friction_survival",
       "archetype_band": "6.6-7.5",
@@ -684,8 +684,8 @@ Pain is category-level (not target-specific): fails Archetype 3 entry. Pain at c
 Sub-position arithmetic produces middle. Decimal lookup A2 middle = 5.0.
 
 Output (prose only):
-diagnosis: "Content creators operate in a category where AI writing tools have multiple established competitors and active market growth, but the packet's pain evidence describes content creation challenges at category level — not specifically tied to creator-segment workflows that this entrant would address differently."
-binding_friction_explanation: "The adoption barrier is the established workflow content creators already use across multiple existing tools, and the packet doesn't yet show that this segment is dissatisfied enough with current options to seek alternatives."
+diagnosis: "Content creators operate in a category where AI writing tools have multiple established competitors and active market growth, but the pain evidence describes content creation challenges at category level — not specifically tied to creator-segment workflows that this entrant would address differently."
+binding_friction_explanation: "The adoption barrier is the established workflow content creators already use across multiple existing tools, and the evidence doesn't yet show that this segment is dissatisfied enough with current options to seek alternatives."
 direction: "The missing evidence is pain specifically tied to the creator segment's workflow — what the existing tools fail to deliver for them concretely, not general category friction."
 
 --- Example 4: Sparse packet case ---
@@ -708,8 +708,8 @@ Archetype lookup: fails all entry criteria for A2-A7. Falls to A1.
 Sub-position arithmetic: SP-A=weak (0), SP-B=moderate_unresolved (0), SP-C=narrow (0). Combined = 0. Bucket = lower. Decimal lookup A1 lower = 3.0.
 
 Output (prose only):
-diagnosis: "The packet describes remote workers as a target but does not yet show a coherent buyer segment, named pain cost, or current behavior pattern that would establish demand for this specific product."
-binding_friction_explanation: "No specific binding friction is evidenced in the packet; the case faces general competitive context rather than a single named adoption blocker."
+diagnosis: "The evidence describes remote workers as a target but does not yet show a coherent buyer segment, named pain cost, or current behavior pattern that would establish demand for this specific product."
+binding_friction_explanation: "No specific binding friction is evidenced; the case faces general competitive context rather than a single named adoption blocker."
 direction: "Movement above this band would require evidence of a coherent target segment (specific role, named workflow circumstance) with documented pain cost and current behavior — without these, the case sits at speculative territory."
 
 --- Example 5: Near-ceiling Archetype 7 case ---

@@ -811,7 +811,7 @@ NO LABELS EXPOSED: archetype names (no_defensibility_component, articulated_defe
 
 NO SOURCE TAGS EXPOSED: [competitor:, [domain_flag:, [idea_description], [narrative_field], [user_claim] NEVER appear literally. Evidence content is paraphrased into natural language.
 
-NO INTERNAL VOCABULARY: "rubric," "archetype," "predicate," "Level A/B/C/D/E," "Tier 1/2/3," "sub-position" NEVER appear in prose.
+NO INTERNAL VOCABULARY: "rubric," "archetype," "predicate," "packet," "Level A/B/C/D/E," "Tier 1/2/3," "sub-position" NEVER appear in prose. When referring to the evidence base in prose, write "the evidence" — never "the packet" (the user has no packet; it is pipeline vocabulary).
 
 NO SCORE NUMBERS: prose does not say "this scores 5.4."
 
@@ -819,11 +819,11 @@ NO TEMPLATING: case-specific vocabulary required. Test: if the committed compone
 
 NO CROSS-METRIC FRAMING: OR prose stays in OR's lane. No comparing to MD/MO/Stage 2c/Stage 3 territory.
 
-NO FOUNDER-COACHING: OR describes what packet shows. Does not advise founder what to do. "You should accumulate more data" is coaching (banned). "The score would move higher if the packet evidenced longitudinal capability improvement tied to data accumulation" is direction (required form).
+NO FOUNDER-COACHING: OR describes what the evidence shows. Does not advise founder what to do. "You should accumulate more data" is coaching (banned). "The score would move higher if the evidence included longitudinal capability improvement tied to data accumulation" is direction (required form).
 
 NO VAGUE HEDGING: do not use "it seems," "might suggest," "potentially indicates," "perhaps," "may indicate," "could possibly," "appears to" as softeners. Express uncertainty as evidence absence, not vague hedging — the DIRECT ABSENCE LANGUAGE below is the correct form.
 
-DIRECT ABSENCE LANGUAGE REQUIRED where evidence is absent: "the packet does not yet show," "the current evidence stops short of," "this is not yet evidenced for the named case."
+DIRECT ABSENCE LANGUAGE REQUIRED where evidence is absent: "the evidence does not yet show," "the current evidence stops short of," "this is not yet evidenced for the named case."
 
 NO MARKETING LANGUAGE: banned: "promising," "exciting," "compelling," "strong moat potential," "robust defensibility," "powerful network effects."
 
@@ -864,7 +864,7 @@ Hold the whole field to one or two short sentences, max ~70 words. For opener va
 
 --- DIRECTION OPENERS (rotate based on what reads naturally) ---
 
-- "The score would move higher if the packet evidenced..."
+- "The score would move higher if the evidence included..."
 - "Movement above this band would require..."
 - "The next defensibility proof would be..."
 - "This would move higher only with..."
@@ -923,7 +923,7 @@ Output:
     "differentiation_basis_diagnosis": "The case is positioned around better prompts and context-awareness for knowledge worker tasks, with the product's distinguishing claim being prompt design rather than any structural moat.",
     "defensibility_diagnosis": "No structural defensibility source is evidenced — prompt design, model selection, and product execution can be replicated by competitors with standard development resources.",
     "binding_constraint_explanation": "The primary constraint is that knowledge workers can accomplish the same job through ChatGPT, Claude, or Copilot directly, with no segment-specific friction that the case is positioned to overcome.",
-    "direction": "The packet describes prompt design and context awareness as the differentiation but names no defensibility source produced by the product's own operation, so it stays at the floor. It would move higher only with evidence of a concrete hard-to-copy source arising from how this specific product is actually used, not from the prompt design itself.",
+    "direction": "The evidence describes prompt design and context awareness as the differentiation but names no defensibility source produced by the product's own operation, so it stays at the floor. It would move higher only with evidence of a concrete hard-to-copy source arising from how this specific product is actually used, not from the prompt design itself.",
     "_internal": {
       "schema_version": "stage_or_v5",
       "originality_archetype": "no_defensibility_component",
@@ -1294,7 +1294,7 @@ Top-level fields are user-facing. _internal is required for validation, debuggin
 
 10. Identify direction anchor per Section 8 hierarchy (default weakest-predicate, A1 honest exit, A6 sustainment/erosion, CAP condition, static-ceiling acknowledgment).
 
-11. Extract source vocabulary from evidence_cited fields. (DIRECTION REMINDER: target evidence threshold, not strategic advice. "Should accumulate data" is coaching; "if the packet evidenced longitudinal capability improvement tied to data accumulation" is direction.)
+11. Extract source vocabulary from evidence_cited fields. (DIRECTION REMINDER: target evidence threshold, not strategic advice. "Should accumulate data" is coaching; "if the evidence included longitudinal capability improvement tied to data accumulation" is direction.)
 
 12. Draft four prose fields with constraints applied per Section 8. Run 13-point self-check before emission:
 

@@ -66,6 +66,22 @@ function getNextResetTime() {
 // ============================================
 // MAIN APP
 // ============================================
+// Live braille spinner for the in-progress pipeline step — the "thinking" signal.
+// Self-contained interval so only this span re-renders, not the whole overlay.
+const STREAM_SPINNER_FRAMES = ["\u280b", "\u2819", "\u2839", "\u2838", "\u283c", "\u2834", "\u2826", "\u2827", "\u2807", "\u280f"];
+function StreamSpinner({ color }) {
+  const [f, setF] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setF((x) => (x + 1) % STREAM_SPINNER_FRAMES.length), 90);
+    return () => clearInterval(id);
+  }, []);
+  return <span style={{ color, flexShrink: 0, width: 16, textAlign: "center" }}>{STREAM_SPINNER_FRAMES[f]}</span>;
+}
+
+// Retrieval source -> trust-dot colour, matching the competitor-card source badges
+// (EvaluationView sourceColors) so the stream and the cards name the same sources.
+const STREAM_SRC_DOT = { github: "#9a9aa2", tavily: "#2dd4bf", exa: "#a78bfa", google: "#6fa8f5" };
+
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState("profile");
   const [profile, setProfile] = useState({ coding: "", ai: "", education: "" });
@@ -374,55 +390,57 @@ export default function Home() {
               throw new Error(event.message);
             }
 
+            // Beat model: each pipeline beat is ONE line that transitions in place
+            // from a live spinner to a checkmark. baseOf() strips the _start/_done
+            // suffix so a stage's start and done resolve to the same beat (this is
+            // also what fixes the old stage2a/2b/2c desync — no hardcoded pairing
+            // names). Retrieval sources have no _start, so they append as their own
+            // checked sub-rows; evidence_ready closes the parent "search" beat.
+            const baseOf = (step) => step.replace(/_(start|done)$/, "");
+            const SOURCE_DONES = { github_done: "github", tavily_done: "tavily", exa_done: "exa", serper_done: "google" };
+
             if (event.step === "complete") {
               finalAnalysis = event.data;
-              // Add final step to display
-              setStreamSteps((prev) => [...prev, { step: "complete", message: "Evaluation complete ✓", done: true }]);
+              setStreamSteps((prev) => [
+                ...prev.map((s) => (s.done ? s : { ...s, done: true })),
+                { step: "complete", message: "Evaluation complete ✓", done: true },
+              ]);
             } else if (event.step === "retry") {
-              // F4/B+ — soft transient-failure notice. This is NOT an error: the
-              // run is still going, a step stumbled and is being retried once.
-              // Append it as an in-progress line so the live pipeline panel shows
-              // an honest "hit a snag — retrying, thanks for your patience"
-              // message during the extra wait (the user is watching the steps, so
-              // silence would read worse than a word). It resolves to a checkmark
-              // in the final "mark remaining done" sweep when the run completes;
-              // if the retry ALSO fails, an "error" event follows and aborts as
-              // before. Must stay distinct from "error" — routing it through the
-              // error branch would throw and kill the very run it is reassuring
-              // the user about.
+              // F4/B+ — soft transient-failure notice. NOT an error: the run is
+              // still going, a step stumbled and is being retried once. Append as an
+              // in-progress line so the panel shows an honest "hit a snag — retrying"
+              // beat during the extra wait. Resolves to a check in the final sweep;
+              // if the retry also fails, an "error" event follows and aborts.
               setStreamSteps((prev) => [...prev, { step: "retry", message: event.message, done: false }]);
-            } else if (event.step.endsWith("_start")) {
-              // In-progress step (no checkmark yet)
-              // For stage starts, also mark previous stage as done
-              setStreamSteps((prev) => {
-                const updated = prev.map((s) => {
-                  // Mark stage1_start done when stage2_start arrives
-                  if (event.step === "stage2_start" && s.step === "stage1_start") return { ...s, done: true };
-                  // Mark stage2_start done when stage3_start arrives
-                  if (event.step === "stage3_start" && s.step === "stage2_start") return { ...s, done: true };
-                  return s;
-                });
-                return [...updated, { step: event.step, message: event.message, done: false }];
-              });
-            } else if (event.step.endsWith("_done") || event.step === "evidence_ready" || event.step === "scoring") {
-              // Mark previous related _start step as done, add this as completed
-              setStreamSteps((prev) => {
-                const updated = prev.map((s) => {
-                  // Mark keywords_start done when keywords_done arrives
-                  if (event.step === "keywords_done" && s.step === "keywords_start") return { ...s, done: true };
-                  // Mark search_start done when first search result arrives
-                  if ((event.step === "github_done" || event.step === "serper_done") && s.step === "search_start") return { ...s, done: true };
-                  // Mark stage starts done when their corresponding done arrives
-                  if (event.step === "stage1_done" && s.step === "stage1_start") return { ...s, done: true };
-                  if (event.step === "stage2_done" && s.step === "stage2_start") return { ...s, done: true };
-                  if (event.step === "stage3_done" && s.step === "stage3_start") return { ...s, done: true };
-                  return s;
-                });
-                return [...updated, { step: event.step, message: event.message, done: true }];
-              });
+            } else if (event.step === "evidence_ready") {
+              // Close the parent retrieval beat, then add the assembled-evidence line.
+              setStreamSteps((prev) => [
+                ...prev.map((s) => (s.base === "search" && !s.done ? { ...s, done: true, message: "Searched 4 sources" } : s)),
+                { step: "evidence_ready", base: "evidence", message: event.message, done: true },
+              ]);
+            } else if (SOURCE_DONES[event.step]) {
+              // A retrieved source — appears already-checked (the 8 calls resolve
+              // together), carrying its trust-dot colour.
+              setStreamSteps((prev) => [...prev, { step: event.step, base: baseOf(event.step), source: SOURCE_DONES[event.step], message: event.message, done: true }]);
+            } else if (event.step === "scoring") {
+              setStreamSteps((prev) => [...prev, { step: "scoring", base: "scoring", message: event.message, done: true }]);
             } else if (event.step === "evaluating") {
-              // Evaluating is in-progress (longest step) — free tier only
-              setStreamSteps((prev) => [...prev, { step: event.step, message: event.message, done: false }]);
+              // Free tier — single long in-progress beat.
+              setStreamSteps((prev) => [...prev, { step: "evaluating", base: "evaluating", message: event.message, done: false }]);
+            } else if (event.step.endsWith("_start")) {
+              const base = baseOf(event.step);
+              setStreamSteps((prev) =>
+                prev.some((s) => s.base === base)
+                  ? prev.map((s) => (s.base === base ? { ...s, done: false, message: event.message } : s))
+                  : [...prev, { step: event.step, base, message: event.message, done: false }]
+              );
+            } else if (event.step.endsWith("_done")) {
+              const base = baseOf(event.step);
+              setStreamSteps((prev) =>
+                prev.some((s) => s.base === base && !s.source)
+                  ? prev.map((s) => (s.base === base && !s.source ? { ...s, done: true, message: event.message } : s))
+                  : [...prev, { step: event.step, base, message: event.message, done: true }]
+              );
             }
           } catch (e) {
             // Skip malformed SSE events
@@ -1896,10 +1914,15 @@ export default function Home() {
                       opacity: s.done ? 0.8 : 1,
                       animation: "fadeInStep 0.3s ease-out",
                     }}>
-                      <span style={{ color: s.done ? (proMode ? "#8b5cf6" : "#10b981") : "#f59e0b", flexShrink: 0, width: 16, textAlign: "center" }}>
-                        {s.done ? "✓" : "›"}
+                      {s.done ? (
+                        <span style={{ color: proMode ? "#8b5cf6" : "#10b981", flexShrink: 0, width: 16, textAlign: "center" }}>✓</span>
+                      ) : (
+                        <StreamSpinner color="#f59e0b" />
+                      )}
+                      <span style={{ wordBreak: "break-word" }}>
+                        {s.source && <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: STREAM_SRC_DOT[s.source] || "#9a9aa2", marginRight: 7, verticalAlign: "1px" }} />}
+                        {s.message}
                       </span>
-                      <span style={{ wordBreak: "break-word" }}>{s.message}</span>
                     </div>
                   ))}
                   {streamSteps.length > 0 && !streamSteps.some(s => s.step === "complete") && (
@@ -3265,10 +3288,15 @@ export default function Home() {
                       opacity: s.done ? 0.8 : 1,
                       animation: "fadeInStep 0.3s ease-out",
                     }}>
-                      <span style={{ color: s.done ? "#8b5cf6" : "#f59e0b", flexShrink: 0, width: 16, textAlign: "center" }}>
-                        {s.done ? "✓" : "›"}
+                      {s.done ? (
+                        <span style={{ color: "#8b5cf6", flexShrink: 0, width: 16, textAlign: "center" }}>✓</span>
+                      ) : (
+                        <StreamSpinner color="#f59e0b" />
+                      )}
+                      <span style={{ wordBreak: "break-word" }}>
+                        {s.source && <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: STREAM_SRC_DOT[s.source] || "#9a9aa2", marginRight: 7, verticalAlign: "1px" }} />}
+                        {s.message}
                       </span>
-                      <span style={{ wordBreak: "break-word" }}>{s.message}</span>
                     </div>
                   ))}
                   {streamSteps.length > 0 && !streamSteps.some(s => s.step === "complete") && (
