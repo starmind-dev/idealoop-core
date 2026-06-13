@@ -6,6 +6,7 @@ import ComparisonView from "./ComparisonView";
 import LineageView from "./LineageView";
 import EvaluationView from "./EvaluationView";
 import ExecutionBriefView from "./ExecutionBriefView";
+import ExploreView from "./ExploreView.js";
 import {
   StepProgress,
   StatusBadge,
@@ -309,6 +310,7 @@ export default function Home() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState(null);
+  const [exploreAnalysis, setExploreAnalysis] = useState(null); // ll2_explore_v1 payload (Explore mode)
 
   // ============================================
   // EXECUTION BRIEF STATE (Screen 3 / step-4 handoff)
@@ -487,8 +489,9 @@ export default function Home() {
     return { ethicsBlocked: false, analysis: finalAnalysis };
   };
 
-  const handleAnalyze = async () => {
-    if (!idea.trim()) return;
+  const handleAnalyze = async (mode = "deep", ideaTextOverride = null) => {
+    const ideaToUse = ideaTextOverride != null ? ideaTextOverride : idea;
+    if (!ideaToUse.trim()) return;
 
     // For logged-in users, check DB-based limits; for anon, use localStorage
     if (user) {
@@ -534,8 +537,8 @@ export default function Home() {
     // V4S28 B7 — clear any previous gate result before retry
     setSpecificityGate(null);
     try {
-      const endpoint = proMode ? "/api/analyze-pro" : "/api/analyze";
-      const result = await analyzeWithStream(idea, profile, endpoint);
+      const endpoint = mode === "explore" ? "/api/analyze-explore" : (proMode ? "/api/analyze-pro" : "/api/analyze");
+      const result = await analyzeWithStream(ideaToUse, profile, endpoint);
 
       // V4S28 B7 — Specificity gate check (before ethics, before usage recording).
       // No credit charged on gate fire; user stays on input screen with panel shown.
@@ -574,9 +577,14 @@ export default function Home() {
         setEvalsRemaining(getEvalsRemaining());
       }
 
-      setAnalysis(result.analysis);
-      resetExecutionBrief();
-      setCurrentScreen("results1");
+      if (mode === "explore") {
+        setExploreAnalysis(result.analysis);
+        setCurrentScreen("explore");
+      } else {
+        setAnalysis(result.analysis);
+        resetExecutionBrief();
+        setCurrentScreen("results1");
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -1817,25 +1825,45 @@ export default function Home() {
               <span style={{ fontSize: 14, color: t.mut, fontFamily: "monospace" }}>
                 {idea.length > 0 ? `${idea.length} characters` : ""}
               </span>
-              <button
-                onClick={handleAnalyze}
-                disabled={!idea.trim() || isAnalyzing || evalsRemaining <= 0}
-                style={{
-                  padding: "12px 32px",
-                  borderRadius: 12,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  border: "none",
-                  cursor: !idea.trim() || isAnalyzing || evalsRemaining <= 0 ? "not-allowed" : "pointer",
-                  ...(!idea.trim() || isAnalyzing || evalsRemaining <= 0
-                    ? { background: t.surfAlt, color: t.mut }
-                    : proMode
-                      ? { background: "#8b5cf6", color: "#fff" }
-                      : { background: t.ctaBg, color: t.ctaText }),
-                }}
-              >
-                {isAnalyzing ? "Analyzing..." : evalsRemaining <= 0 ? "Limit Reached" : proMode ? "Pro Analyze" : "Analyze Idea"}
-              </button>
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                {/* Explore mode entry — widens a rough idea (LL2). Dawn identity,
+                    deliberately not the Deep purple/cta. Same gate + usage path. */}
+                <button
+                  onClick={() => handleAnalyze("explore")}
+                  disabled={!idea.trim() || isAnalyzing || evalsRemaining <= 0}
+                  style={{
+                    padding: "12px 22px",
+                    borderRadius: 12,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    background: "transparent",
+                    cursor: !idea.trim() || isAnalyzing || evalsRemaining <= 0 ? "not-allowed" : "pointer",
+                    color: !idea.trim() || isAnalyzing || evalsRemaining <= 0 ? t.mut : "#bcd2ff",
+                    border: `1px solid ${!idea.trim() || isAnalyzing || evalsRemaining <= 0 ? t.border : "rgba(122,162,255,0.46)"}`,
+                  }}
+                >
+                  {isAnalyzing ? "..." : "Explore"}
+                </button>
+                <button
+                  onClick={() => handleAnalyze("deep")}
+                  disabled={!idea.trim() || isAnalyzing || evalsRemaining <= 0}
+                  style={{
+                    padding: "12px 32px",
+                    borderRadius: 12,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    border: "none",
+                    cursor: !idea.trim() || isAnalyzing || evalsRemaining <= 0 ? "not-allowed" : "pointer",
+                    ...(!idea.trim() || isAnalyzing || evalsRemaining <= 0
+                      ? { background: t.surfAlt, color: t.mut }
+                      : proMode
+                        ? { background: "#8b5cf6", color: "#fff" }
+                        : { background: t.ctaBg, color: t.ctaText }),
+                  }}
+                >
+                  {isAnalyzing ? "Analyzing..." : evalsRemaining <= 0 ? "Limit Reached" : proMode ? "Pro Analyze" : "Analyze Idea"}
+                </button>
+              </div>
             </div>
 
             <div style={{
@@ -3337,6 +3365,77 @@ export default function Home() {
           </PageContainer>
         </footer>
       </div>
+    );
+  }
+
+  // ==========================================
+  // SCREEN: EXPLORE (delegated to ExploreView)
+  // ==========================================
+  if (currentScreen === "explore" && exploreAnalysis) {
+    return (
+      <ExploreView
+        screen="explore"
+        t={t}
+        analysis={exploreAnalysis}
+        user={user}
+        authLoading={authLoading}
+        viewingFromSaved={viewingFromSaved}
+        devMode={devMode}
+        devModeExplicit={devModeExplicit}
+        showAuthModal={showAuthModal}
+        headerStyle={headerStyle}
+        setCurrentScreen={setCurrentScreen}
+        setShowAuthModal={setShowAuthModal}
+        setUser={setUser}
+        setViewingFromSaved={setViewingFromSaved}
+        goToMyIdeas={goToMyIdeas}
+        handleLogout={handleLogout}
+        onSaveBranch={async (ids) => {
+          // Persist each selected angle's branch_idea_text as a saved idea
+          // (eval-less) via the additive Explore route. Returns a promise so
+          // ExploreView's save-state can reflect saving → saved/error.
+          const list = (ids || [])
+            .map((id) => (exploreAnalysis.angles || []).find((a) => a.id === id))
+            .filter(Boolean);
+          if (!list.length) return;
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) { setShowAuthModal(true); throw new Error("Log in to save"); }
+          for (const angle of list) {
+            const res = await fetch("/api/ideas/save", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+              body: JSON.stringify({
+                mode: "explore",
+                idea_text: angle.branch_idea_text,
+                idea_name: angle.title,
+                basis: angle.basis?.primary || null,
+                profile,
+                origin_idea_text: exploreAnalysis.idea,
+              }),
+            });
+            if (!res.ok) {
+              const e = await res.json().catch(() => ({}));
+              throw new Error(e.error || "Save failed");
+            }
+          }
+        }}
+        onTakeToDeep={(angleId, opts) => {
+          // Hand a branch (or the original idea) to Deep. Resolve the text first
+          // and pass it explicitly — setIdea is async, handleAnalyze must not read
+          // stale state. Deep handoff runs the pro pipeline.
+          const o = opts || {};
+          let text = exploreAnalysis.idea;
+          if (!o.useOriginalIdea && angleId) {
+            const a = (exploreAnalysis.angles || []).find((x) => x.id === angleId);
+            if (a && a.branch_idea_text) text = a.branch_idea_text;
+          }
+          setIdea(text);
+          setProMode(true);
+          handleAnalyze("deep", text);
+        }}
+        onExploreVariation={() => handleAnalyze("explore", exploreAnalysis.idea)}
+        onEditRead={() => setCurrentScreen("input")}
+      />
     );
   }
 
