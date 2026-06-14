@@ -82,7 +82,7 @@ function StatusShape({ status }) {
 }
 
 // ---- label maps ------------------------------------------------------------
-const READY_LABEL = { ready_for_deep: "Ready for Deep", worth_shaping: "Worth shaping", probably_thin: "Probably thin" };
+const READY_LABEL = { ready_for_deep: "Ready for Deep", worth_shaping: "Worth shaping", probably_thin: "Lightly grounded" };
 
 const SHIFT_LABEL = {
   target_shift: "Target shift", buyer_shift: "Buyer shift", mechanism_shift: "Mechanism shift",
@@ -155,8 +155,8 @@ function ReadSurface({ read, t }) {
     <section style={{ marginTop: 48 }}>
       <Eyebrow num="1" icon={<SectionIcon.read />} title="Our read" sub="How we understood your idea" t={t} />
       <div style={{
-        background: `radial-gradient(130% 120% at 0% 0%, ${EX.dim}, transparent 56%), ${t.surface}`,
-        border: `1px solid ${t.border}`, borderRadius: 14, padding: "26px 30px 22px",
+        background: `linear-gradient(90deg, ${EX.dim}, transparent 22%), ${t.surface}`,
+        border: `1px solid var(--exborder-soft)`, borderRadius: 14, padding: "26px 30px 22px",
       }}>
         <p style={{ fontSize: 15.5, fontWeight: 300, lineHeight: 1.62, color: "#e9ebef", letterSpacing: "0.1px", margin: "0 0 22px", maxWidth: 760 }}>
           {read.reflection}
@@ -204,52 +204,36 @@ function ReadColumn({ label, icon, iconColor, items, kind, t }) {
 // ============================================================================
 // 2 · Where it could go — the fan
 // ============================================================================
-function AngleCard({ angle, focus, onSave, saveState, onCompare }) {
-  const j = angle.justification || {};
-  const opening = j.opening || {};
-  const bet = j.bet || {};
-  const road = (
-    <li key="road" style={{ display: "flex", gap: 11, fontSize: 12.5, lineHeight: 1.58, color: "var(--exsec)" }}>
-      <span style={{ flexShrink: 0, width: 13, marginTop: 2, color: EX.base, opacity: 0.85, display: "flex", alignItems: "center" }}>
-        <RoadIc />
-        {opening.trust && <span title={`evidence: ${opening.trust}`} style={{ width: 5, height: 5, borderRadius: "50%", background: EX.base, opacity: TRUST_OPACITY[opening.trust] ?? 0.5, marginLeft: 3 }} />}
-      </span>
-      <span>{opening.text}</span>
-    </li>
-  );
-  const betLi = (
-    <li key="bet" style={{ display: "flex", gap: 11, fontSize: 12.5, lineHeight: 1.58, color: "var(--extext)" }}>
-      <span style={{ flexShrink: 0, width: 13, marginTop: 2, color: "var(--exsec)", display: "flex" }}><BetIc /></span>
-      <span>Works only if {bet.text}.{bet.rests_on && (
-        <span style={{ fontFamily: "monospace", fontSize: 9.5, letterSpacing: "0.06em", color: "var(--exmut)", border: "1px solid var(--exborder-soft)", borderRadius: 4, padding: "1px 6px", marginLeft: 6, whiteSpace: "nowrap", textTransform: "uppercase" }}>{bet.rests_on}</span>
-      )}</span>
-    </li>
-  );
-  const rock = (
-    <li key="rock" style={{ display: "flex", gap: 11, fontSize: 12.5, lineHeight: 1.58, color: "var(--exmut)" }}>
-      <span style={{ flexShrink: 0, width: 13, marginTop: 2, color: "var(--exfaint)", display: "flex" }}><RockIc /></span>
-      <span>{angle.justification?.disconfirmer}</span>
-    </li>
-  );
-  const order = focus === "full" ? [road, betLi, rock] : [rock, betLi, road];
+function EssenceCard({ angle, active, dimmed, onEnter, onLeave, onClick }) {
+  const opening = angle.justification?.opening || {};
   const ReadyG = ReadyGlyph[angle.readiness];
-
   return (
-    <div style={{ background: "var(--exsurface)", border: "1px solid var(--exborder)", borderRadius: 13, padding: "24px 26px", position: "relative" }}>
-      <span style={{ fontFamily: "monospace", fontSize: 9.5, letterSpacing: "0.13em", textTransform: "uppercase", color: "var(--exmut)", border: "1px solid var(--exborder-soft)", borderRadius: 5, padding: "3px 7px", display: "inline-block", marginBottom: 13 }}>
+    <div data-aid={angle.id} onMouseEnter={onEnter} onMouseLeave={onLeave} onClick={onClick} style={{
+      flex: 1, minWidth: 0, cursor: "default", display: "flex", flexDirection: "column",
+      borderRadius: 13, padding: "22px 22px 16px",
+      border: `1px solid ${active ? EX.line : "var(--exborder)"}`,
+      background: active ? "var(--exsurf2)" : "var(--exsurface)",
+      boxShadow: active ? "0 16px 38px -22px rgba(0,0,0,0.8)" : "none",
+      transform: active ? "translateY(-5px)" : "none",
+      position: active ? "relative" : "static",
+      zIndex: active ? 5 : "auto",
+      opacity: dimmed ? 0.55 : 1,
+      transition: "border-color .18s, box-shadow .25s, transform .25s, opacity .2s",
+    }}>
+      <span style={{ fontFamily: "monospace", fontSize: 9.5, letterSpacing: "0.13em", textTransform: "uppercase", color: "var(--exmut)", border: "1px solid var(--exborder-soft)", borderRadius: 5, padding: "3px 7px", display: "inline-block", alignSelf: "flex-start", marginBottom: 13 }}>
         {SHIFT_LABEL[angle.basis?.primary] || "New angle"}
       </span>
-      <h3 style={{ fontSize: 16, fontWeight: 600, margin: "0 0 9px", color: "var(--extext)", letterSpacing: "0.1px" }}>{angle.title}</h3>
-      <p style={{ fontSize: 13, color: "var(--exsec)", lineHeight: 1.62, margin: "0 0 19px" }}>{angle.concept}</p>
-      <ul style={{ margin: "0 0 19px", padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 13 }}>{order}</ul>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, borderTop: "1px solid var(--exdivider)", paddingTop: 17, marginTop: 7 }}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--exsec)", fontWeight: 500 }}>
+      <h3 style={{ fontSize: 15.5, fontWeight: 600, margin: "0 0 8px", color: "var(--extext)", letterSpacing: "0.1px", lineHeight: 1.3 }}>{angle.title}</h3>
+      <p style={{ fontSize: 12.5, color: "var(--exsec)", lineHeight: 1.6, margin: "0 0 16px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{angle.concept}</p>
+      <div style={{ display: "flex", gap: 9, marginBottom: 18, minWidth: 0 }}>
+        <span style={{ flexShrink: 0, color: EX.base, opacity: 0.9, marginTop: 1, display: "flex" }}><RoadIc /></span>
+        <span style={{ flex: 1, minWidth: 0, fontSize: 13, lineHeight: 1.55, color: "#cdd0d6", overflowWrap: "anywhere", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{opening.text}</span>
+      </div>
+      <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, borderTop: "1px solid var(--exdivider)", paddingTop: 14 }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 11.5, color: "var(--exsec)", fontWeight: 500, minWidth: 0 }}>
           {ReadyG && <ReadyG />}{READY_LABEL[angle.readiness]}
         </span>
-        <div style={{ display: "flex", gap: 16 }}>
-          <SaveAffordance state={saveState} onClick={() => onSave && onSave(angle)} />
-          <Affordance onClick={() => onCompare && onCompare(angle)}><CmpIc /> compare</Affordance>
-        </div>
+        <span style={{ flexShrink: 0, fontSize: 11.5, color: active ? EX.bright : "var(--exmut)", fontWeight: 500, whiteSpace: "nowrap" }}>look closer ›</span>
       </div>
     </div>
   );
@@ -278,77 +262,150 @@ function SaveAffordance({ state, onClick }) {
   );
 }
 
-function FanSurface({ idea, angles, fanState, focus, setFocus, t, onSave, saveState, onCompare, onTakeToDeep, branchReason, onExpandIdea }) {
+function FanSurface({ idea, angles, fanState, t, onSave, saveState, onCompare, onTakeToDeep, branchReason }) {
   const fanRef = useRef(null);
   const nodeRef = useRef(null);
-  const stackRef = useRef(null);
+  const rowRef = useRef(null);
+  const wellRef = useRef(null);
+  const innerRef = useRef(null);
+  const hideTimer = useRef(null);
+  const dwellTimer = useRef(null);
+  const hoverRef = useRef(true);
   const [paths, setPaths] = useState("");
   const [vb, setVb] = useState("0 0 0 0");
+  const [activeId, setActiveId] = useState(null);
+  const [panelAngle, setPanelAngle] = useState(null);
+  const [wellH, setWellH] = useState(0);
+  const [caretLeft, setCaretLeft] = useState(0);
 
-  const draw = useCallback(() => {
-    const fanEl = fanRef.current, nodeEl = nodeRef.current, stackEl = stackRef.current;
-    if (!fanEl || !nodeEl || !stackEl) return;
-    const fan = fanEl.getBoundingClientRect();
-    const nb = nodeEl.getBoundingClientRect();
-    const x1 = nb.right - fan.left, y1 = nb.top + nb.height / 2 - fan.top;
-    let p = "";
-    [...stackEl.children].forEach((c) => {
-      const cb = c.getBoundingClientRect();
-      const x2 = cb.left - fan.left, y2 = cb.top + cb.height / 2 - fan.top;
-      const mx = x1 + (x2 - x1) * 0.5;
-      const bez = `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
-      p += `<path d="${bez}" fill="none" stroke="url(#exlg)" stroke-width="3" opacity="0.4" filter="url(#exgl)"/>`;
-      p += `<path d="${bez}" fill="none" stroke="url(#exlg)" stroke-width="1.3"/>`;
-      p += `<circle cx="${x2}" cy="${y2}" r="6.5" fill="${EX.gradB}" opacity="0.2"/>`;
-      p += `<circle cx="${x2}" cy="${y2}" r="3" fill="${EX.gradB}"/>`;
-    });
-    setPaths(p);
-    setVb(`0 0 ${fan.width} ${fan.height}`);
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia) {
+      hoverRef.current = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+    }
   }, []);
 
-  useLayoutEffect(() => { draw(); }, [draw, focus, fanState, angles.length]);
+  const draw = useCallback(() => {
+    const fanEl = fanRef.current, nodeEl = nodeRef.current, rowEl = rowRef.current;
+    if (!fanEl || !nodeEl || !rowEl) return;
+    const fan = fanEl.getBoundingClientRect();
+    const nb = nodeEl.getBoundingClientRect();
+    const x1 = nb.left + nb.width / 2 - fan.left, y1 = nb.bottom - fan.top;
+    const any = !!activeId;
+    let p = "";
+    [...rowEl.children].forEach((c) => {
+      const cb = c.getBoundingClientRect();
+      const x2 = cb.left + cb.width / 2 - fan.left, y2 = cb.top - fan.top;
+      const dy = y2 - y1, c1 = y1 + dy * 0.55, c2 = y2 - dy * 0.55;
+      const bez = `M ${x1} ${y1} C ${x1} ${c1}, ${x2} ${c2}, ${x2} ${y2}`;
+      const on = c.getAttribute("data-aid") === activeId;
+      const o1 = on ? 0.28 : 0.2;
+      const o2 = on ? 0.85 : (any ? 0.22 : 0.58);
+      p += `<path d="${bez}" fill="none" stroke="url(#exlg)" stroke-width="2" opacity="${o1}" filter="url(#exgl)"/>`;
+      p += `<path d="${bez}" fill="none" stroke="url(#exlg)" stroke-width="${on ? 1.3 : 1.1}" opacity="${o2}"/>`;
+      p += `<circle cx="${x2}" cy="${y2}" r="6" fill="${EX.gradB}" opacity="0.16"/>`;
+      p += `<circle cx="${x2}" cy="${y2}" r="${on ? 3.6 : 3}" fill="${EX.gradB}" opacity="${on ? 1 : (any ? 0.5 : 1)}"/>`;
+    });
+    p += `<circle cx="${x1}" cy="${y1}" r="3.5" fill="${EX.gradA}"/>`;
+    setPaths(p);
+    setVb(`0 0 ${fan.width} ${fan.height}`);
+  }, [activeId]);
+
+  const positionWell = useCallback(() => {
+    const wellEl = wellRef.current, rowEl = rowRef.current, innerEl = innerRef.current;
+    if (!wellEl || !rowEl) return;
+    if (activeId) {
+      const cardEl = rowEl.querySelector(`[data-aid="${activeId}"]`);
+      const wr = wellEl.getBoundingClientRect();
+      if (cardEl) {
+        const cr = cardEl.getBoundingClientRect();
+        setCaretLeft(cr.left + cr.width / 2 - wr.left);
+      }
+      if (innerEl) setWellH(innerEl.offsetHeight);
+    } else {
+      setWellH(0);
+    }
+  }, [activeId]);
+
+  const cancelHide = () => {
+    if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = null; }
+  };
+  const cancelDwell = () => {
+    if (dwellTimer.current) { clearTimeout(dwellTimer.current); dwellTimer.current = null; }
+  };
+  const showActive = (id) => {
+    cancelHide(); cancelDwell();
+    setActiveId(id);
+    setPanelAngle(angles.find((a) => a.id === id) || null);
+  };
+  const scheduleHide = () => {
+    cancelHide();
+    hideTimer.current = setTimeout(() => { hideTimer.current = null; setActiveId(null); }, 150);
+  };
+  const closeNow = () => { cancelHide(); cancelDwell(); setActiveId(null); };
+  const onEnter = (id) => {
+    if (!hoverRef.current) return;
+    cancelHide();
+    if (activeId) { showActive(id); return; } // already open: switch with no dwell
+    cancelDwell();
+    dwellTimer.current = setTimeout(() => { dwellTimer.current = null; showActive(id); }, 120);
+  };
+  const onLeave = () => { if (!hoverRef.current) return; cancelDwell(); scheduleHide(); };
+  const onTap = (id) => { cancelDwell(); if (activeId === id) closeNow(); else showActive(id); };
+
+  useLayoutEffect(() => { draw(); }, [draw, fanState, angles.length]);
+  useLayoutEffect(() => { positionWell(); }, [positionWell, panelAngle]);
+
   useEffect(() => {
     if (fanState === "empty") return;
-    window.addEventListener("resize", draw);
-    return () => window.removeEventListener("resize", draw);
-  }, [draw, fanState]);
+    const onResize = () => { draw(); positionWell(); };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [draw, positionWell, fanState]);
+
+  useEffect(() => {
+    if (!activeId) return;
+    const onDown = (e) => {
+      const fanEl = fanRef.current, wellEl = wellRef.current;
+      if (fanEl && fanEl.contains(e.target)) return;
+      if (wellEl && wellEl.contains(e.target)) return;
+      closeNow();
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [activeId]);
+
+  useEffect(() => () => { cancelHide(); cancelDwell(); }, []);
+
+  const pa = panelAngle;
+  const bet = pa?.justification?.bet || {};
 
   const node = (
     <div ref={nodeRef} style={{
-      justifySelf: "start", alignSelf: "center", width: 188, border: `1px solid ${EX.line}`, borderRadius: 14,
-      background: `radial-gradient(120% 140% at 0% 0%, ${EX.dim}, transparent 60%), ${t.surfAlt}`,
-      padding: "22px 20px 20px", position: "relative", boxShadow: `0 0 44px -12px ${EX.base}`,
+      width: 252, border: `1px solid ${EX.line}`, borderRadius: 14,
+      background: `radial-gradient(120% 150% at 50% 0%, ${EX.dim}, transparent 62%), ${t.surfAlt}`,
+      padding: "18px 20px 20px", position: "relative", boxShadow: `0 0 46px -14px ${EX.base}`,
     }}>
-      <div style={{ position: "absolute", right: -7, top: "50%", width: 11, height: 11, borderRadius: "50%", background: EX.base, boxShadow: `0 0 0 5px ${EX.dim}, 0 0 18px 3px ${EX.base}`, transform: "translateY(-50%)" }} />
+      <div style={{ position: "absolute", left: "50%", bottom: -6, width: 11, height: 11, borderRadius: "50%", background: EX.gradA, boxShadow: `0 0 0 5px ${EX.dim}, 0 0 16px 2px ${EX.gradA}`, transform: "translateX(-50%)" }} />
       <div style={{ fontFamily: "monospace", fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: EX.bright, display: "flex", gap: 7, alignItems: "center", marginBottom: 9 }}>
         <SectionIcon.node /> your rough idea
       </div>
-      <div style={{ fontSize: 13.5, color: t.text, lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 5, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{idea}</div>
+      <div style={{ fontSize: 13, color: t.text, lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{idea}</div>
     </div>
   );
 
-  const right = fanState !== "empty" ? (
-    <>
-      <span style={{ fontSize: 11, color: t.mut, fontFamily: "monospace", letterSpacing: "0.03em" }}>fan order · not ranked</span>
-      <div style={{ display: "inline-flex", border: `1px solid ${t.border}`, borderRadius: 7, overflow: "hidden" }}>
-        {["full", "risks"].map((f) => (
-          <button key={f} onClick={() => setFocus(f)} style={{
-            background: focus === f ? t.surfAlt : "transparent", border: "none",
-            color: focus === f ? EX.bright : t.mut, fontSize: 11, padding: "5px 10px", cursor: "pointer",
-            borderLeft: f === "risks" ? `1px solid ${t.border}` : "none",
-          }}>{f === "full" ? "full read" : "risks-first"}</button>
-        ))}
-      </div>
-    </>
-  ) : null;
+  const right = fanState !== "empty"
+    ? <span style={{ fontSize: 11, color: t.mut, fontFamily: "monospace", letterSpacing: "0.03em" }}>fan order · not ranked</span>
+    : null;
+
+  const lead = { fontFamily: "monospace", fontSize: 9.5, letterSpacing: "0.13em", textTransform: "uppercase", flex: "0 0 66px", marginTop: 2 };
 
   return (
     <section style={{ marginTop: 48 }} className="ex-scope">
       <Eyebrow num="2" icon={<SectionIcon.dir />} title="Where it could go" sub="Directions the evidence supports" t={t} right={right} />
       {fanState === "empty" ? (
-        <div style={{ position: "relative", zIndex: 1, display: "grid", gridTemplateColumns: "200px 1fr", gap: 30, alignItems: "center" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "252px 1fr", gap: 30, alignItems: "center" }}>
           {node}
-          <div style={{ alignSelf: "center", border: `1px dashed ${t.border}`, borderRadius: 13, padding: "34px 36px", background: t.surfAlt }}>
+          <div style={{ border: `1px dashed ${t.border}`, borderRadius: 13, padding: "34px 36px", background: t.surfAlt }}>
             <p style={{ fontSize: 16, color: t.text, fontWeight: 400, lineHeight: 1.5, margin: "0 0 10px" }}>No separate roads to fan from here — and that's a finding, not a dead end.</p>
             <p style={{ fontSize: 13, color: t.sec, lineHeight: 1.6, margin: 0 }}>{branchReason || "When an idea is already this pointed, exploration has nothing to widen. The honest next move is to judge it, not to branch it."}</p>
             <div onClick={() => onTakeToDeep && onTakeToDeep(null, { useOriginalIdea: true })} style={{ marginTop: 14, fontSize: 12.5, color: EX.bright, display: "inline-flex", gap: 8, alignItems: "center", cursor: "pointer" }}>take it to Deep as it stands →</div>
@@ -357,16 +414,55 @@ function FanSurface({ idea, angles, fanState, focus, setFocus, t, onSave, saveSt
       ) : (
         <>
           {fanState === "thin" && (
-            <div style={{ fontSize: 12, color: t.mut, margin: "4px 0 22px" }}>The directions the evidence supports, shown in fan order.</div>
+            <div style={{ fontSize: 12, color: t.mut, margin: "4px 0 8px" }}>The directions the evidence supports, shown in fan order.</div>
           )}
-          <div ref={fanRef} style={{ position: "relative", marginTop: 14 }}>
+          <div ref={fanRef} style={{ position: "relative" }}>
             <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 0 }} viewBox={vb}
-              dangerouslySetInnerHTML={{ __html: `<defs><linearGradient id="exlg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${EX.gradA}"/><stop offset="1" stop-color="${EX.gradB}"/></linearGradient><filter id="exgl" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="2.4"/></filter></defs>${paths}` }} />
-            <div style={{ position: "relative", zIndex: 1, display: "grid", gridTemplateColumns: "200px 1fr", gap: 38, alignItems: "center" }}>
-              {node}
-              <div ref={stackRef} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                {angles.map((a) => <AngleCard key={a.id} angle={a} focus={focus} onSave={onSave} saveState={(saveState || {})[a.id]} onCompare={onCompare} />)}
+              dangerouslySetInnerHTML={{ __html: `<defs><linearGradient id="exlg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${EX.gradA}"/><stop offset="1" stop-color="${EX.gradB}"/></linearGradient><filter id="exgl" x="-40%" y="-20%" width="180%" height="140%"><feGaussianBlur stdDeviation="2.4"/></filter></defs>${paths}` }} />
+            <div style={{ position: "relative", zIndex: 1 }}>
+              <div style={{ display: "flex", justifyContent: "center" }}>{node}</div>
+              <div ref={rowRef} style={{ display: "flex", gap: 22, marginTop: 92, alignItems: "stretch" }}>
+                {angles.map((a) => (
+                  <EssenceCard key={a.id} angle={a}
+                    active={a.id === activeId}
+                    dimmed={!!activeId && a.id !== activeId}
+                    onEnter={() => onEnter(a.id)}
+                    onLeave={onLeave}
+                    onClick={() => onTap(a.id)} />
+                ))}
               </div>
+            </div>
+          </div>
+
+          <div ref={wellRef}
+            onMouseEnter={() => { if (hoverRef.current) cancelHide(); }}
+            onMouseLeave={() => { if (hoverRef.current) scheduleHide(); }}
+            style={{ overflow: "hidden", height: wellH, transition: "height .3s cubic-bezier(.3,.8,.35,1)" }}>
+            <div ref={innerRef} style={{ paddingTop: 18 }}>
+              {pa && (
+                <div style={{ position: "relative", border: "1px solid var(--exborder)", borderTop: `1px solid ${EX.line}`, borderRadius: 12, background: "var(--exsurf2)", padding: "18px 24px 13px", boxShadow: "0 18px 44px -26px rgba(0,0,0,0.8)" }}>
+                  <span style={{ position: "absolute", top: -6, left: caretLeft, width: 11, height: 11, background: "var(--exsurf2)", borderLeft: `1px solid ${EX.line}`, borderTop: `1px solid ${EX.line}`, transform: "translateX(-50%) rotate(45deg)" }} />
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 15, flexWrap: "wrap" }}>
+                    <span style={{ fontFamily: "monospace", fontSize: 9.5, letterSpacing: "0.13em", textTransform: "uppercase", color: EX.bright, border: `1px solid ${EX.line}`, borderRadius: 5, padding: "3px 7px" }}>{SHIFT_LABEL[pa.basis?.primary] || "New angle"}</span>
+                    <span style={{ fontSize: 14.5, fontWeight: 600, color: "var(--extext)", letterSpacing: "0.1px" }}>{pa.title}</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 16, marginBottom: 13 }}>
+                    <span style={{ ...lead, color: EX.bright }}>the bet</span>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 13, lineHeight: 1.58, color: "#e3e5e9" }}>Works only if {bet.text}.{bet.rests_on && (
+                      <span style={{ fontFamily: "monospace", fontSize: 9.5, letterSpacing: "0.06em", color: "var(--exmut)", border: "1px solid var(--exborder-soft)", borderRadius: 4, padding: "1px 6px", marginLeft: 7, whiteSpace: "nowrap", textTransform: "uppercase" }}>{bet.rests_on}</span>
+                    )}</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 16, marginBottom: 13 }}>
+                    <span style={{ ...lead, color: "var(--exmut)" }}>the limit</span>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, lineHeight: 1.58, color: "var(--exsec)" }}>{pa.justification?.disconfirmer}</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 18, alignItems: "center", borderTop: "1px solid var(--exdivider)", paddingTop: 12, marginTop: 2, flexWrap: "wrap" }}>
+                    <SaveAffordance state={(saveState || {})[pa.id]} onClick={() => onSave && onSave(pa)} />
+                    <Affordance onClick={() => onCompare && onCompare(pa)}><CmpIc /> compare</Affordance>
+                    <span onClick={() => onTakeToDeep && onTakeToDeep(pa.id, { useOriginalIdea: false })} style={{ fontSize: 12, color: EX.bright, fontWeight: 500, display: "inline-flex", gap: 7, alignItems: "center", cursor: "pointer", whiteSpace: "nowrap" }}>take to Deep →</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </>
@@ -581,7 +677,6 @@ export default function ExploreView({
   if (!analysis || analysis.schema_version !== "ll2_explore_v1") return null;
 
   const { idea, fan_state: fanState, read, angles = [], terrain, next_move: nextMove } = analysis;
-  const [focus, setFocus] = useState("full");
 
   const [saveState, setSaveState] = useState({}); // { [angleId]: "saving" | "saved" | "error" }
   const saveBranch = useCallback(async (ids) => {
@@ -661,9 +756,9 @@ export default function ExploreView({
       <main style={{ flex: 1, paddingBottom: 80 }}>
         <PageContainer wide>
           <ReadSurface read={read} t={xt} />
-          <FanSurface idea={idea} angles={angles} fanState={fanState} focus={focus} setFocus={setFocus} t={xt}
+          <FanSurface idea={idea} angles={angles} fanState={fanState} t={xt}
             onSave={(a) => saveBranch([a.id])} saveState={saveState} onCompare={(a) => onCompare && onCompare([a.id])}
-            onTakeToDeep={onTakeToDeep} branchReason={read?.branchability?.reason} onExpandIdea={onExpandIdea} />
+            onTakeToDeep={onTakeToDeep} branchReason={read?.branchability?.reason} />
           <TerrainSurface terrain={terrain} angles={angles} t={xt} />
           <NextMoveSurface nextMove={nextMove} t={xt} handlers={handlers} />
           <div style={{ marginTop: 30, paddingTop: 18, borderTop: `1px solid ${t.border}`, fontSize: 11, color: "#474b54", textAlign: "center", fontFamily: "monospace", letterSpacing: "0.04em" }}>
