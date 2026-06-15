@@ -28,8 +28,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-const FREE_TIER_IDEA_LIMIT = 5;
-
 export async function POST(request) {
   try {
     // ------------------------------------------------
@@ -84,7 +82,7 @@ export async function POST(request) {
     }
 
     // ------------------------------------------------
-    // 3. Check free tier limit: 5 saved ideas total (shared accounting)
+    // 3. Count existing saved ideas (no cap — reported as saved_count)
     // ------------------------------------------------
     const { count, error: countError } = await supabaseAdmin
       .from("ideas")
@@ -97,17 +95,6 @@ export async function POST(request) {
       return NextResponse.json(
         { error: `Failed to check saved ideas count: ${countError.message}` },
         { status: 500 }
-      );
-    }
-
-    if (count >= FREE_TIER_IDEA_LIMIT) {
-      return NextResponse.json(
-        {
-          error: `You've reached the free tier limit of ${FREE_TIER_IDEA_LIMIT} saved ideas.`,
-          limit_reached: true,
-          saved_count: count,
-        },
-        { status: 403 }
       );
     }
 
@@ -227,7 +214,6 @@ export async function POST(request) {
       evaluation_id: evalRow?.id || null,
       has_evaluation: !isExplore,
       saved_count: count + 1,
-      remaining: FREE_TIER_IDEA_LIMIT - (count + 1),
     });
   } catch (err) {
     console.error("Save idea error:", err);

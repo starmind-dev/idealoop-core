@@ -30,7 +30,7 @@
 // ============================================================================
 
 import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
-import { PageContainer, AuthModal, DevModeBadge } from "./components";
+import { PageContainer, AuthModal } from "./components";
 
 // ---- Dawn identity (locked) ------------------------------------------------
 const EX = {
@@ -655,8 +655,6 @@ export default function ExploreView({
   user,
   authLoading,
   viewingFromSaved,
-  devMode,
-  devModeExplicit,
   showAuthModal,
   headerStyle,
   setCurrentScreen,
@@ -714,7 +712,6 @@ export default function ExploreView({
 
   return (
     <div style={{ minHeight: "100vh", background: xt.bg, color: xt.text, display: "flex", flexDirection: "column", overflowX: "hidden", ...scopeVars }}>
-      {devModeExplicit && <DevModeBadge mode={devMode} />}
       <header style={headerStyle}>
         <PageContainer wide>
           <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>

@@ -846,38 +846,6 @@ export function AuthModal({ onClose, onAuth, t }) {
   );
 }
 
-// ============================================
-// DEV MODE BADGE (V4S23 — remove before ship)
-// ============================================
-export function DevModeBadge({ mode }) {
-  const colorMap = {
-    preview: { bg: "rgba(239,68,68,0.15)", color: "#f87171", border: "rgba(239,68,68,0.3)", label: "PREVIEW" },
-    payg: { bg: "rgba(245,158,11,0.15)", color: "#fbbf24", border: "rgba(245,158,11,0.3)", label: "PAYG" },
-    subscriber: { bg: "rgba(16,185,129,0.15)", color: "#34d399", border: "rgba(16,185,129,0.3)", label: "SUBSCRIBER" },
-  };
-  const c = colorMap[mode] || colorMap.subscriber;
-  return (
-    <div style={{
-      position: "fixed",
-      bottom: 16,
-      right: 16,
-      zIndex: 9999,
-      padding: "6px 14px",
-      borderRadius: 8,
-      background: c.bg,
-      border: `1px solid ${c.border}`,
-      backdropFilter: "blur(8px)",
-      fontSize: 11,
-      fontWeight: 700,
-      fontFamily: "monospace",
-      letterSpacing: "0.08em",
-      color: c.color,
-      pointerEvents: "none",
-    }}>
-      DEV: {c.label}
-    </div>
-  );
-}
 
 // ============================================
 // CONTENT GATING COMPONENTS (V4S25)

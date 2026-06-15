@@ -7,6 +7,7 @@ import LineageView from "./LineageView";
 import EvaluationView from "./EvaluationView";
 import ExecutionBriefView from "./ExecutionBriefView";
 import ExploreView from "./ExploreView.js";
+import HubView from "./HubView";
 import {
   StepProgress,
   StatusBadge,
@@ -15,7 +16,6 @@ import {
   Card,
   PageContainer,
   AuthModal,
-  DevModeBadge,
   SpecificityGate,
   getTheme,
   getScoreColor,
@@ -120,6 +120,13 @@ export default function Home() {
   // Evaluation cache — avoids re-fetching already-viewed ideas
   const evaluationCacheRef = useRef({});
 
+  // Preview entry: visit ?hub=new to see the rebuilt two-shelf My Ideas hub.
+  useEffect(() => {
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("hub") === "new") {
+      setCurrentScreen("hubpreview");
+    }
+  }, []);
+
   // Inline idea editing state (hub card rename)
   const [editingIdeaId, setEditingIdeaId] = useState(null);
   const [editingIdeaTitle, setEditingIdeaTitle] = useState("");
@@ -171,43 +178,8 @@ export default function Home() {
   // Pro mode (dev toggle — uses chained pipeline)
   const [proMode, setProMode] = useState(false);
 
-  // ============================================
-  // ENTITLEMENT SYSTEM (V4S23)
-  // ============================================
-  // Dev mode override via query param: ?mode=preview | ?mode=payg | ?mode=subscriber
-  // Default = subscriber so current production behavior is unchanged until Paddle ships
-  const [devMode, setDevMode] = useState("subscriber");
-  const [devModeExplicit, setDevModeExplicit] = useState(false);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const mode = params.get("mode");
-    if (mode === "preview" || mode === "payg" || mode === "subscriber") {
-      setDevMode(mode);
-      setDevModeExplicit(true);
-    }
-  }, []);
-
-  // Central entitlement derivation — computed from devMode (will later derive from real Paddle state)
-  const entitlements = (() => {
-    const isSubscriber = devMode === "subscriber";
-    const isPAYG = devMode === "payg";
-    const isPreview = devMode === "preview";
-
-    return {
-      themeMode: isSubscriber ? "dark" : "light",
-      canUseWorkflow: isSubscriber,
-      canSeeFullContent: true, // All users see full evaluation content — quantity (2 lifetime evals) is the gate, not content visibility
-      saveCap: isSubscriber ? Infinity : 5,
-      isPreviewUser: isPreview,
-      isPAYG,
-      isSubscriber,
-      devMode,
-    };
-  })();
-
-  // Theme derived from entitlements
-  const t = getTheme(entitlements.themeMode);
+  // Theme (launch: dark only — V4S23 entitlement/devMode system removed)
+  const t = getTheme("dark");
 
   // Listen for auth state changes (login, logout, session restore)
   useEffect(() => {
@@ -302,7 +274,9 @@ export default function Home() {
     const saved = localStorage.getItem("iv_profile");
     if (saved) {
       setProfile(JSON.parse(saved));
-      setCurrentScreen("input");
+      // Don't override the ?hub=new preview entry (mount effect above sets "hubpreview").
+      const hubNew = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("hub") === "new";
+      if (!hubNew) setCurrentScreen("input");
     }
     setEvalsRemaining(getEvalsRemaining());
   }, []);
@@ -1079,7 +1053,7 @@ export default function Home() {
         body: JSON.stringify({
           analysis,
           ...(evaluationId ? { evaluation_id: evaluationId } : {}),
-          devMode,
+          devMode: "subscriber",
         }),
       });
 
@@ -1784,7 +1758,7 @@ export default function Home() {
             )}
 
             {/* DEV TOGGLE: Pro mode — remove before launch */}
-            {user && !entitlements.isPreviewUser && (
+            {user && (
               <div style={{
                 display: "flex",
                 alignItems: "center",
@@ -1999,7 +1973,7 @@ export default function Home() {
   // ==========================================
   if (currentScreen === "myideas") {
     // COMPARISON MODE: render ComparisonView instead of hub (subscribers only)
-    if (entitlements.canUseWorkflow && compareMode && compareData) {
+    if (compareMode && compareData) {
       return (
         <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
           <header style={headerStyle}>
@@ -2049,8 +2023,53 @@ export default function Home() {
       );
     }
 
+    // HUB PREVIEW: rebuilt two-shelf My Ideas hub (reach via ?hub=new). Additive;
+    // the live "myideas" screen is untouched.
+    if (currentScreen === "hubpreview") {
+      return (
+        <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+          <header style={headerStyle}>
+            <PageContainer wide>
+              <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: t.mut, margin: 0, cursor: "pointer" }}>
+                  IdeaLoop Core
+                </h1>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  {!authLoading && user && (
+                    <>
+                      <span style={{ fontSize: 12, color: t.mut }}>{user.email}</span>
+                      <button onClick={handleLogout} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
+                        Log out
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </PageContainer>
+          </header>
+
+          <main style={{ flex: 1, paddingBottom: 48, paddingTop: 16 }}>
+            <HubView
+              t={t}
+              onOpenIdea={(id) => loadSavedIdea(id)}
+              onOpenLineage={(id) => { setLineageTargetId(id); setLineageMode(true); }}
+              onBack={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")}
+            />
+          </main>
+
+          <footer style={footerStyle}>
+            <PageContainer>
+              <p style={{ fontSize: 12, color: t.mut, margin: 0 }}>
+                IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
+              </p>
+            </PageContainer>
+          </footer>
+        </div>
+      );
+    }
+
     // LINEAGE MODE: render LineageView instead of hub (subscribers only)
-    if (entitlements.canUseWorkflow && lineageMode && lineageTargetId) {
+    if (lineageMode && lineageTargetId) {
       return (
         <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
           <header style={headerStyle}>
@@ -2132,7 +2151,6 @@ export default function Home() {
 
     return (
       <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
-        {devModeExplicit && <DevModeBadge mode={devMode} />}
         <header style={headerStyle}>
           <PageContainer>
             <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -2346,9 +2364,7 @@ export default function Home() {
               <h2 style={{ fontSize: 24, fontWeight: 600, margin: "0 0 8px 0" }}>My Ideas</h2>
               <p style={{ fontSize: 14, color: t.sec, margin: 0 }}>
                 {savedIdeasCount > 0
-                  ? entitlements.isSubscriber
-                    ? `${savedIdeasCount} ideas saved`
-                    : `${savedIdeasCount} of ${entitlements.saveCap} ideas saved`
+                  ? `${savedIdeasCount} ideas saved`
                   : "Your saved evaluations will appear here."}
               </p>
             </div>
@@ -2411,7 +2427,7 @@ export default function Home() {
                 </div>
 
                 {/* Compare button — enters selection mode (workflow feature, subscribers only) */}
-                {entitlements.canUseWorkflow && myIdeas.filter(i => !i.parent_idea_id || i.is_main_version || !myIdeas.some(p => p.id === i.parent_idea_id)).length >= 2 && !compareSelecting && (
+                {myIdeas.filter(i => !i.parent_idea_id || i.is_main_version || !myIdeas.some(p => p.id === i.parent_idea_id)).length >= 2 && !compareSelecting && (
                   <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
                     <button
                       onClick={() => { setCompareSelecting(true); setCompareSelected([]); }}
@@ -2427,7 +2443,7 @@ export default function Home() {
                 )}
 
                 {/* Selection bar — shows when in selection mode (subscribers only) */}
-                {entitlements.canUseWorkflow && compareSelecting && (
+                {compareSelecting && (
                   <div style={{
                     display: "flex", alignItems: "center", justifyContent: "space-between",
                     padding: "10px 18px", borderRadius: 12,
@@ -2652,8 +2668,7 @@ export default function Home() {
                                 }}>★ Main</span>
                               </>
                             )}
-                            {/* Branch children count — workflow feature, subscribers only */}
-                            {entitlements.canUseWorkflow && (() => {
+                            {(() => {
                               const childCount = myIdeas.filter(i => i.parent_idea_id === savedIdea.id).length;
                               return childCount > 0 ? (
                                 <>
@@ -2789,7 +2804,7 @@ export default function Home() {
                           <span />
                         )}
                         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                          {entitlements.canUseWorkflow && (savedIdea.parent_idea_id || myIdeas.some(i => i.parent_idea_id === savedIdea.id)) && (
+                          {(savedIdea.parent_idea_id || myIdeas.some(i => i.parent_idea_id === savedIdea.id)) && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -2833,38 +2848,7 @@ export default function Home() {
               </div>
             )}
 
-            {/* Upgrade prompt — non-subscribers only */}
-            {!entitlements.canUseWorkflow && myIdeas.length > 0 && (
-              <div style={{
-                marginTop: 24,
-                padding: "24px",
-                borderRadius: 16,
-                border: "1px solid rgba(108,99,255,0.2)",
-                background: "rgba(108,99,255,0.04)",
-                textAlign: "center",
-              }}>
-                <p style={{ fontSize: 16, fontWeight: 600, color: "#a78bfa", margin: "0 0 8px" }}>
-                  Unlock the full workspace
-                </p>
-                <p style={{ fontSize: 13, color: t.sec, lineHeight: 1.6, margin: "0 0 16px" }}>
-                  Evolve ideas, compare versions side by side, see what changed between iterations, track your decision lineage, and save unlimited ideas.
-                </p>
-                <button
-                  style={{
-                    padding: "10px 24px",
-                    borderRadius: 10,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    border: "1px solid rgba(108,99,255,0.4)",
-                    background: "rgba(108,99,255,0.12)",
-                    color: "#a78bfa",
-                    cursor: "pointer",
-                  }}
-                >
-                  Subscribe to Workspace
-                </button>
-              </div>
-            )}
+
           </PageContainer>
         </main>
 
@@ -2882,12 +2866,6 @@ export default function Home() {
   // ==========================================
   // EVOLVE THIS IDEA (Re-evaluation Screen)
   // ==========================================
-  // STATE-LEVEL GUARD: Evolve/Re-eval screen is a workflow feature (subscribers only)
-  if (currentScreen === "reeval" && !entitlements.canUseWorkflow) {
-    setCurrentScreen(viewingFromSaved ? "results2" : "results1");
-    return null;
-  }
-
   if (currentScreen === "reeval" && reEvalMode) {
     const hasAnyChange = reEvalTargetUser.trim() || reEvalProblem.trim() || reEvalCoreIdea.trim();
 
@@ -3380,8 +3358,6 @@ export default function Home() {
         user={user}
         authLoading={authLoading}
         viewingFromSaved={viewingFromSaved}
-        devMode={devMode}
-        devModeExplicit={devModeExplicit}
         showAuthModal={showAuthModal}
         headerStyle={headerStyle}
         setCurrentScreen={setCurrentScreen}
@@ -3455,14 +3431,11 @@ export default function Home() {
         screen={currentScreen}
         t={t}
         analysis={analysis}
-        entitlements={entitlements}
         profile={profile}
         user={user}
         authLoading={authLoading}
         viewingFromSaved={viewingFromSaved}
         isBranchIdea={isBranchIdea}
-        devMode={devMode}
-        devModeExplicit={devModeExplicit}
         showScoreGuide={showScoreGuide}
         showAuthModal={showAuthModal}
         saveStatus={saveStatus}
@@ -3544,13 +3517,6 @@ export default function Home() {
   // ============================================
   // SCREEN: DELTA EXPLANATION (branches only)
   // ============================================
-  // STATE-LEVEL GUARD: Delta screen is a workflow feature (subscribers only)
-  if (currentScreen === "delta" && !entitlements.canUseWorkflow) {
-    // Redirect non-subscribers away from workflow screens
-    setCurrentScreen("results2");
-    return null;
-  }
-
   if (currentScreen === "delta" && viewingFromSaved && isBranchIdea) {
     const currentIdea = myIdeas.find(i => i.id === currentIdeaId);
     const parentIdea = currentIdea ? myIdeas.find(i => i.id === currentIdea.parent_idea_id) : null;

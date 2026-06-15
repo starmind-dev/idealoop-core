@@ -8,7 +8,6 @@ import {
   Card,
   PageContainer,
   AuthModal,
-  DevModeBadge,
   getScoreColor,
   getTcColor,
   getMainBottleneckColor,
@@ -27,16 +26,12 @@ export default function EvaluationView({
   t,
   // Core data
   analysis,
-  entitlements,
   profile,
   user,
   authLoading,
   // Navigation context
   viewingFromSaved,
   isBranchIdea,
-  // Dev mode
-  devMode,
-  devModeExplicit,
   // Popups
   showScoreGuide,
   showAuthModal,
@@ -89,9 +84,10 @@ export default function EvaluationView({
   onNavigateToDelta,
 }) {
 
-  // Content gating — true for free preview users viewing unpaid evaluations
-  const isGated = !entitlements.canSeeFullContent;
-  const isPreviewUser = entitlements.isPreviewUser;
+  // V4S23 entitlement system removed. Content gating retired — all content is full.
+  // PreviewBanner teaser left dormant (isPreviewUser=false) pending M5/Paddle credit wiring.
+  const isGated = false;
+  const isPreviewUser = false;
 
   // ==========================================
   // SCREEN: ANALYSIS (results1)
@@ -99,7 +95,6 @@ export default function EvaluationView({
   if (screen === "results1") {
     return (
       <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
-        {devModeExplicit && <DevModeBadge mode={devMode} />}
         <header style={headerStyle}>
           <PageContainer wide>
             <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -947,7 +942,6 @@ export default function EvaluationView({
   if (screen === "results2") {
     return (
       <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
-        {devModeExplicit && <DevModeBadge mode={devMode} />}
         <header style={headerStyle}>
           <PageContainer wide>
             <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1463,21 +1457,7 @@ export default function EvaluationView({
                       border: "1px solid rgba(16,185,129,0.3)",
                       color: "#34d399",
                     }}>
-                      ✓ Saved to My Ideas {entitlements.isSubscriber ? "" : `(${savedIdeasCount}/${entitlements.saveCap})`}
-                    </div>
-                  ) : !entitlements.isSubscriber && savedIdeasCount >= entitlements.saveCap ? (
-                    <div style={{
-                      width: "100%",
-                      padding: "14px 0",
-                      borderRadius: 12,
-                      fontSize: 14,
-                      fontWeight: 500,
-                      textAlign: "center",
-                      background: "rgba(245,158,11,0.08)",
-                      border: "1px solid rgba(245,158,11,0.2)",
-                      color: "#fbbf24",
-                    }}>
-                      Save limit reached ({entitlements.saveCap}/{entitlements.saveCap} ideas saved)
+                      ✓ Saved to My Ideas
                     </div>
                   ) : saveStatus === "naming" ? (
                     <div style={{
@@ -1526,7 +1506,7 @@ export default function EvaluationView({
                             color: !ideaName.trim() ? t.mut : t.link,
                           }}
                         >
-                          Save {entitlements.isSubscriber ? "" : `(${savedIdeasCount}/${entitlements.saveCap})`}
+                          Save
                         </button>
                         <button
                           onClick={() => { setSaveStatus("idle"); setIdeaName(""); }}
@@ -1563,7 +1543,7 @@ export default function EvaluationView({
                           transition: "all 0.2s",
                         }}
                       >
-                        {saveStatus === "saving" ? "Saving..." : entitlements.isSubscriber ? "Save to My Ideas" : `Save to My Ideas (${savedIdeasCount}/${entitlements.saveCap})`}
+                        {saveStatus === "saving" ? "Saving..." : "Save to My Ideas"}
                       </button>
                       {saveStatus === "error" && saveError && (
                         <p style={{ fontSize: 12, color: "#f87171", textAlign: "center", marginTop: 8 }}>
@@ -1601,7 +1581,7 @@ export default function EvaluationView({
                 {/* Branch ideas get "See what changed" button leading to delta screen */}
                 {isBranchIdea ? (
                   <>
-                    {entitlements.canUseWorkflow ? (
+                    {(
                       <>
                         <button
                           onClick={startReEvaluation}
@@ -1639,20 +1619,6 @@ export default function EvaluationView({
                           See what changed →
                         </button>
                       </>
-                    ) : (
-                      <div style={{
-                        padding: "16px 20px",
-                        borderRadius: 12,
-                        border: "1px solid rgba(108,99,255,0.2)",
-                        background: "rgba(108,99,255,0.04)",
-                        marginBottom: 10,
-                        textAlign: "center",
-                      }}>
-                        <p style={{ fontSize: 13, color: "#a78bfa", margin: "0 0 4px", fontWeight: 600 }}>Workspace feature</p>
-                        <p style={{ fontSize: 12, color: t.sec, margin: 0 }}>
-                          Subscribe to evolve ideas, see what changed, compare, and track lineage.
-                        </p>
-                      </div>
                     )}
                     <button
                       onClick={onBackToMyIdeasCleanup}
@@ -1673,7 +1639,7 @@ export default function EvaluationView({
                   </>
                 ) : (
                   <>
-                    {entitlements.canUseWorkflow ? (
+                    {(
                       <>
                         <button
                           onClick={startReEvaluation}
@@ -1718,20 +1684,6 @@ export default function EvaluationView({
                           );
                         })()}
                       </>
-                    ) : (
-                      <div style={{
-                        padding: "16px 20px",
-                        borderRadius: 12,
-                        border: "1px solid rgba(108,99,255,0.2)",
-                        background: "rgba(108,99,255,0.04)",
-                        marginBottom: 10,
-                        textAlign: "center",
-                      }}>
-                        <p style={{ fontSize: 13, color: "#a78bfa", margin: "0 0 4px", fontWeight: 600 }}>Workspace feature</p>
-                        <p style={{ fontSize: 12, color: t.sec, margin: 0 }}>
-                          Subscribe to evolve ideas, compare versions, and track your decision lineage.
-                        </p>
-                      </div>
                     )}
                     <button
                       onClick={onBackToMyIdeasCleanup}
