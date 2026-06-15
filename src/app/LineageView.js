@@ -88,6 +88,7 @@ function deriveNodesFromMyIdeas(myIdeas, targetIdeaId) {
       is_root: n.id === rootId,
       is_main: !!n.is_main_version,
       branch_reason: n.branch_reason || null,
+      created_at: n.created_at,
     });
     myIdeas.filter((x) => x.parent_idea_id === id).forEach((c) => visit(c.id));
   };
@@ -111,7 +112,12 @@ function layoutTree(nodes) {
   let leaf = 0;
   const walk = (node, depth) => {
     if (!node) return;
-    node.kids.sort((a, b) => 0); // preserve incoming order
+    // Deterministic sibling order (oldest first, id tiebreak) so the optimistic
+    // paint and the server reconcile lay children out identically — no swap flicker.
+    node.kids.sort((a, b) => {
+      const d = new Date(a.created_at || 0) - new Date(b.created_at || 0);
+      return d !== 0 ? d : String(a.id).localeCompare(String(b.id));
+    });
     if (node.kids.length === 0) {
       pos[node.id] = { cx: leaf * COL_W + OFF_X, top: depth * ROW_H + PAD_TOP, depth };
       leaf++;
