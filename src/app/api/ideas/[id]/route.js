@@ -1,21 +1,36 @@
 // src/app/api/ideas/[id]/route.js
 //
-// CUTOVER STEP 1 — CARD ROOMS. The GET routes through the ideas service's single
-// source of truth (getIdea + resolveState) and returns a STATE-tagged payload so
-// the hub can open the right room:
-//   rough   -> { state:'rough',   analysis:null, explore:null }   (idea text + two doors)
-//   explore -> { state:'explore', analysis:null, explore:<envelope> }  (ExploreView, dormant)
-//   deep    -> { state:'deep',    analysis:<…>,  explore:null }   (the 3-screen flow)
-// Eval-less ideas (rough / explore) NO LONGER 404 — the old GET .single()'d the
-// evaluations row and 404'd on any idea without one, which is why rough cards
-// would not open. The DEEP `analysis` object is byte-identical to the prior route,
-// so the deep-open path (applyLoadedIdea -> results1) is untouched. `?evaluation_id=`
-// selection is preserved; state is then derived from the SELECTED eval.
-// DELETE and PATCH are UNCHANGED.
+// CUTOVER — this route now delegates ALL THREE verbs to the ideas orchestrator
+// (the single source of truth), finishing the half-migration the prior version
+// left behind (GET was on the service; PATCH + DELETE hand-rolled their logic).
+//
+// GET    — CARD ROOMS (unchanged). Routes through getIdea + resolveState and
+//          returns a STATE-tagged payload so the hub can open the right room:
+//            rough   -> { state:'rough',   analysis:null, explore:null }   (idea text + two doors)
+//            explore -> { state:'explore', analysis:null, explore:<envelope> }  (ExploreView, dormant)
+//            deep    -> { state:'deep',    analysis:<…>,  explore:null }   (the 3-screen flow)
+//          Eval-less ideas (rough / explore) do NOT 404. The DEEP `analysis`
+//          object is byte-identical to the prior route, so applyLoadedIdea ->
+//          results1 is untouched. `?evaluation_id=` selection preserved.
+//
+// PATCH  — delegates to updateIdea(userId, ideaId, { title, folder_id, branch_reason }).
+//          NEW: accepts `folder_id` (move-to-folder) with an ownership guard, and
+//          accepts `branch_reason` (edit branch note). `status_label` is RETIRED —
+//          the label model is gone; its only writers were the removed lineage
+//          status dropdown and this route, so it is no longer validated or written.
+//          (The column DROP itself is a later cutover step — the flat list route
+//          still SELECTs it.) Returns { ok: true }; the page.js consumer reads the
+//          body only on error and applies its optimistic update from what it sent.
+//
+// DELETE — delegates to deleteIdea(userId, ideaId). Same soft-archive of the idea
+//          + its descendant branches, same { archived_ids, archived_count } the hub
+//          consumer prunes from. GAINS the one-main-per-family invariant the inline
+//          version silently skipped: deleting the main promotes the family root to
+//          main. (`collectSubtreeIds` is gone — the service owns the subtree walk.)
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getIdea, resolveState } from "@/lib/services/ideas";
+import { getIdea, resolveState, updateIdea, deleteIdea } from "@/lib/services/ideas";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -29,36 +44,6 @@ async function authenticate(request) {
   const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
   if (error || !user) return null;
   return user;
-}
-
-// Collect an idea + every descendant branch (walk DOWN the parent_idea_id tree).
-// Used so deleting a root/parent archives its whole lineage, not just the one row.
-async function collectSubtreeIds(rootId, userId) {
-  const ids = [rootId];
-  let frontier = [rootId];
-  const seen = new Set([rootId]); // safety against cycles
-
-  while (frontier.length > 0) {
-    const { data: children, error } = await supabaseAdmin
-      .from("ideas")
-      .select("id")
-      .eq("user_id", userId)
-      .in("parent_idea_id", frontier);
-
-    if (error || !children || children.length === 0) break;
-
-    const next = [];
-    for (const c of children) {
-      if (!seen.has(c.id)) {
-        seen.add(c.id);
-        ids.push(c.id);
-        next.push(c.id);
-      }
-    }
-    frontier = next;
-  }
-
-  return ids;
 }
 
 // Build the DEEP `analysis` object from an evaluation row. BYTE-IDENTICAL to the
@@ -185,59 +170,6 @@ export async function GET(request, { params }) {
   }
 }
 
-export async function DELETE(request, { params }) {
-  try {
-    const user = await authenticate(request);
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
-    }
-
-    const { id: ideaId } = await params;
-    if (!ideaId) {
-      return NextResponse.json({ error: "Missing idea ID." }, { status: 400 });
-    }
-
-    // Verify the idea exists and belongs to the user before touching anything.
-    const { data: target, error: targetError } = await supabaseAdmin
-      .from("ideas")
-      .select("id")
-      .eq("id", ideaId)
-      .eq("user_id", user.id)
-      .single();
-
-    if (targetError || !target) {
-      return NextResponse.json({ error: "Idea not found." }, { status: 404 });
-    }
-
-    // Archive the idea AND all of its descendant branches in one update,
-    // so deleting a root/parent clears its whole lineage instead of leaving
-    // orphaned branches still active in the hub.
-    const subtreeIds = await collectSubtreeIds(ideaId, user.id);
-
-    const { error: archiveError } = await supabaseAdmin
-      .from("ideas")
-      .update({ status: "archived", updated_at: new Date().toISOString() })
-      .eq("user_id", user.id)
-      .in("id", subtreeIds);
-
-    if (archiveError) {
-      return NextResponse.json(
-        { error: "Failed to archive: " + archiveError.message },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      archived_ids: subtreeIds,
-      archived_count: subtreeIds.length,
-    });
-  } catch (err) {
-    console.error("Archive idea error:", err);
-    return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
-  }
-}
-
 export async function PATCH(request, { params }) {
   try {
     const user = await authenticate(request);
@@ -250,52 +182,89 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ error: "Missing idea ID." }, { status: 400 });
     }
 
-    const body = await request.json();
-    const updates = {};
+    const body = await request.json().catch(() => ({}));
 
-    // Validate status_label if provided
-    if (body.status_label !== undefined) {
-      const allowed = ["exploring", "lead", "parked", "killed"];
-      if (!allowed.includes(body.status_label)) {
-        return NextResponse.json(
-          { error: `Invalid status_label. Must be one of: ${allowed.join(", ")}` },
-          { status: 400 }
-        );
-      }
-      updates.status_label = body.status_label;
-    }
+    // Build the patch against the service's whitelist (title / folder_id /
+    // branch_reason). status_label is intentionally NOT accepted — see header.
+    const patch = {};
 
-    // Validate title if provided
     if (body.title !== undefined) {
       const trimmed = (body.title || "").trim();
       if (!trimmed) {
         return NextResponse.json({ error: "Title cannot be empty." }, { status: 400 });
       }
-      updates.title = trimmed;
+      patch.title = trimmed;
     }
 
-    if (Object.keys(updates).length === 0) {
+    if ("branch_reason" in body) {
+      patch.branch_reason = body.branch_reason || null;
+    }
+
+    if ("folder_id" in body) {
+      const fid = body.folder_id || null;
+      // Folder-ownership guard: a move into a folder requires that folder to be
+      // the caller's own. null (un-file) is always allowed. Without this the
+      // service would set whatever folder_id it's handed — the server stays the
+      // authority over what a move can target, not the client.
+      if (fid !== null) {
+        const { data: folder, error: folderErr } = await supabaseAdmin
+          .from("folders")
+          .select("id")
+          .eq("id", fid)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (folderErr) {
+          console.error("PATCH /api/ideas/[id] folder check error:", folderErr);
+          return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+        }
+        if (!folder) {
+          return NextResponse.json({ error: "Folder not found." }, { status: 400 });
+        }
+      }
+      patch.folder_id = fid;
+    }
+
+    if (Object.keys(patch).length === 0) {
       return NextResponse.json({ error: "No valid fields to update." }, { status: 400 });
     }
 
-    updates.updated_at = new Date().toISOString();
-
-    const { data, error } = await supabaseAdmin
-      .from("ideas")
-      .update(updates)
-      .eq("id", ideaId)
-      .eq("user_id", user.id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("PATCH /api/ideas/[id] error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ idea: data });
+    // Delegate the write to the orchestrator (it owns the field whitelist + user
+    // scoping). The consumer reads the body only on error, so { ok: true } is
+    // sufficient on success.
+    await updateIdea(user.id, ideaId, patch);
+    return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("PATCH /api/ideas/[id] unexpected error:", err);
+    return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+  }
+}
+
+export async function DELETE(request, { params }) {
+  try {
+    const user = await authenticate(request);
+    if (!user) {
+      return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+    }
+
+    const { id: ideaId } = await params;
+    if (!ideaId) {
+      return NextResponse.json({ error: "Missing idea ID." }, { status: 400 });
+    }
+
+    // Delegate to the orchestrator: soft-archives the idea AND its descendant
+    // branches, and — unlike the prior inline archive — promotes the family root
+    // to main when the deleted node was the main, preserving one-main-per-family.
+    // Returns { ok, archived_ids, archived_count, new_main? }; the hub consumer
+    // reads archived_ids + archived_count to prune the lineage locally.
+    const result = await deleteIdea(user.id, ideaId);
+    return NextResponse.json(result);
+  } catch (err) {
+    // The service throws "Idea not found." when the (active) lineage can't be
+    // resolved — surface it as a 404, matching the prior route's not-found path.
+    if (err && err.message === "Idea not found.") {
+      return NextResponse.json({ error: "Idea not found." }, { status: 404 });
+    }
+    console.error("Archive idea error:", err);
     return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
   }
 }
