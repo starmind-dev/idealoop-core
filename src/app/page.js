@@ -285,6 +285,16 @@ export default function Home() {
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState(null);
   const [exploreAnalysis, setExploreAnalysis] = useState(null); // ll2_explore_v1 payload (Explore mode)
+  // Rough room: the rough idea currently open in its two-door room.
+  const [roughRoomIdea, setRoughRoomIdea] = useState(null); // { id, text, title }
+  // Graduation intent: when set, the next deep save flips THIS idea forward in
+  // place (rough -> deep) instead of creating a new idea. Declared per analysis
+  // run via handleAnalyze, so a fresh (non-rough-room) run always clears it.
+  const [graduatingIdeaId, setGraduatingIdeaId] = useState(null);
+  // The id of an explored idea SAVED in this Explore session. Set on a
+  // successful explore-result save; lets angles saved afterward branch under it
+  // (orphan rule) and lets "take to Deep as it stands" graduate it in place.
+  const [savedExploreIdeaId, setSavedExploreIdeaId] = useState(null);
 
   // ============================================
   // EXECUTION BRIEF STATE (Screen 3 / step-4 handoff)
@@ -463,7 +473,7 @@ export default function Home() {
     return { ethicsBlocked: false, analysis: finalAnalysis };
   };
 
-  const handleAnalyze = async (mode = "deep", ideaTextOverride = null) => {
+  const handleAnalyze = async (mode = "deep", ideaTextOverride = null, graduateId = null) => {
     const ideaToUse = ideaTextOverride != null ? ideaTextOverride : idea;
     if (!ideaToUse.trim()) return;
 
@@ -506,6 +516,11 @@ export default function Home() {
     setCurrentEvaluationId(null);
     setCurrentIdeaId(null);
     setViewingFromSaved(false);
+    // This analysis run declares its graduation intent (or lack of one). A
+    // fresh run from input/explore passes null, clearing any stale intent.
+    setGraduatingIdeaId(graduateId);
+    // A new run starts a clean Explore session — no saved explored idea yet.
+    setSavedExploreIdeaId(null);
     setIsReEvalResult(false);
     setReEvalRevisionNotes(null);
     // V4S28 B7 — clear any previous gate result before retry
@@ -835,6 +850,10 @@ export default function Home() {
             // new row (null when none was generated). Branch saves do NOT carry
             // it — a branch persists its brief via generate-from-hub later.
             execution_brief: briefData || null,
+            // Graduation: when set, the save flips this existing idea forward in
+            // place (rough -> deep) instead of creating a new idea. Absent on a
+            // normal fresh save.
+            ...(graduatingIdeaId ? { graduate_idea_id: graduatingIdeaId } : {}),
           }),
         });
 
@@ -853,7 +872,16 @@ export default function Home() {
         setSavedIdeaId(data.idea_id);
         setCurrentIdeaId(data.idea_id);
         setCurrentEvaluationId(data.evaluation_id);
-        setSavedIdeasCount(data.saved_count);
+        if (typeof data.saved_count === "number") setSavedIdeasCount(data.saved_count);
+
+        if (data.graduated) {
+          // The rough card became a deep card in place. Intent is spent; drop
+          // the stale cached rough read so reopening shows the deep room, and
+          // refresh the hub so the card moves shelves.
+          setGraduatingIdeaId(null);
+          delete evaluationCacheRef.current[data.idea_id];
+          fetchMyIdeas();
+        }
       }
     } catch (err) {
       setSaveStatus("error");
@@ -932,6 +960,40 @@ export default function Home() {
     setCurrentScreen("results1");
   };
 
+  // Route a loaded idea to the right room based on its derived state. Deep ideas
+  // carry an analysis and open the results room; rough ideas have none and open
+  // the two-door rough room; explore ideas open the explore room.
+  const routeLoadedIdea = (data, ideaId) => {
+    const state = data && data.state;
+    if (state === "rough") {
+      const txt = data.idea?.raw_idea_text || "";
+      setRoughRoomIdea({
+        id: ideaId,
+        text: txt,
+        title: data.idea?.title || txt.split(/[.!?\n]/)[0].trim().slice(0, 80),
+      });
+      setCurrentScreen("roughroom");
+      return;
+    }
+    if (state === "explore") {
+      if (data.explore) {
+        setExploreAnalysis(data.explore);
+        // Reopened from the hub: this explored idea is already saved. Mark it so
+        // the "Keep this explored idea" bar doesn't offer to save it again, and
+        // remember its id so a new angle branches under it and "take to Deep as
+        // it stands" graduates THIS idea rather than making a duplicate.
+        setViewingFromSaved(true);
+        setSavedExploreIdeaId(ideaId);
+        setCurrentScreen("explore");
+      } else {
+        setMyIdeasError("This explored idea can't be opened yet.");
+      }
+      return;
+    }
+    // deep (default) — analysis present
+    applyLoadedIdea(data, ideaId);
+  };
+
   // Load a saved idea's full evaluation and show it
   const loadSavedIdea = async (ideaId, evaluationId) => {
     if (!user) return;
@@ -945,7 +1007,7 @@ export default function Home() {
     // Check cache first — instant load if available
     if (evaluationCacheRef.current[cacheKey]) {
       const cached = evaluationCacheRef.current[cacheKey];
-      applyLoadedIdea(cached, ideaId);
+      routeLoadedIdea(cached, ideaId);
       return;
     }
 
@@ -966,7 +1028,7 @@ export default function Home() {
       // Store in cache
       evaluationCacheRef.current[cacheKey] = data;
 
-      applyLoadedIdea(data, ideaId);
+      routeLoadedIdea(data, ideaId);
     } catch (err) {
       setMyIdeasError(err.message || "Failed to load idea.");
     } finally {
@@ -1231,7 +1293,10 @@ export default function Home() {
 
   // Navigate to My Ideas Hub
   const goToMyIdeas = () => {
-    setCurrentScreen("myideas");
+    // The hub IS the two-shelf HubView now (was the old flat list). Every "My
+    // Ideas" link and every room's back-button lands here, so the new hub is
+    // reachable and returnable without the ?hub=new URL or a page refresh.
+    setCurrentScreen("hubpreview");
     setCompareMode(false);
     setCompareSelecting(false);
     setCompareSelected([]);
@@ -1971,7 +2036,143 @@ export default function Home() {
   // ==========================================
   // MY IDEAS HUB
   // ==========================================
-  if (currentScreen === "myideas") {
+  if (currentScreen === "hubpreview" && !lineageMode && !compareMode) {
+    return (
+      <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+        <header style={headerStyle}>
+          <PageContainer wide>
+            <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: t.mut, margin: 0, cursor: "pointer" }}>
+                IdeaLoop Core
+              </h1>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                {!authLoading && user && (
+                  <>
+                    <span style={{ fontSize: 12, color: t.mut }}>{user.email}</span>
+                    <button onClick={handleLogout} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
+                      Log out
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </PageContainer>
+        </header>
+
+        <main style={{ flex: 1, paddingBottom: 48, paddingTop: 16 }}>
+          <HubView
+            t={t}
+            onOpenIdea={(id) => loadSavedIdea(id)}
+            onOpenLineage={(id) => { setLineageTargetId(id); setLineageMode(true); }}
+            onBack={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")}
+          />
+        </main>
+
+        <footer style={footerStyle}>
+          <PageContainer>
+            <p style={{ fontSize: 12, color: t.mut, margin: 0 }}>
+              IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
+            </p>
+          </PageContainer>
+        </footer>
+      </div>
+    );
+  }
+
+  // ROUGH ROOM: a rough idea's two-door room. Idea text + Explore/Deep doors.
+  // Deep graduates the idea forward in place (no copy). Explore arrives with
+  // the explore room. Serves both standalone rough ideas and saved angles.
+  if (currentScreen === "roughroom") {
+    return (
+      <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+        <header style={headerStyle}>
+          <PageContainer wide>
+            <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: t.mut, margin: 0, cursor: "pointer" }}>
+                IdeaLoop Core
+              </h1>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                {!authLoading && user && (
+                  <>
+                    <span style={{ fontSize: 12, color: t.mut }}>{user.email}</span>
+                    <button onClick={handleLogout} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
+                      Log out
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </PageContainer>
+        </header>
+
+        <main style={{ flex: 1, paddingBottom: 48, paddingTop: 40 }}>
+          <PageContainer>
+            <button
+              onClick={() => setCurrentScreen("hubpreview")}
+              style={{ background: "none", border: "none", color: t.mut, fontFamily: "monospace", fontSize: 12, cursor: "pointer", padding: 0, marginBottom: 28, letterSpacing: "0.04em" }}
+            >
+              ← My Ideas
+            </button>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+              <span aria-hidden style={{ fontSize: 13 }}>✏️</span>
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: t.mut, fontFamily: "monospace" }}>
+                Rough idea
+              </span>
+            </div>
+
+            <h2 style={{ fontSize: 24, fontWeight: 600, color: t.text, margin: "0 0 18px", lineHeight: 1.25 }}>
+              {roughRoomIdea?.title || "Untitled idea"}
+            </h2>
+
+            <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, padding: "20px 22px", color: t.text, fontSize: 15, lineHeight: 1.6, whiteSpace: "pre-wrap", marginBottom: 32 }}>
+              {roughRoomIdea?.text}
+            </div>
+
+            <p style={{ fontSize: 12, color: t.mut, margin: "0 0 16px", fontFamily: "monospace", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+              Take it forward
+            </p>
+
+            {error && (
+              <p style={{ fontSize: 13, color: "#f87171", margin: "0 0 16px" }}>{error}</p>
+            )}
+
+            <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
+              <button
+                onClick={() => handleAnalyze("explore", roughRoomIdea?.text, roughRoomIdea?.id)}
+                disabled={isAnalyzing || !roughRoomIdea}
+                style={{ padding: "14px 26px", borderRadius: 12, fontSize: 14, fontWeight: 600, background: "transparent", color: isAnalyzing || !roughRoomIdea ? t.mut : t.text, border: `1px solid ${t.border}`, cursor: isAnalyzing || !roughRoomIdea ? "not-allowed" : "pointer", opacity: isAnalyzing || !roughRoomIdea ? 0.55 : 1 }}
+              >
+                Explore
+              </button>
+
+              <button
+                onClick={() => handleAnalyze("deep", roughRoomIdea?.text, roughRoomIdea?.id)}
+                disabled={isAnalyzing || !roughRoomIdea}
+                style={{ padding: "14px 34px", borderRadius: 12, fontSize: 14, fontWeight: 600, border: "none", cursor: isAnalyzing || !roughRoomIdea ? "not-allowed" : "pointer", background: isAnalyzing || !roughRoomIdea ? t.surfAlt : t.ctaBg, color: isAnalyzing || !roughRoomIdea ? t.mut : t.ctaText }}
+              >
+                {isAnalyzing ? "Analyzing..." : "Deep evaluate"}
+              </button>
+            </div>
+
+            <p style={{ fontSize: 12, color: t.mut, margin: "18px 0 0", lineHeight: 1.5, maxWidth: 520 }}>
+              Explore widens this idea; Deep scores it. Either way it stays the same idea and moves into Ideas — no copy left behind.
+            </p>
+          </PageContainer>
+        </main>
+
+        <footer style={footerStyle}>
+          <PageContainer>
+            <p style={{ fontSize: 12, color: t.mut, margin: 0 }}>
+              IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
+            </p>
+          </PageContainer>
+        </footer>
+      </div>
+    );
+  }
+
+  if (currentScreen === "myideas" || (lineageMode && lineageTargetId) || (compareMode && compareData)) {
     // COMPARISON MODE: render ComparisonView instead of hub (subscribers only)
     if (compareMode && compareData) {
       return (
@@ -2025,48 +2226,6 @@ export default function Home() {
 
     // HUB PREVIEW: rebuilt two-shelf My Ideas hub (reach via ?hub=new). Additive;
     // the live "myideas" screen is untouched.
-    if (currentScreen === "hubpreview") {
-      return (
-        <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
-          <header style={headerStyle}>
-            <PageContainer wide>
-              <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: t.mut, margin: 0, cursor: "pointer" }}>
-                  IdeaLoop Core
-                </h1>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  {!authLoading && user && (
-                    <>
-                      <span style={{ fontSize: 12, color: t.mut }}>{user.email}</span>
-                      <button onClick={handleLogout} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
-                        Log out
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </PageContainer>
-          </header>
-
-          <main style={{ flex: 1, paddingBottom: 48, paddingTop: 16 }}>
-            <HubView
-              t={t}
-              onOpenIdea={(id) => loadSavedIdea(id)}
-              onOpenLineage={(id) => { setLineageTargetId(id); setLineageMode(true); }}
-              onBack={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")}
-            />
-          </main>
-
-          <footer style={footerStyle}>
-            <PageContainer>
-              <p style={{ fontSize: 12, color: t.mut, margin: 0 }}>
-                IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
-              </p>
-            </PageContainer>
-          </footer>
-        </div>
-      );
-    }
 
     // LINEAGE MODE: render LineageView instead of hub (subscribers only)
     if (lineageMode && lineageTargetId) {
@@ -3387,6 +3546,9 @@ export default function Home() {
                 basis: angle.basis?.primary || null,
                 profile,
                 origin_idea_text: exploreAnalysis.idea,
+                // If the explored idea was saved this session, branch the angle
+                // under it (orphan rule); the route verifies it's explored.
+                ...(savedExploreIdeaId ? { parent_idea_id: savedExploreIdeaId } : {}),
               }),
             });
             if (!res.ok) {
@@ -3401,13 +3563,56 @@ export default function Home() {
           // stale state. Deep handoff runs the pro pipeline.
           const o = opts || {};
           let text = exploreAnalysis.idea;
+          let graduateId = null;
           if (!o.useOriginalIdea && angleId) {
             const a = (exploreAnalysis.angles || []).find((x) => x.id === angleId);
             if (a && a.branch_idea_text) text = a.branch_idea_text;
+            // A specific angle is its OWN idea — a fresh deep root, no graduation.
+          } else {
+            // Taking the original idea to Deep AS IT STANDS: graduate the node it
+            // already is — the explored idea if it was saved this session, else
+            // the rough idea this Explore came from — forward in place. No copy.
+            graduateId = savedExploreIdeaId || graduatingIdeaId || null;
           }
           setIdea(text);
           setProMode(true);
-          handleAnalyze("deep", text);
+          handleAnalyze("deep", text, graduateId);
+        }}
+        onSaveExplore={async (ideaName) => {
+          // Save the explored idea itself. With a graduating id (this came from
+          // a rough idea), flip that idea forward IN PLACE (rough -> explored,
+          // no copy). Without one (fresh from the input screen), create a new
+          // explored idea. Symmetric with a Deep save. Returns a promise so
+          // ExploreView's save state can reflect saving -> saved / error.
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) { setShowAuthModal(true); throw new Error("Log in to save"); }
+          const res = await fetch("/api/ideas/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+            body: JSON.stringify({
+              mode: "explore",
+              explore_result: exploreAnalysis,
+              idea_text: exploreAnalysis.idea,
+              idea_name: ideaName || undefined,
+              profile,
+              ...(graduatingIdeaId ? { graduate_idea_id: graduatingIdeaId } : {}),
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Save failed");
+          // The explored idea now exists (graduated in place OR freshly created).
+          // Remember it so angles saved next branch under it, and so "take to
+          // Deep as it stands" graduates it instead of making a duplicate.
+          if (data.idea_id) setSavedExploreIdeaId(data.idea_id);
+          if (data.graduated) {
+            // The rough card became an explore card in place; intent is spent.
+            // Drop the stale cached rough read so reopening shows the explore
+            // room, and refresh the hub so the card moves shelves.
+            setGraduatingIdeaId(null);
+            delete evaluationCacheRef.current[data.idea_id];
+          }
+          fetchMyIdeas();
+          return data;
         }}
         onExploreVariation={() => handleAnalyze("explore", exploreAnalysis.idea)}
         onEditRead={() => setCurrentScreen("input")}

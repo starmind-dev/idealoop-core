@@ -648,6 +648,63 @@ function MoveButton({ action, isPrimary, t, handlers }) {
 // ============================================================================
 // ExploreView — screen shell + the four surfaces
 // ============================================================================
+// ============================================================================
+// Save this explored idea — the "keep it or leave it" verb, symmetric with a
+// Deep save. One click saves the explored idea into My Ideas (no score);
+// leaving the page without saving is the discard. Auth-gated.
+// ============================================================================
+function SaveExploredBar({ user, onSaveExplore, goToMyIdeas, setShowAuthModal, xt, viewingFromSaved }) {
+  const [state, setState] = useState("idle"); // idle | saving | saved | error
+  const [hover, setHover] = useState(false);
+  // Already saved (reopened from the hub) — nothing to keep. Matches Deep, which
+  // shows no re-save control on a saved evaluation; the header "Back to My Ideas"
+  // link is the only action needed.
+  if (viewingFromSaved) return null;
+  const doSave = async () => {
+    if (state === "saving" || state === "saved" || !onSaveExplore) return;
+    setState("saving");
+    try { await onSaveExplore(); setState("saved"); }
+    catch (e) { setState("error"); }
+  };
+  return (
+    <section style={{ marginTop: 40 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24, flexWrap: "wrap", background: xt.surface, border: `1px solid ${xt.border}`, borderRadius: 14, padding: "22px 26px" }}>
+        <div style={{ minWidth: 240, flex: 1 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: xt.text, marginBottom: 5 }}>Keep this explored idea</div>
+          <div style={{ fontSize: 12.5, color: xt.sec, lineHeight: 1.55, maxWidth: 540 }}>
+            Saves it to your Ideas as an explored idea — the read and its angles, no score. Leave without saving to discard.
+          </div>
+        </div>
+        {!user ? (
+          <button onClick={() => setShowAuthModal && setShowAuthModal(true)}
+            style={{ fontSize: 13, fontWeight: 600, color: EX.bright, background: "transparent", border: `1px solid ${EX.line}`, borderRadius: 10, padding: "11px 22px", cursor: "pointer", whiteSpace: "nowrap" }}>
+            Log in to save
+          </button>
+        ) : state === "saved" ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 16, whiteSpace: "nowrap" }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 600, color: EX.bright }}>
+              <Svg w={13} sw={2}><path d="M5 13l4 4L19 7" /></Svg> Saved
+            </span>
+            <button onClick={() => goToMyIdeas && goToMyIdeas()}
+              style={{ fontSize: 12.5, fontWeight: 500, color: "var(--exsec)", background: "none", border: "none", cursor: "pointer" }}>
+              View in My Ideas →
+            </button>
+          </div>
+        ) : (
+          <button onClick={doSave} disabled={state === "saving"}
+            onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+            style={{ fontSize: 13, fontWeight: 600, color: "#0a0d13", background: state === "saving" ? "rgba(122,162,255,0.55)" : (hover ? EX.bright : EX.base), border: "none", borderRadius: 10, padding: "12px 26px", cursor: state === "saving" ? "default" : "pointer", whiteSpace: "nowrap", transition: "background 0.14s" }}>
+            {state === "saving" ? "Saving…" : state === "error" ? "Retry" : "Save this idea"}
+          </button>
+        )}
+      </div>
+      {state === "error" && (
+        <div style={{ fontSize: 12, color: "#fca5a5", marginTop: 10 }}>Couldn't save. Please try again.</div>
+      )}
+    </section>
+  );
+}
+
 export default function ExploreView({
   screen,
   t,
@@ -671,6 +728,7 @@ export default function ExploreView({
   onPark,
   onEditRead,
   onExpandIdea,
+  onSaveExplore,
 }) {
   if (!analysis || analysis.schema_version !== "ll2_explore_v1") return null;
 
@@ -758,6 +816,7 @@ export default function ExploreView({
             onTakeToDeep={onTakeToDeep} branchReason={read?.branchability?.reason} />
           <TerrainSurface terrain={terrain} angles={angles} t={xt} />
           <NextMoveSurface nextMove={nextMove} t={xt} handlers={handlers} />
+          <SaveExploredBar user={user} onSaveExplore={onSaveExplore} goToMyIdeas={goToMyIdeas} setShowAuthModal={setShowAuthModal} xt={xt} viewingFromSaved={viewingFromSaved} />
           <div style={{ marginTop: 30, paddingTop: 18, borderTop: `1px solid ${t.border}`, fontSize: 11, color: "#474b54", textAlign: "center", fontFamily: "monospace", letterSpacing: "0.04em" }}>
             EXPLORE — WIDENS A ROUGH IDEA · NO SCORE, NO RANK, NO VERDICT
           </div>

@@ -1,13 +1,21 @@
 // src/app/api/ideas/[id]/route.js
-// CHANGE vs current: maps evaluation.execution_brief_json onto the returned
-// `analysis` object (one line in the GET handler's analysis assembly). The
-// evaluation is already fetched with select("*"), so the column rides back
-// automatically once it exists — no select change needed. This is what lets the
-// frontend decide, on a hub-loaded idea, whether to show "Continue to Execution
-// Brief" (brief present) or "Generate Execution Brief" (brief null).
+//
+// CUTOVER STEP 1 — CARD ROOMS. The GET routes through the ideas service's single
+// source of truth (getIdea + resolveState) and returns a STATE-tagged payload so
+// the hub can open the right room:
+//   rough   -> { state:'rough',   analysis:null, explore:null }   (idea text + two doors)
+//   explore -> { state:'explore', analysis:null, explore:<envelope> }  (ExploreView, dormant)
+//   deep    -> { state:'deep',    analysis:<…>,  explore:null }   (the 3-screen flow)
+// Eval-less ideas (rough / explore) NO LONGER 404 — the old GET .single()'d the
+// evaluations row and 404'd on any idea without one, which is why rough cards
+// would not open. The DEEP `analysis` object is byte-identical to the prior route,
+// so the deep-open path (applyLoadedIdea -> results1) is untouched. `?evaluation_id=`
+// selection is preserved; state is then derived from the SELECTED eval.
+// DELETE and PATCH are UNCHANGED.
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getIdea, resolveState } from "@/lib/services/ideas";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -53,6 +61,48 @@ async function collectSubtreeIds(rootId, userId) {
   return ids;
 }
 
+// Build the DEEP `analysis` object from an evaluation row. BYTE-IDENTICAL to the
+// prior route's assembly so the deep-open path (applyLoadedIdea) is unaffected.
+function buildDeepAnalysis(evaluation) {
+  return {
+    evaluation: {
+      overall_score: evaluation.weighted_overall_score,
+      market_demand: evaluation.scoring_json?.market_demand || {
+        score: evaluation.market_demand_score,
+        explanation: "",
+      },
+      monetization: evaluation.scoring_json?.monetization || {
+        score: evaluation.monetization_score,
+        explanation: "",
+      },
+      originality: evaluation.scoring_json?.originality || {
+        score: evaluation.originality_score,
+        explanation: "",
+      },
+      technical_complexity: evaluation.scoring_json?.technical_complexity || {
+        score: evaluation.technical_complexity_score,
+        explanation: "",
+      },
+      marketplace_note: evaluation.scoring_json?.marketplace_note || null,
+      failure_risks: evaluation.scoring_json?.failure_risks || [],
+      evidence_strength: evaluation.scoring_json?.evidence_strength || null,
+      summary: evaluation.summary_text || "",
+    },
+    competition: {
+      competitors: evaluation.competitors_json || [],
+      differentiation: evaluation.competition_summary || "",
+      data_source: evaluation.data_source || "llm_generated",
+    },
+    estimates: evaluation.estimates_json || {},
+    classification: evaluation.classification || "commercial",
+    scope_warning: evaluation.scope_warning || false,
+    _meta: evaluation.meta_json || {},
+    // The persisted execution brief (null when none generated yet). The frontend
+    // reads this to choose "Continue to Execution Brief" vs "Generate".
+    execution_brief: evaluation.execution_brief_json || null,
+  };
+}
+
 export async function GET(request, { params }) {
   try {
     const user = await authenticate(request);
@@ -65,95 +115,70 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: "Missing idea ID." }, { status: 400 });
     }
 
-    const { data: idea, error: ideaError } = await supabaseAdmin
-      .from("ideas")
-      .select("id, title, raw_idea_text, profile_context_json, status, created_at")
-      .eq("id", ideaId)
-      .eq("user_id", user.id)
-      .single();
-
-    if (ideaError || !idea) {
+    // Single source of truth: the service fetches the idea + all evals (sorted
+    // latest-first), derives state, and TOLERATES eval-less ideas (rough/explore).
+    const idea = await getIdea(user.id, ideaId);
+    if (!idea || idea.status === "archived") {
       return NextResponse.json({ error: "Idea not found." }, { status: 404 });
     }
 
     const { searchParams } = new URL(request.url);
     const requestedEvalId = searchParams.get("evaluation_id");
+    const evals = idea.evaluations || [];
 
-    let evaluation;
-
+    // Pick the target eval: a specifically-requested one (branch / alternatives
+    // load) else the latest. A requested-but-missing eval is a real 404. A rough
+    // idea simply has none — that is no longer an error.
+    let evaluation = null;
     if (requestedEvalId) {
-      const { data: evalData, error: evalError } = await supabaseAdmin
-        .from("evaluations")
-        .select("*")
-        .eq("id", requestedEvalId)
-        .eq("idea_id", ideaId)
-        .eq("user_id", user.id)
-        .single();
-
-      if (evalError || !evalData) {
+      evaluation = evals.find((e) => e.id === requestedEvalId) || null;
+      if (!evaluation) {
         return NextResponse.json({ error: "Evaluation not found." }, { status: 404 });
       }
-      evaluation = evalData;
     } else {
-      const { data: evalData, error: evalError } = await supabaseAdmin
-        .from("evaluations")
-        .select("*")
-        .eq("idea_id", ideaId)
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
-
-      if (evalError || !evalData) {
-        return NextResponse.json({ error: "Evaluation not found." }, { status: 404 });
-      }
-      evaluation = evalData;
+      evaluation = evals[0] || null;
     }
 
-    const analysis = {
-      evaluation: {
-        overall_score: evaluation.weighted_overall_score,
-        market_demand: evaluation.scoring_json?.market_demand || {
-          score: evaluation.market_demand_score,
-          explanation: "",
-        },
-        monetization: evaluation.scoring_json?.monetization || {
-          score: evaluation.monetization_score,
-          explanation: "",
-        },
-        originality: evaluation.scoring_json?.originality || {
-          score: evaluation.originality_score,
-          explanation: "",
-        },
-        technical_complexity: evaluation.scoring_json?.technical_complexity || {
-          score: evaluation.technical_complexity_score,
-          explanation: "",
-        },
-        marketplace_note: evaluation.scoring_json?.marketplace_note || null,
-        failure_risks: evaluation.scoring_json?.failure_risks || [],
-        evidence_strength: evaluation.scoring_json?.evidence_strength || null,
-        summary: evaluation.summary_text || "",
-      },
-      competition: {
-        competitors: evaluation.competitors_json || [],
-        differentiation: evaluation.competition_summary || "",
-        data_source: evaluation.data_source || "llm_generated",
-      },
-      estimates: evaluation.estimates_json || {},
-      classification: evaluation.classification || "commercial",
-      scope_warning: evaluation.scope_warning || false,
-      _meta: evaluation.meta_json || {},
-      // NEW: the persisted execution brief (null when none generated yet). The
-      // frontend reads this to choose "Continue to Execution Brief" vs "Generate".
-      execution_brief: evaluation.execution_brief_json || null,
+    // Derive state from the SELECTED eval via the service's single resolver.
+    const { mode } = evaluation
+      ? resolveState({ evaluations: [evaluation] })
+      : { mode: "rough" };
+
+    const ideaOut = {
+      id: idea.id,
+      title: idea.title,
+      raw_idea_text: idea.raw_idea_text,
+      profile_context_json: idea.profile_context_json,
+      status: idea.status,
+      created_at: idea.created_at,
     };
 
-    return NextResponse.json({
-      idea,
-      analysis,
-      evaluation_id: evaluation.id,
+    const base = {
+      idea: ideaOut,
+      state: mode, // 'rough' | 'explore' | 'deep'
+      evaluation_id: evaluation ? evaluation.id : null,
       profile: idea.profile_context_json || {},
-    });
+      analysis: null,
+      explore: null,
+    };
+
+    if (mode === "deep") {
+      base.analysis = buildDeepAnalysis(evaluation);
+    } else if (mode === "explore") {
+      // The ll2_explore_v1 envelope. getIdea's lean eval select OMITS explore_json
+      // (it's large and the hub/list never needs it), so fetch it directly by eval
+      // id here — only when actually opening an explored idea.
+      const { data: exRow } = await supabaseAdmin
+        .from("evaluations")
+        .select("explore_json")
+        .eq("id", evaluation.id)
+        .eq("user_id", user.id)
+        .single();
+      base.explore = exRow?.explore_json || null;
+    }
+    // rough: idea text only — the two-door room reads idea.raw_idea_text.
+
+    return NextResponse.json(base);
   } catch (err) {
     console.error("Get idea error:", err);
     return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
