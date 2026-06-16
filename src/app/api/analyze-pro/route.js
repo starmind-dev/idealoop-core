@@ -438,8 +438,8 @@ USER PROFILE:
 ${idea}`;
 
           const stage1Response = await callWithRetry({
-            model: "claude-sonnet-4-20250514",
-            max_tokens: 3000,
+            model: "claude-sonnet-4-6",
+            max_tokens: 8000,
             temperature: 0,
             // V4S28 P0.5 Stage 1 Fix #3: sampler-level hardening.
             // Phase 0.5 Fix #1 (sort items) confirmed Stage 1 non-determinism
@@ -449,10 +449,9 @@ ${idea}`;
             // deterministic. top_k=1 forces greedy single-token selection at
             // each step; top_p=0.1 constrains nucleus to top 10% probability
             // mass as belt-and-suspenders against distribution flattening.
-            // Sonnet 4 (claude-sonnet-4-20250514) accepts both alongside
+            // Sonnet 4 (claude-sonnet-4-6) accepts both alongside
             // temperature (the either/or restriction is Sonnet 4.5+ only).
             top_k: 1,
-            top_p: 0.1,
             system: stage1SystemPrompt,
             messages: [{ role: "user", content: stage1UserMessage }],
           }, "Competitive analysis");
@@ -509,8 +508,8 @@ ${idea}`;
           // Run Stage 2a and Stage TC in parallel
           const [stage2aResponse, stageTcResponse] = await Promise.all([
             callWithRetry({
-              model: "claude-sonnet-4-20250514",
-              max_tokens: 2000,
+              model: "claude-sonnet-4-6",
+              max_tokens: 6000,
               temperature: 0,
               // V4S29 Bundle 2 — F1 partial cure (May 8, 2026): sampler hardening
               // on Stage 2a / 2b / TC to suppress Layer A sampler-driven near-tie
@@ -536,19 +535,17 @@ ${idea}`;
               // scoring stages, and their stability concerns are tracked as
               // separate B10a findings outside F1 scope.
               top_k: 1,
-              top_p: 0.1,
               system: STAGE2A_SYSTEM_PROMPT,
               messages: [{ role: "user", content: stage2aUserMessage }],
             }, "Evidence extraction"),
             callWithRetry({
-              model: "claude-sonnet-4-20250514",
-              max_tokens: 1000,
+              model: "claude-sonnet-4-6",
+              max_tokens: 3000,
               temperature: 0,
               // V4S29 Bundle 2 — F1 sampler hardening (see Stage 2a comment above
               // for full rationale). Stage TC scores TC in isolation; same Layer A
               // suppression logic applies.
               top_k: 1,
-              top_p: 0.1,
               system: STAGE_TC_SYSTEM_PROMPT,
               messages: [{ role: "user", content: stageTcUserMessage }],
             }, "Technical complexity scoring"),
@@ -644,11 +641,10 @@ ${JSON.stringify({
           // for determinism. max_tokens 4096 — each scorer emits prose + a full
           // nested _internal predicate-commitment block.
           const scorerCallConfig = {
-            model: "claude-sonnet-4-20250514",
-            max_tokens: 4096,
+            model: "claude-sonnet-4-6",
+            max_tokens: 8000,
             temperature: 0,
             top_k: 1,
-            top_p: 0.1,
           };
 
           const [stageMdResponse, stageMoResponse, stageOrResponse] = await Promise.all([
@@ -882,8 +878,8 @@ ${JSON.stringify({
           })}`;
 
           const stage2cResponse = await callWithRetry({
-            model: "claude-sonnet-4-20250514",
-            max_tokens: 4096,
+            model: "claude-sonnet-4-6",
+            max_tokens: 6000,
             temperature: 0,
             system: STAGE2C_SYSTEM_PROMPT,
             messages: [{ role: "user", content: stage2cUserMessage }],
@@ -959,7 +955,7 @@ ${JSON.stringify(stage1Result)}
 ${JSON.stringify({ evaluation: ev })}`;
 
           const stage3Response = await callWithRetry({
-            model: "claude-sonnet-4-20250514",
+            model: "claude-sonnet-4-6",
             // V4S28 B8 hotfix (May 1, 2026): bumped from 4096 → 8192. Stage 3
             // generates estimates. Elaborate inputs (~5000 char idea text) consistently
             // produced 5500-6500 tokens of output, hitting the old ceiling and

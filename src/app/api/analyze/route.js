@@ -187,7 +187,7 @@ ${idea}
           // that change alone, confirming it doesn't perturb scoring. Don't
           // bundle with sampler changes; don't copy-paste from Pro.
           const message = await client.messages.create({
-            model: "claude-sonnet-4-20250514",
+            model: "claude-sonnet-4-6",
             max_tokens: 4096,
             temperature: 0,
             system: fullSystemPrompt,

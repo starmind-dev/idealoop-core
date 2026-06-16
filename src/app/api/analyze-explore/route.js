@@ -37,7 +37,7 @@ import { EXPLORE_SYSTEM_PROMPT } from "../../../lib/services/prompt-explore";
 // grounding, branchability<->fan_state agreement — surface as warnings to be
 // aggregated across ~20 ideas. Tighten to reject once the distribution is known.
 
-const EXPLORE_MODEL = "claude-sonnet-4-20250514";
+const EXPLORE_MODEL = "claude-sonnet-4-6";
 const RETRY_BACKOFF_MS = 1200;
 
 // Obvious "open => wanted" leak tokens for the branch_idea_text neutrality probe
@@ -334,10 +334,9 @@ export async function POST(request) {
 
           const stage1Response = await callWithRetry({
             model: EXPLORE_MODEL,
-            max_tokens: 3000,
+            max_tokens: 8000,
             temperature: 0,
             top_k: 1,
-            top_p: 0.1,
             system: stage1SystemPrompt,
             messages: [{ role: "user", content: stage1UserMessage }],
           }, "Landscape mapping");
@@ -388,10 +387,9 @@ export async function POST(request) {
 
           const sorterResponse = await callWithRetry({
             model: EXPLORE_MODEL,
-            max_tokens: 3000,
+            max_tokens: 6000,
             temperature: 0,
             top_k: 1,
-            top_p: 0.1,
             system: STAGE2A_EXPLORE_SYSTEM_PROMPT,
             messages: [{ role: "user", content: sorterUserMessage }],
           }, "Evidence sorting");
@@ -450,7 +448,7 @@ export async function POST(request) {
 
           const exploreResponse = await callWithRetry({
             model: EXPLORE_MODEL,
-            max_tokens: 4096,
+            max_tokens: 8000,
             temperature: 0,
             // NO top_k / top_p — the synthesis stays open so it can fan.
             system: EXPLORE_SYSTEM_PROMPT,

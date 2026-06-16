@@ -52,8 +52,8 @@ const supabaseAdmin = createClient(
 // ---- Anthropic call config -------------------------------------------------
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
-const MODEL = "claude-sonnet-4-20250514"; // same Sonnet the pipeline uses
-const MAX_TOKENS = 4096; // six short JSON blocks of prose — ample
+const MODEL = "claude-sonnet-4-6"; // same Sonnet the pipeline uses
+const MAX_TOKENS = 8000; // six short JSON blocks of prose — ample
 // Lower than the evaluation pipeline on purpose: the locked "variance is a
 // feature" position is about SCORE variance, not FORMAT variance. This is a
 // sentinel-strict, fixed-order structured call — content variance (the bet
