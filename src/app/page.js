@@ -7,6 +7,7 @@ import LineageView from "./LineageView";
 import EvaluationView from "./EvaluationView";
 import ExecutionBriefView from "./ExecutionBriefView";
 import ExploreView from "./ExploreView.js";
+import ExploreInputView from "./ExploreInputView";
 import HubView from "./HubView";
 import OverviewView from "./OverviewView";
 import DashboardShell from "./DashboardShell";
@@ -284,6 +285,7 @@ export default function Home() {
     setEvalsRemaining(getEvalsRemaining());
   }, []);
   const [idea, setIdea] = useState("");
+  const [inputMode, setInputMode] = useState("deep"); // "explore" | "deep" — which input screen the "input" route shows
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState(null);
@@ -1507,8 +1509,8 @@ export default function Home() {
         ) : (
           <OverviewView
             t={t}
-            onStartExplore={() => setCurrentScreen("input")}
-            onStartDeep={() => setCurrentScreen("input")}
+            onStartExplore={() => { setInputMode("explore"); setCurrentScreen("input"); }}
+            onStartDeep={() => { setInputMode("deep"); setCurrentScreen("input"); }}
             onContinue={(id) => loadSavedIdea(id)}
             onOpenIdea={(id) => loadSavedIdea(id)}
             onViewAll={goToMyIdeas}
@@ -1698,6 +1700,37 @@ export default function Home() {
   // ==========================================
   // SCREEN 1: IDEA INPUT
   // ==========================================
+  // Explore gets its own input screen (the quiet-field star map); Deep keeps the
+  // shared screen below. Routed by inputMode, set from the Overview mode cards.
+  if (currentScreen === "input" && inputMode === "explore") {
+    return (
+      <DashboardShell
+        t={t}
+        active=""
+        userEmail={user?.email}
+        authLoading={authLoading}
+        onLogin={() => setShowAuthModal(true)}
+        onLogout={handleLogout}
+        onNavigate={railNav}
+      >
+        {showAuthModal && (
+          <AuthModal onClose={() => setShowAuthModal(false)} onAuth={(u) => setUser(u)} t={t} />
+        )}
+        <ExploreInputView
+          t={t}
+          idea={idea}
+          setIdea={setIdea}
+          onRun={() => handleAnalyze("explore")}
+          onBack={goToMyIdeas}
+          isAnalyzing={isAnalyzing}
+          evalsRemaining={evalsRemaining}
+          gateNode={specificityGate ? <SpecificityGate gate={specificityGate} t={t} /> : null}
+          error={error}
+        />
+      </DashboardShell>
+    );
+  }
+
   if (currentScreen === "input") {
     return (
       <DashboardShell
