@@ -108,6 +108,28 @@ export function clearLastIdea() {
   } catch {}
 }
 
+// ============================================
+// HUB SWR CACHE — the last GET /api/ideas payload, per user. Lets the Overview
+// (and later the Hub) paint instantly on repeat loads from cache, then refresh
+// in the background — sidesteps the cross-region fetch latency. Scoped by userId
+// so a different account on the same browser never reads a stale set.
+// ============================================
+export function readHubCache(userId) {
+  try {
+    const c = JSON.parse(localStorage.getItem("iv_hub_cache") || "null");
+    if (!c || c.userId !== userId) return null;
+    return { rough: c.rough || [], ideas: c.ideas || [] };
+  } catch {
+    return null;
+  }
+}
+
+export function writeHubCache(userId, rough, ideas) {
+  try {
+    localStorage.setItem("iv_hub_cache", JSON.stringify({ userId, rough, ideas, ts: Date.now() }));
+  } catch {}
+}
+
 // Shared functional colors — same in both themes
 //
 // V4S28 B8 (April 30, 2026): Updated palette + boundaries to "Mix B" lock.

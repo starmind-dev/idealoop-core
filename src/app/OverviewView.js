@@ -30,9 +30,9 @@
 //   onOpenIdea     — fn(id): open a recent idea (wired to loadSavedIdea)
 //   onViewAll      — fn(): go to the My Ideas hub
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import CognitiveLoop from "./CognitiveLoop";
-import { getLastIdea, getScoreColor } from "./components";
+import { getLastIdea, getScoreColor, readHubCache, writeHubCache } from "./components";
 import { supabase } from "../lib/supabase";
 
 const iconProps = (color, size) => ({
@@ -266,33 +266,98 @@ function PresenceLayer({ t, rough, ideas, lastId, onContinue, onOpenIdea, onView
   );
 }
 
+function SkelBar({ w, h = 12, style }) {
+  return <div style={{ width: w, height: h, borderRadius: 6, background: "rgba(255,255,255,0.06)", animation: "ilcPulse 1.4s ease-in-out infinite", ...style }} />;
+}
+
+// Mirrors PresenceLayer's two-column shape + heights so the swap to real data is
+// in place (no jump). Shown only on a genuine first load — i.e. signed in, no
+// cached payload — while the cross-region fetch is in flight.
+function PresenceSkeleton({ t }) {
+  const eyebrow = { fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: t.mut };
+  const circle = { width: 32, height: 32, borderRadius: "50%", flexShrink: 0, background: "rgba(255,255,255,0.06)", animation: "ilcPulse 1.4s ease-in-out infinite" };
+  return (
+    <>
+      <style>{"@keyframes ilcPulse { 0%,100% { opacity: 0.45 } 50% { opacity: 0.9 } }"}</style>
+      <div style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "30px 0 24px" }} />
+      <div style={{ display: "flex", gap: 28, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 190, borderRight: "1px solid rgba(255,255,255,0.07)", paddingRight: 26 }}>
+          <div style={{ ...eyebrow, marginBottom: 10 }}>Continue</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <div style={circle} />
+            <SkelBar w="70%" h={13} />
+          </div>
+          <SkelBar w={70} h={12} style={{ marginBottom: 22 }} />
+          <div style={{ ...eyebrow, marginBottom: 6 }}>Browse</div>
+          <div style={{ padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}><SkelBar w="60%" /></div>
+          <div style={{ padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}><SkelBar w="68%" /></div>
+          <div style={{ padding: "8px 0" }}><SkelBar w="52%" /></div>
+        </div>
+        <div style={{ flex: 2, minWidth: 240 }}>
+          <div style={{ marginBottom: 6 }}><SkelBar w={108} h={13} /></div>
+          {[0, 1, 2].map((k) => (
+            <div key={k} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 2px", borderBottom: k < 2 ? "1px solid rgba(255,255,255,0.05)" : "none" }}>
+              <div style={circle} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <SkelBar w="55%" h={13} style={{ marginBottom: 6 }} />
+                <SkelBar w={90} h={10} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function OverviewView({ t, onStartExplore, onStartDeep, onContinue, onOpenIdea, onViewAll }) {
   const [rough, setRough] = useState([]);
   const [ideas, setIdeas] = useState([]);
-  const [loaded, setLoaded] = useState(false);
+  // "idle" before auth is known, "loading" while the first fetch is in flight
+  // with no cache (skeleton), "ready" once cache OR fetch has landed.
+  const [status, setStatus] = useState("idle");
   const [lastId, setLastId] = useState(null);
 
-  const authedFetch = useCallback(async (url) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error("Not signed in.");
-    return fetch(url, { headers: { Authorization: `Bearer ${session.access_token}` } });
+  // Stale-while-revalidate: paint instantly from the per-user localStorage cache
+  // (no flash on repeat loads; sidesteps the cross-region fetch latency), then
+  // refresh in the background and reconcile + re-cache. A genuine first load
+  // (no cache) shows the skeleton instead of an empty space under the loop.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!alive) return;
+      if (!session) { setStatus("ready"); return; }
+      const uid = session.user.id;
+
+      const cached = readHubCache(uid);
+      if (cached) {
+        setRough(cached.rough);
+        setIdeas(cached.ideas);
+        setStatus("ready");
+      } else {
+        setStatus("loading");
+      }
+
+      try {
+        const res = await fetch("/api/ideas", { headers: { Authorization: `Bearer ${session.access_token}` } });
+        const d = await res.json();
+        if (!alive) return;
+        if (!res.ok) throw new Error(d.error || "load failed");
+        const r = d.rough || [];
+        const i = d.ideas || [];
+        setRough(r);
+        setIdeas(i);
+        writeHubCache(uid, r, i);
+      } catch {
+        // keep whatever the cache already painted; nothing more to surface
+      } finally {
+        if (alive) setStatus("ready");
+      }
+    })();
+    return () => { alive = false; };
   }, []);
 
-  const load = useCallback(async () => {
-    try {
-      const res = await authedFetch("/api/ideas");
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.error || "load failed");
-      setRough(d.rough || []);
-      setIdeas(d.ideas || []);
-    } catch {
-      setRough([]); setIdeas([]);
-    } finally {
-      setLoaded(true);
-    }
-  }, [authedFetch]);
-
-  useEffect(() => { load(); }, [load]);
   useEffect(() => { const s = getLastIdea(); setLastId(s && s.id ? s.id : null); }, []);
 
   const hasIdeas = rough.length + ideas.length > 0;
@@ -324,7 +389,8 @@ export default function OverviewView({ t, onStartExplore, onStartDeep, onContinu
         <CognitiveLoop t={t} bg={t.bg} maxWidth={540} />
       </div>
 
-      {loaded && hasIdeas && (
+      {status === "loading" && <PresenceSkeleton t={t} />}
+      {status === "ready" && hasIdeas && (
         <PresenceLayer
           t={t} rough={rough} ideas={ideas} lastId={lastId}
           onContinue={onContinue} onOpenIdea={onOpenIdea} onViewAll={onViewAll}
