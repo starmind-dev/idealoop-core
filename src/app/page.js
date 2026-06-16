@@ -8,6 +8,8 @@ import EvaluationView from "./EvaluationView";
 import ExecutionBriefView from "./ExecutionBriefView";
 import ExploreView from "./ExploreView.js";
 import HubView from "./HubView";
+import OverviewView from "./OverviewView";
+import DashboardShell from "./DashboardShell";
 import {
   StepProgress,
   StatusBadge,
@@ -85,6 +87,8 @@ const STREAM_SRC_DOT = { github: "#9a9aa2", tavily: "#2dd4bf", exa: "#a78bfa", g
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState("profile");
+  // Which view the Dashboard shell shows; the rail stays put, only this swaps.
+  const [dashView, setDashView] = useState("overview"); // "overview" | "hub"
   const [profile, setProfile] = useState({ coding: "", ai: "", education: "" });
   const [evalsRemaining, setEvalsRemaining] = useState(EVAL_LIMIT);
   const [user, setUser] = useState(null);
@@ -120,11 +124,12 @@ export default function Home() {
   // Evaluation cache — avoids re-fetching already-viewed ideas
   const evaluationCacheRef = useRef({});
 
-  // Preview entry: visit ?hub=new to see the rebuilt two-shelf My Ideas hub.
+  // Preview entry: ?hub=new -> rebuilt My Ideas hub; ?view=overview -> new Dashboard/Overview.
   useEffect(() => {
-    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("hub") === "new") {
-      setCurrentScreen("hubpreview");
-    }
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("view") === "overview") setCurrentScreen("dashboard");
+    else if (params.get("hub") === "new") setCurrentScreen("hubpreview");
   }, []);
 
   // Inline idea editing state (hub card rename)
@@ -274,9 +279,10 @@ export default function Home() {
     const saved = localStorage.getItem("iv_profile");
     if (saved) {
       setProfile(JSON.parse(saved));
-      // Don't override the ?hub=new preview entry (mount effect above sets "hubpreview").
-      const hubNew = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("hub") === "new";
-      if (!hubNew) setCurrentScreen("input");
+      // Don't override a preview entry (?hub=new or ?view=overview — the mount effect above sets those).
+      const previewParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+      const previewEntry = !!previewParams && (previewParams.get("hub") === "new" || previewParams.get("view") === "overview");
+      if (!previewEntry) setCurrentScreen("input");
     }
     setEvalsRemaining(getEvalsRemaining());
   }, []);
@@ -1296,12 +1302,25 @@ export default function Home() {
     // The hub IS the two-shelf HubView now (was the old flat list). Every "My
     // Ideas" link and every room's back-button lands here, so the new hub is
     // reachable and returnable without the ?hub=new URL or a page refresh.
-    setCurrentScreen("hubpreview");
+    setCurrentScreen("dashboard");
+    setDashView("hub");
+    setLineageMode(false);
+    setLineageTargetId(null);
     setCompareMode(false);
     setCompareSelecting(false);
     setCompareSelected([]);
     setCompareData(null);
     fetchMyIdeas();
+  };
+
+  // Shared rail navigation for the Dashboard shell. Every screen rendered inside
+  // the shell wires its rail to this, so navigation behaves identically whether
+  // you're on the Overview, the Hub, or a flow screen.
+  const railNav = (key) => {
+    if (key === "overview") { setCurrentScreen("dashboard"); setDashView("overview"); }
+    else if (key === "hub") goToMyIdeas();
+    else if (key === "explore" || key === "deep") setCurrentScreen("input");
+    // settings / plan / help: not wired yet
   };
 
   // Toggle idea/evaluation selection for comparison
@@ -1464,6 +1483,43 @@ export default function Home() {
       <div style={{ minHeight: "100vh", background: t.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <p style={{ color: t.mut, fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase" }}>IdeaLoop Core</p>
       </div>
+    );
+  }
+
+  // ==========================================
+  // SCREEN: DASHBOARD (persistent rail; content swaps between Overview and Hub).
+  // The !lineageMode && !compareMode guard lets the dedicated lineage/compare
+  // branch take over and then fall straight back here (currentScreen is still
+  // "dashboard"), so returning from a tree or a compare lands back in the hub.
+  // ==========================================
+  if (currentScreen === "dashboard" && !lineageMode && !compareMode) {
+    return (
+      <DashboardShell
+        t={t}
+        active={dashView}
+        userEmail={user?.email}
+        authLoading={authLoading}
+        onLogin={() => setShowAuthModal(true)}
+        onLogout={handleLogout}
+        onNavigate={railNav}
+      >
+        {showAuthModal && (
+          <AuthModal onClose={() => setShowAuthModal(false)} onAuth={(u) => setUser(u)} t={t} />
+        )}
+        {dashView === "hub" ? (
+          <HubView
+            t={t}
+            onOpenIdea={(id) => loadSavedIdea(id)}
+            onOpenLineage={(id) => { setLineageTargetId(id); setLineageMode(true); }}
+          />
+        ) : (
+          <OverviewView
+            t={t}
+            onStartExplore={() => setCurrentScreen("input")}
+            onStartDeep={() => setCurrentScreen("input")}
+          />
+        )}
+      </DashboardShell>
     );
   }
 
@@ -1679,45 +1735,15 @@ export default function Home() {
   // ==========================================
   if (currentScreen === "input") {
     return (
-      <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
-        <header style={headerStyle}>
-          <PageContainer>
-            <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: t.mut, margin: 0, cursor: "pointer" }}>
-                IdeaLoop Core
-              </h1>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <button onClick={() => setCurrentScreen("profile")} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
-                  {profile.coding} · {profile.ai} AI · Edit ✎
-                </button>
-                {!authLoading && (
-                  user ? (
-                    <>
-                      <span style={{ color: t.divider }}>|</span>
-                      <button onClick={goToMyIdeas} style={{ fontSize: 12, color: t.link, background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>
-                        My Ideas
-                      </button>
-                      <span style={{ color: t.divider }}>|</span>
-                      <button onClick={handleLogout} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
-                        Log out
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <span style={{ color: t.divider }}>|</span>
-                      <button
-                        onClick={() => setShowAuthModal(true)}
-                        style={{ fontSize: 12, color: t.link, background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}
-                      >
-                        Log in
-                      </button>
-                    </>
-                  )
-                )}
-              </div>
-            </div>
-          </PageContainer>
-        </header>
+      <DashboardShell
+        t={t}
+        active=""
+        userEmail={user?.email}
+        authLoading={authLoading}
+        onLogin={() => setShowAuthModal(true)}
+        onLogout={handleLogout}
+        onNavigate={railNav}
+      >
 
         {showAuthModal && (
           <AuthModal
@@ -1727,9 +1753,15 @@ export default function Home() {
           />
         )}
 
+        {/* Profile summary — deep-flow only; relocated into content (the rail owns nav now). */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+          <button onClick={() => setCurrentScreen("profile")} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
+            {profile.coding} · {profile.ai} AI · Edit ✎
+          </button>
+        </div>
+
         <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} branchMode={viewingFromSaved && isBranchIdea} t={t} />
 
-        <main style={{ flex: 1, paddingBottom: 48 }}>
           <PageContainer>
             <div style={{ marginBottom: 32 }}>
               {specificityGate ? (() => {
@@ -2020,16 +2052,7 @@ export default function Home() {
               </div>
             )}
           </PageContainer>
-        </main>
-
-        <footer style={footerStyle}>
-          <PageContainer>
-            <p style={{ fontSize: 12, color: t.mut, margin: 0 }}>
-              IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
-            </p>
-          </PageContainer>
-        </footer>
-      </div>
+      </DashboardShell>
     );
   }
 
