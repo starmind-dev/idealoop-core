@@ -79,6 +79,35 @@ export function getTheme(mode) {
   return T[mode] || T.dark;
 }
 
+// ============================================
+// LAST-OPENED IDEA — the Overview "continue where you left off" marker.
+// Per-browser, no backend. Matches the existing iv_ localStorage idiom
+// (iv_profile / iv_eval_timestamps). recordLastIdea is called from the single
+// open chokepoint (routeLoadedIdea in page.js); the Overview reads it post-mount
+// to pick WHICH family is the resume target (it then renders from the authoritative
+// /api/ideas card, falling back to the newest idea when no marker / no match).
+// ============================================
+export function recordLastIdea(id) {
+  try {
+    if (!id) return;
+    localStorage.setItem("iv_last_idea", JSON.stringify({ id, ts: Date.now() }));
+  } catch {}
+}
+
+export function getLastIdea() {
+  try {
+    return JSON.parse(localStorage.getItem("iv_last_idea") || "null");
+  } catch {
+    return null;
+  }
+}
+
+export function clearLastIdea() {
+  try {
+    localStorage.removeItem("iv_last_idea");
+  } catch {}
+}
+
 // Shared functional colors — same in both themes
 //
 // V4S28 B8 (April 30, 2026): Updated palette + boundaries to "Mix B" lock.

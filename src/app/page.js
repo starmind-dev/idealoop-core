@@ -22,6 +22,7 @@ import {
   getTheme,
   getScoreColor,
   getTcColor,
+  recordLastIdea,
 } from "./components";
 
 // ============================================
@@ -964,6 +965,9 @@ export default function Home() {
   // the two-door rough room; explore ideas open the explore room.
   const routeLoadedIdea = (data, ideaId) => {
     const state = data && data.state;
+    // Mark this as the family the user last opened — the Overview "continue
+    // where you left off" resume target (per-browser; resolved to a hub card).
+    recordLastIdea(ideaId);
     if (state === "rough") {
       const txt = data.idea?.raw_idea_text || "";
       setRoughRoomIdea({
@@ -1505,6 +1509,9 @@ export default function Home() {
             t={t}
             onStartExplore={() => setCurrentScreen("input")}
             onStartDeep={() => setCurrentScreen("input")}
+            onContinue={(id) => loadSavedIdea(id)}
+            onOpenIdea={(id) => loadSavedIdea(id)}
+            onViewAll={goToMyIdeas}
           />
         )}
       </DashboardShell>
