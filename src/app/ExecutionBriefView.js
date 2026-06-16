@@ -34,11 +34,12 @@
 //   status                 — "idle" | "streaming" | "complete" | "error"
 //   error                  — message string when status === "error"
 //   retrying               — soft transient-retry notice (boolean)
-//   viewingFromSaved, isBranchIdea, profile, user, authLoading
+//   viewingFromSaved, isBranchIdea
 //   getStepNumber          — () => current step (4 for the brief)
-//   setCurrentScreen, goToMyIdeas, handleLogout
+//   setCurrentScreen, goToMyIdeas
 //   onRegenerate           — () => regenerate the brief (explicit, deliberate)
-//   headerStyle, footerStyle
+//   (chrome — rail/topbar/footer — provided by DashboardShell in page.js;
+//    this view is content-only.)
 // ============================================================================
 
 import React, { useState, useEffect, useRef } from "react";
@@ -599,18 +600,12 @@ export default function ExecutionBriefView({
   isReEvalResult = false,
   saveStatus,
   savedIdeaId,
-  profile,
-  user,
-  authLoading,
   getStepNumber,
   setCurrentScreen,
   goToMyIdeas,
-  handleLogout,
   onRegenerate,
   onSaveIdea,
   onNewIdea,
-  headerStyle,
-  footerStyle,
 }) {
   const mb = analysis?.estimates?.main_bottleneck;
   const mbColor = mb && mb !== "Specification" ? getMainBottleneckColor(mb, t.mode) : null;
@@ -680,44 +675,7 @@ export default function ExecutionBriefView({
   }, [status, sections]);
 
   return (
-    <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "clip" }}>
-      <header style={headerStyle}>
-        <PageContainer wide>
-          <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <h1
-              onClick={() => setCurrentScreen(profile && profile.coding && profile.ai ? "input" : "profile")}
-              style={{ fontSize: 14, fontFamily: MONO, letterSpacing: "0.1em", textTransform: "uppercase", color: t.mut, margin: 0, cursor: "pointer" }}
-            >
-              IdeaLoop Core
-            </h1>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <button
-                onClick={() => setCurrentScreen("results2")}
-                style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}
-              >
-                ← Back to analysis
-              </button>
-              {!authLoading && user && (
-                <>
-                  <span style={{ color: t.divider }}>|</span>
-                  {!viewingFromSaved && (
-                    <>
-                      <button onClick={goToMyIdeas} style={{ fontSize: 12, color: t.link, background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>
-                        My Ideas
-                      </button>
-                      <span style={{ color: t.divider }}>|</span>
-                    </>
-                  )}
-                  <span style={{ fontSize: 12, color: t.mut }}>{user.email}</span>
-                  <button onClick={handleLogout} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
-                    Log out
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </PageContainer>
-      </header>
+    <>
 
       <StepProgress
         currentStep={getStepNumber ? getStepNumber() : 4}
@@ -858,19 +816,8 @@ export default function ExecutionBriefView({
             </>
           )}
 
-          <p style={{ fontSize: 11.5, color: t.mut, textAlign: "center", margin: 0, lineHeight: 1.5 }}>
-            IdeaLoop Core — all analysis is AI-generated. Use as a guide, not a definitive assessment.
-          </p>
         </PageContainer>
       </main>
-
-      <footer style={footerStyle}>
-        <PageContainer wide>
-          <p style={{ fontSize: 12, color: t.mut, margin: 0 }}>
-            IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
-          </p>
-        </PageContainer>
-      </footer>
 
       {/* Crossing overlay — sharp animation over a blurred backdrop (the brief
           assembles behind it). Mirrors the analyze streaming overlay pattern. */}
@@ -904,6 +851,6 @@ export default function ExecutionBriefView({
           <style>{`@keyframes ebBreathe{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.7}50%{transform:translate(-50%,-50%) scale(1.22);opacity:1}}@keyframes ebOverlayIn{from{opacity:0}to{opacity:1}}`}</style>
         </div>
       )}
-    </div>
+    </>
   );
 }

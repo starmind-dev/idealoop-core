@@ -28,7 +28,6 @@ export default function EvaluationView({
   analysis,
   profile,
   user,
-  authLoading,
   // Navigation context
   viewingFromSaved,
   isBranchIdea,
@@ -54,9 +53,6 @@ export default function EvaluationView({
   // Execution Brief (Screen 3)
   openExecutionBrief,
   hasExecutionBrief,
-  // Shared styles
-  headerStyle,
-  footerStyle,
   // Simple setters (for inline form interactions)
   setCurrentScreen,
   setShowAuthModal,
@@ -72,7 +68,6 @@ export default function EvaluationView({
   setIsReEvalResult,
   // Functions
   goToMyIdeas,
-  handleLogout,
   handleSaveIdea,
   startReEvaluation,
   getStepNumber,
@@ -94,57 +89,21 @@ export default function EvaluationView({
   // ==========================================
   if (screen === "results1") {
     return (
-      <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
-        <header style={headerStyle}>
-          <PageContainer wide>
-            <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: t.mut, margin: 0, cursor: "pointer" }}>
-                IdeaLoop Core
-              </h1>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <button onClick={() => {
-                  if (viewingFromSaved) {
-                    setViewingFromSaved(false);
-                    goToMyIdeas();
-                  } else {
-                    setCurrentScreen("input");
-                  }
-                }} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
-                  {viewingFromSaved ? "← Back to My Ideas" : "← Back to idea"}
-                </button>
-                {!authLoading && (
-                  user ? (
-                    <>
-                      <span style={{ color: t.divider }}>|</span>
-                      {!viewingFromSaved && (
-                        <>
-                          <button onClick={goToMyIdeas} style={{ fontSize: 12, color: t.link, background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>
-                            My Ideas
-                          </button>
-                          <span style={{ color: t.divider }}>|</span>
-                        </>
-                      )}
-                      <span style={{ fontSize: 12, color: t.mut }}>{user.email}</span>
-                      <button onClick={handleLogout} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
-                        Log out
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <span style={{ color: t.divider }}>|</span>
-                      <button
-                        onClick={() => setShowAuthModal(true)}
-                        style={{ fontSize: 12, color: t.link, background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}
-                      >
-                        Log in to save
-                      </button>
-                    </>
-                  )
-                )}
-              </div>
-            </div>
-          </PageContainer>
-        </header>
+      <>
+        <PageContainer wide>
+          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", padding: "4px 0 0" }}>
+            <button onClick={() => {
+              if (viewingFromSaved) {
+                setViewingFromSaved(false);
+                goToMyIdeas();
+              } else {
+                setCurrentScreen("input");
+              }
+            }} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
+              {viewingFromSaved ? "← Back to My Ideas" : "← Back to idea"}
+            </button>
+          </div>
+        </PageContainer>
 
         {showAuthModal && (
           <AuthModal
@@ -924,15 +883,7 @@ export default function EvaluationView({
             </button>
           </PageContainer>
         </main>
-
-        <footer style={footerStyle}>
-          <PageContainer wide>
-            <p style={{ fontSize: 12, color: t.mut, margin: 0 }}>
-              IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
-            </p>
-          </PageContainer>
-        </footer>
-      </div>
+      </>
     );
   }
 
@@ -941,38 +892,14 @@ export default function EvaluationView({
   // ==========================================
   if (screen === "results2") {
     return (
-      <div style={{ minHeight: "100vh", background: t.bg, color: t.text, display: "flex", flexDirection: "column", overflowX: "hidden" }}>
-        <header style={headerStyle}>
-          <PageContainer wide>
-            <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h1 onClick={() => setCurrentScreen(profile.coding && profile.ai ? "input" : "profile")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: t.mut, margin: 0, cursor: "pointer" }}>
-                IdeaLoop Core
-              </h1>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <button onClick={() => setCurrentScreen("results1")} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
-                  ← Back to analysis
-                </button>
-                {!authLoading && user && (
-                  <>
-                    <span style={{ color: t.divider }}>|</span>
-                    {!viewingFromSaved && (
-                      <>
-                        <button onClick={goToMyIdeas} style={{ fontSize: 12, color: t.link, background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>
-                          My Ideas
-                        </button>
-                        <span style={{ color: t.divider }}>|</span>
-                      </>
-                    )}
-                    <span style={{ fontSize: 12, color: t.mut }}>{user.email}</span>
-                    <button onClick={handleLogout} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
-                      Log out
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          </PageContainer>
-        </header>
+      <>
+        <PageContainer wide>
+          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", padding: "4px 0 0" }}>
+            <button onClick={() => setCurrentScreen("results1")} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
+              ← Back to analysis
+            </button>
+          </div>
+        </PageContainer>
 
         {showAuthModal && (
           <AuthModal
@@ -1724,15 +1651,7 @@ export default function EvaluationView({
             )}
           </PageContainer>
         </main>
-
-        <footer style={footerStyle}>
-          <PageContainer wide>
-            <p style={{ fontSize: 12, color: t.mut, margin: 0 }}>
-              IdeaLoop Core — All analysis is AI-generated. Use as a guide, not a definitive assessment.
-            </p>
-          </PageContainer>
-        </footer>
-      </div>
+      </>
     );
   }
 

@@ -710,16 +710,13 @@ export default function ExploreView({
   t,
   analysis,
   user,
-  authLoading,
   viewingFromSaved,
   showAuthModal,
-  headerStyle,
   setCurrentScreen,
   setShowAuthModal,
   setUser,
   setViewingFromSaved,
   goToMyIdeas,
-  handleLogout,
   // explore action handlers (all optional)
   onTakeToDeep,
   onSaveBranch,
@@ -769,47 +766,19 @@ export default function ExploreView({
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: xt.bg, color: xt.text, display: "flex", flexDirection: "column", overflowX: "hidden", ...scopeVars }}>
-      <header style={headerStyle}>
-        <PageContainer wide>
-          <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <h1 onClick={() => setCurrentScreen && setCurrentScreen("input")} style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: t.mut, margin: 0, cursor: "pointer" }}>IdeaLoop Core</h1>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 12, color: EX.bright, fontFamily: "monospace", letterSpacing: "0.04em" }}>
-                <span style={{ width: 9, height: 9, border: `1.5px solid ${EX.base}`, transform: "rotate(45deg)", boxShadow: `0 0 10px -1px ${EX.base}` }} /> explore
-              </span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <button onClick={() => { if (viewingFromSaved) { setViewingFromSaved && setViewingFromSaved(false); goToMyIdeas && goToMyIdeas(); } else { setCurrentScreen && setCurrentScreen("input"); } }} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
-                {viewingFromSaved ? "← Back to My Ideas" : "← Back to idea"}
-              </button>
-              {!authLoading && (user ? (
-                <>
-                  <span style={{ color: t.divider }}>|</span>
-                  {!viewingFromSaved && (
-                    <>
-                      <button onClick={goToMyIdeas} style={{ fontSize: 12, color: t.link, background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>My Ideas</button>
-                      <span style={{ color: t.divider }}>|</span>
-                    </>
-                  )}
-                  <span style={{ fontSize: 12, color: t.mut }}>{user.email}</span>
-                  <button onClick={handleLogout} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>Log out</button>
-                </>
-              ) : (
-                <>
-                  <span style={{ color: t.divider }}>|</span>
-                  <button onClick={() => setShowAuthModal && setShowAuthModal(true)} style={{ fontSize: 12, color: t.link, background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>Log in to save</button>
-                </>
-              ))}
-            </div>
-          </div>
-        </PageContainer>
-      </header>
-
+    <div style={{ background: xt.bg, color: xt.text, overflowX: "hidden", ...scopeVars }}>
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal && setShowAuthModal(false)} onAuth={(u) => setUser && setUser(u)} t={t} />}
 
       <main style={{ flex: 1, paddingBottom: 80 }}>
         <PageContainer wide>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0 22px" }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 12, color: EX.bright, fontFamily: "monospace", letterSpacing: "0.04em" }}>
+              <span style={{ width: 9, height: 9, border: `1.5px solid ${EX.base}`, transform: "rotate(45deg)", boxShadow: `0 0 10px -1px ${EX.base}` }} /> explore
+            </span>
+            <button onClick={() => { if (viewingFromSaved) { setViewingFromSaved && setViewingFromSaved(false); goToMyIdeas && goToMyIdeas(); } else { setCurrentScreen && setCurrentScreen("input"); } }} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
+              {viewingFromSaved ? "← Back to My Ideas" : "← Back to idea"}
+            </button>
+          </div>
           <ReadSurface read={read} t={xt} />
           <FanSurface idea={idea} angles={angles} fanState={fanState} t={xt}
             onSave={(a) => saveBranch([a.id])} saveState={saveState} onCompare={(a) => onCompare && onCompare([a.id])}
