@@ -8,6 +8,7 @@ import EvaluationView from "./EvaluationView";
 import ExecutionBriefView from "./ExecutionBriefView";
 import ExploreView from "./ExploreView.js";
 import ExploreInputView from "./ExploreInputView";
+import DeepInputView from "./DeepInputView";
 import HubView from "./HubView";
 import OverviewView from "./OverviewView";
 import DashboardShell from "./DashboardShell";
@@ -1327,7 +1328,8 @@ export default function Home() {
     setCompareSelected([]);
     if (key === "overview") { setCurrentScreen("dashboard"); setDashView("overview"); }
     else if (key === "hub") goToMyIdeas();
-    else if (key === "explore" || key === "deep") setCurrentScreen("input");
+    else if (key === "explore") { setInputMode("explore"); setSpecificityGate(null); setCurrentScreen("input"); }
+    else if (key === "deep") { setInputMode("deep"); setSpecificityGate(null); setCurrentScreen("input"); }
     // settings / plan / help: not wired yet
   };
 
@@ -1509,8 +1511,8 @@ export default function Home() {
         ) : (
           <OverviewView
             t={t}
-            onStartExplore={() => { setInputMode("explore"); setCurrentScreen("input"); }}
-            onStartDeep={() => { setInputMode("deep"); setCurrentScreen("input"); }}
+            onStartExplore={() => { setSpecificityGate(null); setInputMode("explore"); setCurrentScreen("input"); }}
+            onStartDeep={() => { setSpecificityGate(null); setInputMode("deep"); setCurrentScreen("input"); }}
             onContinue={(id) => loadSavedIdea(id)}
             onOpenIdea={(id) => loadSavedIdea(id)}
             onViewAll={goToMyIdeas}
@@ -1726,6 +1728,42 @@ export default function Home() {
           evalsRemaining={evalsRemaining}
           gateNode={specificityGate ? <SpecificityGate gate={specificityGate} t={t} /> : null}
           error={error}
+        />
+      </DashboardShell>
+    );
+  }
+
+  // Deep gets its own input screen (the "under pressure" creed intake); like
+  // Explore, routed by inputMode. Reached only by cold open today (Overview's
+  // Deep card -> onStartDeep), so provenance is null; the strip is wired for
+  // when handoffs later route through here. The shared screen below stays as a
+  // harmless fallback (both inputMode values now early-return).
+  if (currentScreen === "input" && inputMode === "deep") {
+    return (
+      <DashboardShell
+        t={t}
+        active=""
+        userEmail={user?.email}
+        authLoading={authLoading}
+        onLogin={() => setShowAuthModal(true)}
+        onLogout={handleLogout}
+        onNavigate={railNav}
+      >
+        {showAuthModal && (
+          <AuthModal onClose={() => setShowAuthModal(false)} onAuth={(u) => setUser(u)} t={t} />
+        )}
+        <DeepInputView
+          t={t}
+          idea={idea}
+          setIdea={setIdea}
+          onRun={() => handleAnalyze("deep")}
+          onBack={goToMyIdeas}
+          isAnalyzing={isAnalyzing}
+          evalsRemaining={evalsRemaining}
+          gateNode={specificityGate ? <SpecificityGate gate={specificityGate} t={t} /> : null}
+          error={error}
+          profile={profile}
+          onEditProfile={() => setCurrentScreen("profile")}
         />
       </DashboardShell>
     );
