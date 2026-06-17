@@ -88,6 +88,80 @@ function StreamSpinner({ color }) {
 // (EvaluationView sourceColors) so the stream and the cards name the same sources.
 const STREAM_SRC_DOT = { github: "#9a9aa2", tavily: "#2dd4bf", exa: "#a78bfa", google: "#6fa8f5" };
 
+// Per-mode stream identity — the ONE seam where the two cognitive modes (and
+// re-eval) diverge during a run. deep = indigo (pressure), explore = blue
+// (widening, non-verdict), reeval = violet (evolution). When you want fully
+// bespoke per-mode streaming displays later, branch from this map / inside
+// StreamOverlay — the call sites already pass the mode, so nothing else moves.
+const STREAM_VARIANTS = {
+  deep:    { accent: "#8a82c2", glow: "rgba(138,130,194,0.55)", label: "EVALUATION PIPELINE" },
+  explore: { accent: "#60a5fa", glow: "rgba(96,165,250,0.55)",  label: "WIDENING THE IDEA" },
+  reeval:  { accent: "#8b5cf6", glow: "rgba(139,92,246,0.55)",  label: "EVOLUTION PIPELINE" },
+};
+
+// StreamOverlay — the fixed full-screen pipeline modal shown while a run streams.
+// It does DOUBLE DUTY: it shows the SSE beats AND, because it's a fixed
+// z-index:9999 blur, it blocks every other control (rail, buttons) for the
+// duration of the run — the interaction-block that (together with the
+// runningRef lock) keeps a second pipeline from being started mid-run. `mode`
+// picks the accent + label; everything else is shared. Single source for all
+// three call sites (deep/explore input + re-eval).
+function StreamOverlay({ streamSteps, t, mode = "deep" }) {
+  const v = STREAM_VARIANTS[mode] || STREAM_VARIANTS.deep;
+  return (
+    <div style={{
+      position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+      background: t.streamOverlay, animation: "overlayFadeIn 0.3s ease-out",
+    }}>
+      <div style={{
+        background: t.streamBg, border: `1px solid ${t.streamBorder}`, borderRadius: 12,
+        padding: "28px 32px", fontFamily: "'Courier New', Courier, monospace",
+        fontSize: 13, lineHeight: 1.8, width: "90%", maxWidth: 520, boxShadow: t.streamShadow,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: `1px solid ${t.streamDivider}` }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: v.accent, boxShadow: `0 0 8px ${v.glow}` }} />
+          <span style={{ color: t.mut, fontSize: 11, letterSpacing: "0.08em" }}>{v.label}</span>
+        </div>
+        {streamSteps.map((s, i) => (
+          <div key={i} style={{
+            display: "flex", alignItems: "flex-start", gap: 10,
+            color: s.done ? t.sec : t.text, opacity: s.done ? 0.8 : 1,
+            animation: "fadeInStep 0.3s ease-out",
+          }}>
+            {s.done ? (
+              <span style={{ color: v.accent, flexShrink: 0, width: 16, textAlign: "center" }}>✓</span>
+            ) : (
+              <StreamSpinner color={v.accent} />
+            )}
+            <span style={{ wordBreak: "break-word" }}>
+              {s.source && <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: STREAM_SRC_DOT[s.source] || "#9a9aa2", marginRight: 7, verticalAlign: "1px" }} />}
+              {s.message}
+            </span>
+          </div>
+        ))}
+        {streamSteps.length > 0 && !streamSteps.some(s => s.step === "complete") && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, color: t.mut, marginTop: 2 }}>
+            <span style={{ width: 16, textAlign: "center", animation: "blink 1s step-end infinite" }}>_</span>
+          </div>
+        )}
+        {streamSteps.length === 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, color: t.mut }}>
+            <span style={{ width: 16, textAlign: "center", animation: "blink 1s step-end infinite" }}>_</span>
+            <span>Initializing...</span>
+          </div>
+        )}
+      </div>
+      <style>{`
+        @keyframes fadeInStep { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes blink { 50% { opacity: 0; } }
+        @keyframes overlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
+      `}</style>
+    </div>
+  );
+}
+
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState("profile");
   // Which view the Dashboard shell shows; the rail stays put, only this swaps.
@@ -176,6 +250,12 @@ export default function Home() {
   // SSE streaming state
   const [streamSteps, setStreamSteps] = useState([]); // array of { step, message, done }
   const streamRef = useRef(null); // ref to track if stream should be aborted
+  // Synchronous concurrency lock shared by handleAnalyze + handleReEvaluate. Set
+  // BEFORE any await and released in finally, so a second trigger (rail swap,
+  // fast re-click) can't slip a parallel pipeline through the async eval-check
+  // gap before isAnalyzing/isReEvaluating flips true. The button's isAnalyzing
+  // guard alone leaks because that state is set post-await.
+  const runningRef = useRef(false);
 
   // V4S28 B7 — Specificity gate state. Set to { missing_elements, message,
   // trigger_type } when Haiku short-circuits the pipeline; null otherwise.
@@ -509,6 +589,11 @@ export default function Home() {
       }
     }
 
+    // Concurrency lock — committed to running now (all eval-limit early returns
+    // are above). Reject any second run that races in before the next one ends.
+    if (runningRef.current) return;
+    runningRef.current = true;
+
     setIsAnalyzing(true);
     setError("");
     // Reset save state for new evaluation
@@ -581,6 +666,7 @@ export default function Home() {
       setError(err.message);
     } finally {
       setIsAnalyzing(false);
+      runningRef.current = false;
     }
   };
 
@@ -607,6 +693,11 @@ export default function Home() {
     } catch (err) {
       console.error("DB eval check failed:", err);
     }
+
+    // Concurrency lock (shared with handleAnalyze) — no run may start while one
+    // is in flight; released in finally.
+    if (runningRef.current) return;
+    runningRef.current = true;
 
     setIsReEvaluating(true);
     setError("");
@@ -695,6 +786,7 @@ export default function Home() {
       setError(err.message);
     } finally {
       setIsReEvaluating(false);
+      runningRef.current = false;
     }
   };
 
@@ -1729,6 +1821,7 @@ export default function Home() {
           gateNode={specificityGate ? <SpecificityGate gate={specificityGate} t={t} /> : null}
           error={error}
         />
+        {isAnalyzing && <StreamOverlay streamSteps={streamSteps} t={t} mode="explore" />}
       </DashboardShell>
     );
   }
@@ -1765,6 +1858,7 @@ export default function Home() {
           profile={profile}
           onEditProfile={() => setCurrentScreen("profile")}
         />
+        {isAnalyzing && <StreamOverlay streamSteps={streamSteps} t={t} mode="deep" />}
       </DashboardShell>
     );
   }
@@ -1968,85 +2062,7 @@ export default function Home() {
               </div>
             )}
 
-            {isAnalyzing && (
-              <div style={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                zIndex: 9999,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                backdropFilter: "blur(8px)",
-                WebkitBackdropFilter: "blur(8px)",
-                background: t.streamOverlay,
-                animation: "overlayFadeIn 0.3s ease-out",
-              }}>
-                <div style={{
-                  background: t.streamBg,
-                  border: `1px solid ${t.streamBorder}`,
-                  borderRadius: 12,
-                  padding: "28px 32px",
-                  fontFamily: "'Courier New', Courier, monospace",
-                  fontSize: 13,
-                  lineHeight: 1.8,
-                  width: "90%",
-                  maxWidth: 520,
-                  boxShadow: t.streamShadow,
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: `1px solid ${t.streamDivider}` }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981", boxShadow: "0 0 8px rgba(16,185,129,0.5)" }} />
-                    <span style={{ color: t.mut, fontSize: 11, letterSpacing: "0.08em" }}>EVALUATION PIPELINE</span>
-                  </div>
-                  {streamSteps.map((s, i) => (
-                    <div key={i} style={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      gap: 10,
-                      color: s.done ? t.sec : t.text,
-                      opacity: s.done ? 0.8 : 1,
-                      animation: "fadeInStep 0.3s ease-out",
-                    }}>
-                      {s.done ? (
-                        <span style={{ color: "#10b981", flexShrink: 0, width: 16, textAlign: "center" }}>✓</span>
-                      ) : (
-                        <StreamSpinner color="#f59e0b" />
-                      )}
-                      <span style={{ wordBreak: "break-word" }}>
-                        {s.source && <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: STREAM_SRC_DOT[s.source] || "#9a9aa2", marginRight: 7, verticalAlign: "1px" }} />}
-                        {s.message}
-                      </span>
-                    </div>
-                  ))}
-                  {streamSteps.length > 0 && !streamSteps.some(s => s.step === "complete") && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, color: t.mut, marginTop: 2 }}>
-                      <span style={{ width: 16, textAlign: "center", animation: "blink 1s step-end infinite" }}>_</span>
-                    </div>
-                  )}
-                  {streamSteps.length === 0 && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, color: t.mut }}>
-                      <span style={{ width: 16, textAlign: "center", animation: "blink 1s step-end infinite" }}>_</span>
-                      <span>Initializing...</span>
-                    </div>
-                  )}
-                </div>
-                <style>{`
-                  @keyframes fadeInStep {
-                    from { opacity: 0; transform: translateY(4px); }
-                    to { opacity: 1; transform: translateY(0); }
-                  }
-                  @keyframes blink {
-                    50% { opacity: 0; }
-                  }
-                  @keyframes overlayFadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                  }
-                `}</style>
-              </div>
-            )}
+            {isAnalyzing && <StreamOverlay streamSteps={streamSteps} t={t} mode={inputMode} />}
           </PageContainer>
       </DashboardShell>
     );
@@ -2570,85 +2586,7 @@ export default function Home() {
               </span>
             </div>
 
-            {isReEvaluating && (
-              <div style={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                zIndex: 9999,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                backdropFilter: "blur(8px)",
-                WebkitBackdropFilter: "blur(8px)",
-                background: t.streamOverlay,
-                animation: "overlayFadeIn 0.3s ease-out",
-              }}>
-                <div style={{
-                  background: t.streamBg,
-                  border: `1px solid ${t.streamBorder}`,
-                  borderRadius: 12,
-                  padding: "28px 32px",
-                  fontFamily: "'Courier New', Courier, monospace",
-                  fontSize: 13,
-                  lineHeight: 1.8,
-                  width: "90%",
-                  maxWidth: 520,
-                  boxShadow: t.streamShadow,
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: `1px solid ${t.streamDivider}` }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#8b5cf6", boxShadow: "0 0 8px rgba(139,92,246,0.5)" }} />
-                    <span style={{ color: t.mut, fontSize: 11, letterSpacing: "0.08em" }}>EVOLUTION PIPELINE</span>
-                  </div>
-                  {streamSteps.map((s, i) => (
-                    <div key={i} style={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      gap: 10,
-                      color: s.done ? t.sec : t.text,
-                      opacity: s.done ? 0.8 : 1,
-                      animation: "fadeInStep 0.3s ease-out",
-                    }}>
-                      {s.done ? (
-                        <span style={{ color: "#8b5cf6", flexShrink: 0, width: 16, textAlign: "center" }}>✓</span>
-                      ) : (
-                        <StreamSpinner color="#f59e0b" />
-                      )}
-                      <span style={{ wordBreak: "break-word" }}>
-                        {s.source && <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: STREAM_SRC_DOT[s.source] || "#9a9aa2", marginRight: 7, verticalAlign: "1px" }} />}
-                        {s.message}
-                      </span>
-                    </div>
-                  ))}
-                  {streamSteps.length > 0 && !streamSteps.some(s => s.step === "complete") && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, color: t.mut, marginTop: 2 }}>
-                      <span style={{ width: 16, textAlign: "center", animation: "blink 1s step-end infinite" }}>_</span>
-                    </div>
-                  )}
-                  {streamSteps.length === 0 && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, color: t.mut }}>
-                      <span style={{ width: 16, textAlign: "center", animation: "blink 1s step-end infinite" }}>_</span>
-                      <span>Initializing...</span>
-                    </div>
-                  )}
-                </div>
-                <style>{`
-                  @keyframes fadeInStep {
-                    from { opacity: 0; transform: translateY(4px); }
-                    to { opacity: 1; transform: translateY(0); }
-                  }
-                  @keyframes blink {
-                    50% { opacity: 0; }
-                  }
-                  @keyframes overlayFadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                  }
-                `}</style>
-              </div>
-            )}
+            {isReEvaluating && <StreamOverlay streamSteps={streamSteps} t={t} mode="reeval" />}
           </PageContainer>
         </main>
       </DashboardShell>
