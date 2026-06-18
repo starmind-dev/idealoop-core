@@ -465,12 +465,19 @@ export function StepProgress({ currentStep, savedMode, branchMode, t }) {
     return () => window.removeEventListener("resize", check);
   }, []);
 
+  // Deep arc (V6 redesign). Profile is folded into the Idea step (edited inline
+  // in DeepInputView), so it's no longer its own node. Step 5 always shows: on a
+  // first run it sits in the future/dimmed state as an onboarding affordance
+  // ("this is where it goes once you save it"); on a saved view it's live
+  // (Evolve), and on a branch view it's Delta.
   const steps = [
-    { number: 1, label: "Profile" },
-    { number: 2, label: "Idea" },
-    { number: 3, label: "Analysis" },
-    { number: 4, label: "Execution" },
-    ...(branchMode ? [{ number: 5, label: "Delta" }] : savedMode ? [{ number: 5, label: "Evolve" }] : []),
+    { number: 1, label: "Idea", short: "Idea" },
+    { number: 2, label: "Deep Analysis", short: "Analysis" },
+    { number: 3, label: "Evidence & Reality", short: "Evidence" },
+    { number: 4, label: "Handoff", short: "Handoff" },
+    ...(branchMode
+      ? [{ number: 5, label: "Delta", short: "Delta" }]
+      : [{ number: 5, label: "Evolve", short: "Evolve" }]),
   ];
 
   const circleSize = isMobile ? 28 : 40;
@@ -516,7 +523,7 @@ export function StepProgress({ currentStep, savedMode, branchMode, t }) {
                 whiteSpace: "nowrap",
               }}
             >
-              {step.label}
+              {isMobile ? step.short : step.label}
             </span>
           </div>
           {index < steps.length - 1 && (
@@ -613,7 +620,7 @@ export function ScoreBar({ name, score, explanation, weight, notes, t, gated }) 
 // ============================================
 // SECTION HEADER
 // ============================================
-export function SectionHeader({ icon, title, subtitle, t }) {
+export function SectionHeader({ icon, title, subtitle, t, accent }) {
   return (
     <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 24 }}>
       <div
@@ -621,8 +628,9 @@ export function SectionHeader({ icon, title, subtitle, t }) {
           width: 40,
           height: 40,
           borderRadius: 12,
-          background: t.surfAlt,
-          border: `1px solid ${t.border}`,
+          background: accent ? `${accent}1A` : t.surfAlt,
+          border: `1px solid ${accent ? `${accent}38` : t.border}`,
+          color: accent || "inherit",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",

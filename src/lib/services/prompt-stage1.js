@@ -189,6 +189,7 @@ Do NOT invent dates. Only surface dates that appear in actual search results. Th
         "description": "What they do in 2-3 sentences — more detailed than free tier",
         "strengths": "1-2 sentences on what makes them strong",
         "weaknesses": "1-2 sentences on observed gaps or limitations",
+        "take": "≤12 words. A punchy one-line characterization of THIS competitor: their strongest point + their most relevant observed gap, compressed. Neutral reporting — describe the competitor; do NOT frame it as where the idea wins, and do NOT assess market viability (Stage 2's job). E.g., 'Owns checkout, but planning stays generic and engagement-thin.'",
         "competitor_type": "direct | adjacent | substitute | internal_build",
         "evidence_strength": "strong | moderate | weak",
         "importance": "high | medium | low",
@@ -207,6 +208,7 @@ Do NOT invent dates. Only surface dates that appear in actual search results. Th
 
 Additional rules:
 - Include every genuinely relevant competitor — no padding, no omitting. Use real companies/products when possible. Each competitor must have a competitor_type, evidence_strength, and importance.
+- Each competitor's "take" is a ≤12-word compression of its strongest point and its most relevant observed gap, phrased as neutral competitor characterization — concrete and specific to that competitor, never generic. It must NOT say or imply where the idea wins, and must NOT judge market viability (those are Stage 2's). It is the punchy surface form of the same facts already in strengths/weaknesses, not a new judgment.
 - The landscape_analysis must contain only observable market facts — not interpretation of what those facts mean for a new entrant.
 - The differentiation field must describe overlap and distinctness — not judge whether the differentiation is sufficient.
 - entry_barriers should name the SPECIFIC barrier categories for THIS idea, not generic startup challenges.

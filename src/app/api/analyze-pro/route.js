@@ -15,6 +15,7 @@ import { STAGE_MD_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage-md";
 import { STAGE_MO_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage-mo";
 import { STAGE_OR_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage-or";
 import { STAGE2C_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage2c";
+import { VERDICT_LEAD_SYSTEM_PROMPT } from "../../../lib/services/prompt-verdict-lead";
 import { STAGE_TC_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage-tc";
 import { STAGE3_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage3";
 import { calculateOverallScore, computeMoDisplayScore, computeMoOverrideTrace } from "../../../lib/services/scoring";
@@ -894,6 +895,18 @@ ${JSON.stringify({
           // pre-F4 pipeline. summary + failure_risks DO stay on ev here — Stage 3
           // genuinely reads failure_risks; only the flag is presentational.
           let synthesisDegraded = false;
+          // Verdict labor-split (A11/A12): headline + detail are held in LOCALS like
+          // the degrade flag — written to ev only at final assembly, never before
+          // Stage 3, so the two NEW fields stay out of Stage 3's input. summary (the
+          // lead) still stays on ev as before; its CONTENT is shorter now, but Stage 3
+          // is steered away from narrative summary fields, so this is non-load-bearing.
+          let verdictHeadline = "";
+          let verdictDetail = null;
+          // Competitive position (A13) — the tri-split for "How your idea compares".
+          // Same labor pattern: held in a LOCAL, written to ev at assembly, never before
+          // Stage 3. Null on thin / no-rival / degraded cases (view falls back to
+          // competition.differentiation).
+          let competitivePosition = null;
 
           // Graceful degradation per S3 lock: if Stage 2c parse fails, set
           // summary + failure_risks empty and proceed to Stage 3 with empty
@@ -908,6 +921,22 @@ ${JSON.stringify({
             ev.failure_risks = Array.isArray(stage2cResult.failure_risks)
               ? stage2cResult.failure_risks
               : [];
+            // Verdict labor-split (A11/A12) — captured to locals, applied at assembly.
+            verdictHeadline = typeof stage2cResult.verdict_headline === "string" ? stage2cResult.verdict_headline.trim() : "";
+            verdictDetail = (typeof stage2cResult.verdict_detail === "string" && stage2cResult.verdict_detail.trim()) ? stage2cResult.verdict_detail.trim() : null;
+            // Competitive position (A13) — captured to a local, applied at assembly.
+            // Defensive: keep only if it's an object; trim each cell to a string.
+            {
+              const cp = stage2cResult.competitive_position;
+              competitivePosition = (cp && typeof cp === "object" && !Array.isArray(cp))
+                ? {
+                    headline: typeof cp.headline === "string" ? cp.headline.trim() : "",
+                    overlap: typeof cp.overlap === "string" ? cp.overlap.trim() : "",
+                    you_win: typeof cp.you_win === "string" ? cp.you_win.trim() : "",
+                    exposed: typeof cp.exposed === "string" ? cp.exposed.trim() : "",
+                  }
+                : null;
+            }
             // F4/A — full synthesis present.
             synthesisDegraded = false;
             sendEvent({
@@ -930,6 +959,37 @@ ${JSON.stringify({
               step: "stage2c_done",
               message: "Stage 2c synthesis incomplete; proceeding with scores only",
             });
+          }
+
+          // ============================
+          // VERDICT LEAD COMPRESSOR (Option B)
+          // ============================
+          // Stage 2c's `summary` is the FULL, rich verdict — it becomes the modal
+          // ("Read the full verdict"). This isolated pass distills it into the short
+          // 3-beat lead the card shows. A separate call has CLEAN context, so the
+          // word cap binds where in-Block-A prompt rules structurally could not
+          // (summary is the gravitational centre of 2c; richness wins there by design).
+          // Non-fatal: on any failure verdictLead stays null and the card falls back
+          // to the full summary. verdict_lead is NOT a Stage 3 input — withheld like
+          // the other verdict fields and applied to ev at assembly.
+          let verdictLead = null;
+          if (!synthesisDegraded && typeof ev.summary === "string" && ev.summary.trim()) {
+            try {
+              const leadResponse = await callWithRetry({
+                model: "claude-haiku-4-5-20251001",
+                max_tokens: 400,
+                temperature: 0,
+                system: VERDICT_LEAD_SYSTEM_PROMPT,
+                messages: [{ role: "user", content: `HEADLINE: ${verdictHeadline || "(none)"}\n\nVERDICT:\n${ev.summary}` }],
+              }, "Verdict lead compression");
+              const leadParsed = JSON.parse(cleanJsonResponse(leadResponse.content[0].text));
+              verdictLead = (typeof leadParsed.verdict_lead === "string" && leadParsed.verdict_lead.trim())
+                ? leadParsed.verdict_lead.trim()
+                : null;
+            } catch (leadError) {
+              console.error("Verdict lead compression failed (card falls back to full summary):", leadError);
+              verdictLead = null;
+            }
           }
 
           // ============================
@@ -1017,6 +1077,22 @@ ${JSON.stringify({ evaluation: ev })}`;
           // branches, so it never entered Stage 3's input. Pure presentational
           // metadata for the frontend's honest "synthesis didn't complete" note.
           ev.synthesis_degraded = synthesisDegraded;
+
+          // Verdict labor-split (A11/A12) — apply HERE (assembly), like the degrade
+          // flag, so the two new fields never entered Stage 3's input. On degrade both
+          // stay "" / null. Frontend reads verdict_headline for the card lead-in and
+          // renders "Read the full verdict" only when verdict_detail is present.
+          ev.verdict_headline = verdictHeadline;
+          ev.verdict_detail = verdictDetail;
+          // Verdict lead (Option B) — the short 3-beat card lead, compressed from the
+          // full summary in an isolated pass. Card shows this; modal shows ev.summary.
+          // Null when compression failed or degraded → card falls back to ev.summary.
+          ev.verdict_lead = verdictLead;
+
+          // Competitive position (A13) — apply at assembly, withheld from Stage 3 like
+          // the verdict fields. Frontend reads ev.competitive_position for the "How your
+          // idea compares" tri-split, falling back to competition.differentiation.
+          ev.competitive_position = competitivePosition;
 
           // V4S28 B8 — restore thin_dimensions for frontend rendering
           // (was stripped before Stage 2c/3 to prevent downstream contamination;

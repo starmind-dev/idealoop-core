@@ -7,7 +7,7 @@
 //   (Rationale + structural-session history in MasterReference / NarrativeContract.)
 //
 // Input:  idea + profile + Stage 1 output + evidence packets + metric scores + evidence_strength
-// Output: summary (string) + failure_risks (array of structured risk objects)
+// Output: verdict_headline (string) + summary/LEAD (string) + verdict_detail (string|null) + failure_risks (array of structured risk objects) + competitive_position (object|null)
 //
 // Output-contract invariant: Risk 3 archetype enum stays A/B/C/D/E in the JSON.
 //   Archetype A is internally split into A1/A2/A3 for prompt-level reasoning, but the
@@ -335,6 +335,8 @@ OVERRIDE CONDITIONS (only legitimate triggers):
 
 ANTI-TEMPLATE DISCIPLINE: the example anchors above demonstrate the cognitive operation each archetype performs. They are NOT templates to copy. Vary the grammatical subject, clause structure, and consequence framing according to THIS case's specific evidence.
 
+HEADLINE COORDINATION: verdict_headline carries the verdict-shape (the WHAT). Because of that, sentence 1 of the lead expresses the case-truth as EVIDENCE or MECHANISM (the WHY) — never as a second verdict declaration. The archetype SELECTION procedure (band + case-truth) is unchanged; what changes is that the opener no longer carries the verdict sentence and spends its words on the case-specific evidence the verdict rests on. The opener leans toward the evidence-anchored expression of whichever archetype the case selects (α1 names the structural force through its evidence, not "the case is low because X"; β1 anchors the tension in the signals on each side, not "the tension between X and Y is the defining structure"; γ1/γ4 lead with the market evidence or the specific gate, not "this is a real opportunity"). Full divergence rule in A11.
+
 === A5 — CROSS-METRIC STRUCTURE NAMING ===
 
 The Summary names cross-metric structure when the metric pattern materially changes how to read the case. Cross-metric structure includes:
@@ -368,6 +370,8 @@ SELECTION is case-truth-driven, with band as a strong correlate:
   High-band cases (overall > 6.5) typically warrant ACTION DIRECTION closing — the case is workable and the question is what to do first.
 
 These are defaults, not determinants. A 4.8 case may warrant DECISION CONDITION closing if the binding weakness is "we don't know X yet" rather than "the structural barrier is Y." A 7.0 case may warrant DECISION CONDITION closing if a material uncertainty dominates next-step decisions. Pick the closing-move type that the case's specific verdict needs.
+
+LEAD APPLICATION (per A10 lead structure): in the summary LEAD, ACTION DIRECTION is NOT used — the concrete first move belongs to Execution Reality, not the lead. The lead's close (its PIVOT beat) uses DECISION CONDITION or STRUCTURAL VERDICT only; a high-band lead that would naturally take ACTION DIRECTION instead closes on the DECISION CONDITION (what confirms the case is build-ready). The SPECIFICITY TEST below still applies to whichever closing type the lead uses.
 
 SPECIFICITY TEST — the closing must name at least one of:
   - a specific buyer segment
@@ -464,7 +468,7 @@ Example 3 (role-type inference):
 
 This rule applies to Summary; C10 applies the same discipline to Risk 3. Risk 1 and Risk 2 are profile-blind per B7 and should not reference founder profile at all.
 
-=== A10 — SENTENCE ADVANCEMENT ===
+=== A10 — SENTENCE ADVANCEMENT + LEAD STRUCTURE ===
 
 Each sentence in the Summary must advance the synthesis. Advancement means adding ONE of:
 
@@ -480,9 +484,101 @@ FORBIDDEN SENTENCE TYPES:
   - Transitional or summarizing language without forward content advancement ("Overall, this means...", "To summarize...", "In conclusion...")
   - Examples or elaboration that don't add case-distinguishing content
 
-Length follows from how much advancement the case genuinely warrants. High-coverage cases may legitimately run longer ONLY when each added sentence advances synthesis. Low-coverage cases should be shorter because fewer distinct synthesis moves are available.
+LEAD STRUCTURE — THREE BEATS, ONE SENTENCE EACH:
+
+The "summary" field is the LEAD. It is THREE synthesis beats, one sentence per beat — not a paragraph, not four sentences, and not a word budget. Length is bounded by the STRUCTURE, not by a count: three synthesis sentences land around 70–100 words. If the lead runs materially past ~110 words, a beat has been overloaded or a fourth has crept in — cut, do not stretch. (The word range is a sanity check, not the rule. The rule is three beats.)
+
+THE THREE BEATS (this is content, not a fixed order):
+  1. FOUNDATION — what the case genuinely has going for it: the real demand, strength, or signal it rests on. For a weak case, the most that can honestly be said; a thin foundation is still this beat.
+  2. CONSTRAINT — what caps or complicates it: the binding weakness, the cross-metric tension (A5), the thing holding the verdict where it sits.
+  3. PIVOT — the one variable the verdict turns on: the decisive uncertainty (A7), or the condition under which the read would change. This is the lead's close.
+
+ORDER FOLLOWS A4, NOT THIS LIST. A4's archetype selection decides which beat OPENS — its band families already align: constraint-led openers for low band (α), tension/pivot-led for mid (β), foundation/strength-led for high (γ). The three beats are always present; the band decides the sequence. Sentence 1 is still expressed as evidence or mechanism per A4 HEADLINE COORDINATION — the opening beat leads with the evidence, never a restatement of verdict_headline.
+
+THE CLOSE IS THE PIVOT, NOT AN ACTION. The lead names the decisive variable — what the verdict turns on. It does NOT prescribe the first move ("validate X first," "recruit a CTO"); the concrete move is Execution Reality's (A8 boundary). Per A6, the lead's close is DECISION CONDITION or STRUCTURAL VERDICT — never ACTION DIRECTION.
+
+ONE SENTENCE PER BEAT — NO GAMING. A beat that needs a semicolon-chained second clause to fit is carrying two beats' work; the second goes to the next beat or to verdict_detail. A beat is one synthesis claim, not a compound paragraph squeezed into a single sentence. A normal case is exactly three beats; a genuinely thin case may run two if FOUNDATION and CONSTRAINT honestly collapse — never pad to reach three, never exceed three.
+
+BEAT DENSITY — ONE CLAIM, ONE ANCHOR PER BEAT. Each beat is a single load-bearing claim carried by AT MOST one evidence anchor. A beat that strings together two or more separate facts or named sources ("IdeaProof's 10,000 users and StartupValidation's positioning and category pull"; "founder-profile calibration, GitHub API integration, search-backed evidence packets") is enumerating evidence inside the sentence — keep the single most load-bearing anchor and relocate the rest to verdict_detail. The em-dash, the comma series, and "and" are NOT licenses to chain a second claim or a second evidence list into the beat: if the text after an em-dash or "and" introduces a distinct second claim or a list of supporting items, that material belongs in the next beat or in verdict_detail, not in this one. Test each beat: can the reader hold it in one breath as a single assertion? If it takes two breaths, it is two beats compressed — split or relocate. A correctly dense lead is three taut assertions, not three loaded paragraphs.
+
+OVERFLOW GOES TO DETAIL, NOT INTO THE LEAD. Everything the case warrants beyond the three beats — deeper cross-packet integration, second-order coupling, secondary tensions — is verdict_detail (A12), not a fourth lead sentence. Relocated, not discarded. The lead is the three beats; the detail is the rest.
+
+PROTECT INTEGRATION (per A1). Each beat is a SYNTHESIS sentence, not a metric read. The anti-enumeration test still binds: if the three beats can be rewritten as "demand strong / monetization weak / build hard" without loss, the lead has FAILED — that is enumeration, not synthesis. FOUNDATION / CONSTRAINT / PIVOT are cross-cutting case-truths, never the three metric scores in disguise.
 
 This discipline applies to Summary prose. Risk prose has its own per-archetype disciplines in Block C; cross-prose advancement requirements live there separately.
+
+=== A11 — VERDICT HEADLINE ===
+
+verdict_headline is the case-truth (Section 1.1) stated as a verdict-shape: the single most decision-changing read of the case, compressed to a headline (≤8 words; target 4–7). It is the WHAT — the shape of the verdict — and the first thing the user reads. It is REQUIRED on every run.
+
+WHAT IT IS:
+  - The verdict-shape: what the case fundamentally IS, as a claim — not its score, not a metric list.
+  - Anchored to the case-truth per Section 1.1 and traceable to upstream per A2. Never an invented verdict.
+
+BAND-FAMILY SHAPE (a HINT, not a routing table):
+The headline's shape USUALLY follows the case's band-family, because both express the same case-truth:
+  - Low band (overall < 5.0): lead with the binding constraint — what structurally caps the case.
+  - Mid band (5.0–6.5): name the tension or the open variable — what the case turns on.
+  - High band (overall > 6.5): name the strength WITH its gate — strong, but conditioned.
+
+  CASE-TRUTH OVERRIDES BAND: overall band is a routing hint only. When band and case-truth diverge, the headline follows the CASE-TRUTH, exactly as A4's opener selection allows override. A high-band case is NOT always "A real opportunity, gated by X" — depending on its case-truth it may be "fragile upside," "strong pull, weak capture," "real demand, exposed economics," or another shape entirely. Do not let the band default flatten distinct case-truths into one headline frame.
+
+FORBIDDEN:
+  - SCORE RESTATEMENT: "A 6.7 idea." "Above-average potential." Names a number, not a shape.
+  - GENERIC VERDICT: "A promising idea." "Worth pursuing." Interchangeable across cases.
+  - ENUMERATION: "Strong demand, weak monetization, hard build." A metric scoreboard is not a verdict-shape (per A1).
+  - Internal labels per D6; other-stage territory per D7.
+
+ANTI-TEMPLATE DISCIPLINE:
+The verdict-shape is the HIGHEST templating-risk surface in the summary — verdicts rhyme. The frame "[adjective] opportunity, [verb]-ed by [X]" ("A real opportunity, gated by sequencing" / "A strong idea, limited by access" / "A promising market, capped by competition") is a mold-in-waiting and MUST NOT become the universal headline form. The cognitive operation — naming the case's verdict-shape — has many surface forms (strength-then-gate, constraint-first, tension-as-subject, open-question, structural-verdict). These are not a list to rotate through; each case finds the shape its own case-truth takes. Do not default to a frame; reach for one only when the case's verdict-shape genuinely takes that form. (Audit: if multiple headlines in a batch share the same frame without case-specific necessity, the frame has templated — break it.)
+
+DIVERGENCE FROM THE OPENER (coordinates with A4):
+The headline is the WHAT; sentence 1 of the lead is the WHY. Same case-truth, different altitude; they MUST NOT restate each other.
+
+  WORKED PAIR:
+    Headline: "A real opportunity, gated by sequencing."
+    BAD lead sentence 1:  "This is a real opportunity whose outcome depends on sequencing." (restates the headline — adds no evidence)
+    GOOD lead sentence 1: "Six years of sustained multi-metro engagement gives the demand side real weight, while payment proof still stops at adjacent precedent." (carries the evidence the headline asserts but does not show)
+
+  TEST: if sentence 1 could be deleted and the headline alone would convey the same claim, sentence 1 is a restatement — rewrite it to carry evidence the headline does not.
+
+LENGTH: ≤8 words. A comma-spliced second clause is fine ("A real opportunity, gated by sequencing"). A headline that runs to a full sentence with a verb chain has become a lead sentence — compress it.
+
+=== A12 — VERDICT DETAIL (CONDITIONAL) ===
+
+verdict_detail is the continuation of the lead: the cross-packet synthesis the case genuinely warrants that did not fit the lead's bound (A10). Shown on demand ("Read the full verdict"), never on the card by default. CONDITIONAL — null on cases without genuine additional synthesis.
+
+WHAT IT IS:
+  - The next layer of integration (per A1): synthesis spanning packets — MD × MO × OR × competition — that no single downstream surface holds. The deeper coupling, the second-order interaction, the mechanism the lead asserts but does not unpack.
+  - Generated in the SAME reasoning pass as the lead. NOT a second summary. Lead and detail are one synthesis split by altitude.
+
+EXTENDS, NEVER RECAPS:
+A10's advancement rule applies ACROSS the lead→detail boundary. Every sentence must advance synthesis the lead did not already make.
+  FORBIDDEN: restating the lead longer; re-deriving metric reads (A8); re-listing risks (A1); recapping the landscape (A8). The detail is the cross-packet synthesis layer, not a long-form rewrite of surfaces the view already shows.
+
+NULL CONDITION (default for thin cases):
+Null when, after the lead takes the most decisive synthesis, no genuine additional cross-packet integration remains. Do NOT pad to populate it — an absent detail is correct and the affordance does not render. A padded detail that recaps the surfaces is worse than no detail.
+
+LENGTH (when present): typically 2–4 sentences / ~120–180 words; bounded by what advances (A10), not a dumping ground.
+
+BOUNDARY (per A8): no metric re-justification, time estimates, Main Bottleneck declaration, or landscape recap. Synthesis at the lead's altitude, continued.
+
+=== A13 — COMPETITIVE POSITION ===
+
+competitive_position is the synthesis header for the competition view ("How your idea compares") — the one place the pipeline states, as a judgment, where this idea sits against the listed competitors. Stage 1 mapped the landscape as a reporter and is FORBIDDEN from judging differentiation strength; THIS is where that judgment is made, drawing on the Stage 1 competitor list and the originality packet. Four fields, each one tight phrase:
+
+  - headline: the competitive-position verdict-shape in one phrase (≤10 words) — the idea's edge named as a claim, not a metric, not a hedge. E.g., "Your edge is end-to-end automation — copyable."
+  - overlap: where the idea collides with the field, naming specific listed competitors (≤14 words). Descriptive — the one reporter-grade cell. E.g., "Mealime on planning · Instacart on cart export."
+  - you_win: the wedge no listed rival closes (≤14 words) — the defensible distinct edge. This is the judgment Stage 1 cannot make. E.g., "The automated hand-off from plan to order — no rival closes it."
+  - exposed: where the position is structurally undercut (≤14 words) — the vulnerability that caps the edge. E.g., "Store apps that already own checkout are a feature flag away."
+
+ANCHORING (per A2): every cell traces to the listed competitors and the originality evidence. you_win and exposed are the compressed form of the originality packet's defensibility read — same case-truth, headline altitude. Never invent a wedge or an exposure the evidence does not support.
+
+ALTITUDE (anti-contamination): competitive_position lives at the LANDSCAPE altitude — it is the competitor grid's header, NOT the verdict. It MUST NOT restate the lead (A10) or verdict_headline (A11); those are the verdict altitude. The lead is already forbidden from landscape recap (A8); this is the inverse — the competition header does not re-deliver the verdict. If competitive_position and the lead converge on the same sentence, one is at the wrong altitude: competitive_position stays on the competitor field, the lead stays on the case-truth.
+
+NULL CONDITION: if no listed competitor is a genuine direct or adjacent rival (substitutes only, or an empty / llm-generated landscape with no real overlap), set competitive_position to null — the view falls back to the descriptive differentiation. Do NOT manufacture a "you win" against a field that isn't there.
+
+ANTI-TEMPLATE: the headline carries the same templating risk as A11 — do not default every case to "Your edge is X — copyable." The shape follows the case (sometimes "strong overlap, thin wedge"; sometimes "no direct rivals, exposed on distribution"). Case-truth over frame.
 
 ============================================================================
 SECTION 3 — BLOCK B: RISK 1 + RISK 2 DIFFERENTIATION
@@ -1131,7 +1227,9 @@ SECTION 7 — OUTPUT SCHEMA
 Return ONLY valid JSON with the following structure:
 
 {
-  "summary": "Synthesis paragraph. Anchored to upstream evidence per A2. Sentence 1 follows A4 archetype selection. Cross-metric structure named per A5 when materially asymmetric. Decisive uncertainty (or structural strength) named per A7. Closing-move per A6 with specificity test. Profile references per A9 verbatim discipline. No internal labels per D6. No other-stage territory per D7.",
+  "verdict_headline": "REQUIRED. Case-truth as verdict-shape per A11. ≤8 words. Band is a hint; case-truth overrides per A11. Anti-template per A11. Diverges from lead sentence 1 per A11/A4.",
+  "summary": "[THE LEAD] Exactly three synthesis beats, one sentence each per A10 — FOUNDATION / CONSTRAINT / PIVOT, ~70–100 words, overflow → verdict_detail. Order follows A4 archetype; sentence 1 expressed as evidence/mechanism per A4 HEADLINE COORDINATION; does not restate verdict_headline per A11/A4. Anchored to upstream evidence per A2. Cross-metric structure per A5 when materially asymmetric. Decisive uncertainty per A7. Close is the PIVOT (DECISION CONDITION or STRUCTURAL VERDICT per A6); ACTION DIRECTION belongs to Execution Reality. Profile references per A9 verbatim. No internal labels per D6. No other-stage territory per D7.",
+  "verdict_detail": "Cross-packet synthesis continuation per A12, or null. EXTENDS the lead, never recaps. Null on thin cases.",
   "failure_risks": [
     {
       "slot": "market_category",
@@ -1148,7 +1246,13 @@ Return ONLY valid JSON with the following structure:
       "archetype": "A | B | C | D | E",
       "text": "Sentence 1 subject per C5 discipline. Archetype-specific per C7 evidence-driven selection. Profile references per C10 verbatim discipline. ONLY present when Risk 3 fires per Section 1.2 Decision Procedure. Archetype A subtypes (A1/A2/A3) are internal reasoning only; the JSON output emits 'A' for all three subtypes per C4 JSON Output Mapping."
     }
-  ]
+  ],
+  "competitive_position": {
+    "headline": "≤10 words per A13. Competitive-position verdict-shape; the idea's edge as a claim. Anti-template per A13. Or null when no genuine rival per A13 NULL CONDITION.",
+    "overlap": "≤14 words per A13. Where the idea collides, naming specific listed competitors. Descriptive.",
+    "you_win": "≤14 words per A13. The wedge no listed rival closes — the judgment Stage 1 cannot make. Anchored per A2.",
+    "exposed": "≤14 words per A13. Where the position is structurally undercut. Anchored per A2."
+  }
 }
 
 OUTPUT RULES:

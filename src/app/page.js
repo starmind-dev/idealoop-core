@@ -414,9 +414,10 @@ export default function Home() {
   };
 
   const getStepNumber = () => {
-    // brief reuses step 4 "Execution" — it's an execution-facing screen like
-    // results2; not every screen needs to tick its own dot.
-    const map = { profile: 1, input: 2, myideas: 2, reeval: 5, results1: 3, results2: 4, brief: 4, delta: 5 };
+    // Deep arc (V6): Idea(1) · Deep Analysis(2) · Evidence & Reality(3) ·
+    // Handoff(4) · Evolve(5). results1 is the Deep Analysis screen, results2 is
+    // Evidence & Reality, brief is the Handoff. Profile/input fold into Idea.
+    const map = { profile: 1, input: 1, myideas: 1, reeval: 5, results1: 2, results2: 3, brief: 4, delta: 5 };
     return map[currentScreen] || 1;
   };
 

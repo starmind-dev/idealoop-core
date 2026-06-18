@@ -2,22 +2,15 @@
 
 import {
   StepProgress,
-  StatusBadge,
-  ScoreBar,
   SectionHeader,
   Card,
   PageContainer,
   AuthModal,
-  getScoreColor,
-  getTcColor,
   getMainBottleneckColor,
   MainBottleneckIcon,
-  MbCloseCallAffordance,
-  GateCTA,
-  BlurGate,
   PreviewBanner,
 } from "./components";
-import MetricProseDetail, { MetricProseBody } from "./MetricProseDetail";
+import { ProvenanceStrip, PressureRead, DeepMetricCard, DeepTcCard, ExecutionReality, KeyRisks, CompetitorGrid } from "./DeepResultParts";
 
 export default function EvaluationView({
   // Screen
@@ -84,6 +77,16 @@ export default function EvaluationView({
   const isGated = false;
   const isPreviewUser = false;
 
+  // Deep provenance (V6 lineage strip). Today cold-open is the only live path,
+  // so most results show the gray "straight to Deep" state. reeval and branched
+  // light up as those paths route through. The bet/limit prose for branched
+  // stays sparse until the Explore→Deep handoff carries branch_reason here.
+  const deepProvenance = isReEvalResult
+    ? { state: "reeval" }
+    : isBranchIdea
+    ? { state: "branched", onExplore: viewingFromSaved ? goToMyIdeas : undefined }
+    : { state: "cold" };
+
   // ==========================================
   // SCREEN: ANALYSIS (results1)
   // ==========================================
@@ -121,6 +124,9 @@ export default function EvaluationView({
             {/* Free Preview Banner */}
             {isPreviewUser && <PreviewBanner t={t} evalsRemaining={evalsRemaining} />}
 
+            {/* Provenance — where this idea came from (Explore branch / cold / re-eval) */}
+            <ProvenanceStrip provenance={deepProvenance} t={t} />
+
             {/* Scope Warning */}
             {analysis.scope_warning && (
               <div style={{
@@ -157,535 +163,57 @@ export default function EvaluationView({
               </div>
             )}
 
-            {/* Competition */}
-            <section style={{ marginBottom: 48 }}>
-              <SectionHeader icon="🌐" title="Competition Landscape" subtitle="Similar existing products in the market" t={t} />
-
-              {analysis.competition.data_source === "verified" ? (
-                <div style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  marginBottom: 16,
-                  padding: "6px 14px",
-                  borderRadius: 9999,
-                  background: "rgba(16,185,129,0.08)",
-                  border: "1px solid rgba(16,185,129,0.2)",
-                }}>
-                  <span style={{ fontSize: 12, color: "#34d399", fontWeight: 600 }}>Verified Sources</span>
-                  <span style={{ fontSize: 11, color: t.sec }}>via GitHub, Tavily, Exa & Google</span>
-                </div>
-              ) : (
-                <div style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  marginBottom: 16,
-                  padding: "6px 14px",
-                  borderRadius: 9999,
-                  background: "rgba(245,158,11,0.08)",
-                  border: "1px solid rgba(245,158,11,0.2)",
-                }}>
-                  <span style={{ fontSize: 12, color: "#fbbf24", fontWeight: 600 }}>AI-Generated</span>
-                  <span style={{ fontSize: 11, color: t.sec }}>use as directional guide</span>
-                </div>
-              )}
-
-              {(() => {
-                const sourceColors = {
-                  github: { bg: `${t.srcBadge.github}26`, color: t.srcBadge.github, border: `${t.srcBadge.github}4D`, label: "GitHub" },
-                  tavily: { bg: "#2dd4bf26", color: "#2dd4bf", border: "#2dd4bf4D", label: "Tavily" },
-                  exa: { bg: "#a78bfa26", color: "#a78bfa", border: "#a78bfa4D", label: "Exa" },
-                  google: { bg: `${t.srcBadge.google}26`, color: t.srcBadge.google, border: `${t.srcBadge.google}4D`, label: "Google" },
-                  llm: { bg: `${t.srcBadge.llm}26`, color: t.srcBadge.llm, border: `${t.srcBadge.llm}4D`, label: "AI" },
-                };
-                const typeColors = {
-                  direct: { label: "Direct", color: t.typeBadge.direct, bg: `${t.typeBadge.direct}1A`, border: `${t.typeBadge.direct}40` },
-                  adjacent: { label: "Adjacent", color: t.typeBadge.adjacent, bg: `${t.typeBadge.adjacent}1A`, border: `${t.typeBadge.adjacent}40` },
-                  substitute: { label: "Substitute", color: t.typeBadge.substitute, bg: `${t.typeBadge.substitute}1A`, border: `${t.typeBadge.substitute}40` },
-                  internal_build: { label: "Internal Build", color: t.srcBadge.github, bg: `${t.srcBadge.github}1A`, border: `${t.srcBadge.github}40` },
-                };
-
-                const renderCompCard = (comp, i) => {
-                  const src = sourceColors[comp.source] || sourceColors.llm;
-                  const tc = typeColors[comp.competitor_type] || null;
-                  return (
-                    <Card key={i} style={{ display: "flex", flexDirection: "column", gap: 12 }} t={t}>
-                      <div>
-                        <h3 style={{ fontSize: 14, fontWeight: 700, color: t.text, margin: "0 0 8px 0", wordBreak: "break-word" }}>{comp.name}</h3>
-                        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-                          {tc && (
-                            <span style={{
-                              fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 9999,
-                              border: `1px solid ${tc.border}`, background: tc.bg, color: tc.color,
-                              letterSpacing: "0.03em", whiteSpace: "nowrap",
-                            }}>
-                              {tc.label}
-                            </span>
-                          )}
-                          <span style={{
-                            fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 9999,
-                            border: `1px solid ${src.border}`, background: src.bg, color: src.color,
-                            textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap",
-                          }}>
-                            {src.label}
-                          </span>
-                          <StatusBadge status={comp.status} />
-                        </div>
-                      </div>
-                      <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.6, margin: 0, flex: 1 }}>
-                        {comp.description}
-                      </p>
-                      <p style={{ fontSize: 12, color: "#34d399", fontWeight: 600, lineHeight: 1.5, margin: 0 }}>
-                        {comp.outcome}
-                      </p>
-                      {comp.url && (
-                        <a href={comp.url} target="_blank" rel="noopener noreferrer"
-                          style={{ fontSize: 12, color: t.link, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, marginTop: 2 }}>
-                          Visit →
-                        </a>
-                      )}
-                    </Card>
-                  );
-                };
-
-                const hasCompetitorTypes = analysis.competition.competitors.some(c => c.competitor_type);
-
-                if (hasCompetitorTypes) {
-                  const directCompetitors = analysis.competition.competitors.filter(
-                    c => c.competitor_type === "direct" || c.competitor_type === "adjacent"
-                  );
-                  const alternatives = analysis.competition.competitors.filter(
-                    c => c.competitor_type === "substitute" || c.competitor_type === "internal_build"
-                  );
-
-                  return (
-                    <div style={{ marginBottom: 16 }}>
-                      {directCompetitors.length > 0 && (
-                        <>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, marginTop: 8 }}>
-                            <span style={{ fontSize: 15 }}>⚔️</span>
-                            <span style={{ fontSize: 14, fontWeight: 600, color: t.text, letterSpacing: "0.01em" }}>Direct Competitors</span>
-                            <span style={{ fontSize: 11, color: t.mut, fontWeight: 500, marginLeft: 2 }}>{directCompetitors.length}</span>
-                          </div>
-                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16, marginBottom: 24 }}>
-                            {directCompetitors.map((comp, i) => renderCompCard(comp, `direct-${i}`))}
-                          </div>
-                        </>
-                      )}
-                      {alternatives.length > 0 && (
-                        <>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, marginTop: 8 }}>
-                            <span style={{ fontSize: 15 }}>🔄</span>
-                            <span style={{ fontSize: 14, fontWeight: 600, color: t.text, letterSpacing: "0.01em" }}>Alternatives</span>
-                            <span style={{ fontSize: 11, color: t.mut, fontWeight: 500, marginLeft: 2 }}>{alternatives.length}</span>
-                          </div>
-                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16, marginBottom: 16 }}>
-                            {alternatives.map((comp, i) => renderCompCard(comp, `alt-${i}`))}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  );
-                } else {
-                  // Fallback: flat list for old saved evaluations without competitor_type
-                  return (
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16, marginBottom: 16 }}>
-                      {analysis.competition.competitors.map((comp, i) => renderCompCard(comp, i))}
-                    </div>
-                  );
-                }
-              })()}
-
-              {analysis.competition.differentiation && (
-                <>
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 16 }}>
-                    <div style={{
-                      width: 40, height: 40, borderRadius: 12,
-                      background: t.surfAlt, border: `1px solid ${t.border}`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 18, flexShrink: 0,
-                    }}>🔍</div>
-                    <div>
-                      <h3 style={{ fontSize: 16, fontWeight: 700, color: t.text, margin: 0 }}>How your idea compares</h3>
-                      <p style={{ fontSize: 13, color: t.sec, margin: "2px 0 0 0" }}>Positioning against competitors</p>
-                    </div>
-                  </div>
-                  <div style={{
-                    background: "rgba(37,99,235,0.025)",
-                    border: "1px solid rgba(37,99,235,0.1)",
-                    borderLeft: "3px solid #2563eb",
-                    borderRadius: 14,
-                    padding: "22px 24px",
-                    boxShadow: "0 1px 4px rgba(37,99,235,0.03)",
-                    marginBottom: 16,
-                  }}>
-                    <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.6, margin: 0 }}>
-                      {analysis.competition.differentiation}
-                    </p>
-                  </div>
-                </>
-              )}
-            </section>
 
             {/* Final Evaluation */}
             <section style={{ marginBottom: 48 }}>
-              <SectionHeader icon="📊" title="Evaluation" subtitle="Scored analysis of your AI product idea" t={t} />
+              <SectionHeader icon="📊" title="The Pressure Read" subtitle="What held, what capped it, and what would move it — based on the evidence." t={t} />
 
               {/*
                 ============================================================
-                V4S28 B8 — C-2 LAYOUT (April 30, 2026)
+                V6 — PRESSURE READ (verdict-first, June 2026)
                 ============================================================
-                Two-card structure replacing the old "big number" Overall card
-                and standalone Evidence Strength card:
-
-                  [Summary card]
-                    - EVALUATION label (left)  ·  OVERALL X.X /10 (right)
-                      → header chip changes to "EARLY READ" when LOW
-                    - Horizontal-bar chart for MD / MO / OR
-                    - Internal divider rule
-                    - TC bar (inverted color logic via getTcColor)
-                    - MEDIUM/LOW callout panel below the bars (when applicable)
-
-                  [Prose card]
-                    - Pill-headed prose section per metric (MD, MO, OR)
-                    - "EXECUTION CONTEXT · NOT IN THE OVERALL" centered divider
-                    - Floating tinted container for TC pill-headed prose
-
-                Color logic uses Mix B palette via getScoreColor / getTcColor.
-                Weights shown on the bars: 37.5% / 31.25% / 31.25% (V4S28 B8 α
-                formula change — TC removed from Overall, see scoring.js).
+                The verdict leads. PressureRead renders, in one card: the
+                Stage-2c verdict paragraph (honest degrade) + a confidence line
+                (from evidence_strength) + the neutral overall gauge + the
+                identity-coloured MD/MO/OR tiles (with contribution = score ×
+                weight) + the TC build-difficulty word-ladder (execution context).
+                The three per-metric prose cards follow. Competition, Key Risks,
+                and Execution Reality moved to the next screen (Evidence &
+                Reality). See DeepResultParts.js for the new components.
                 ============================================================
               */}
 
-              {(() => {
-                const ev = analysis.evaluation;
-                const es = ev.evidence_strength;
-                const isLow = es && es.level === "LOW";
-                const isMedium = es && es.level === "MEDIUM";
+              <PressureRead analysis={analysis} t={t} onScoreGuide={() => setShowScoreGuide(true)} />
 
-                // Static prompts mapped to the 3-value Haiku-aligned enum.
-                // Used for the LOW callout bullets when thin_dimensions is
-                // present in the response payload.
-                // Enum (locked May 4, 2026 pre-B10a Haiku calibration revisit):
-                //   target_user = adoption unit (not necessarily literal payer)
-                //   use_case    = job/pain/task/workflow under one umbrella
-                //   mechanism   = how the product intervenes
-                const THIN_DIMENSION_PROMPTS = {
-                  target_user: {
-                    title: "Who exactly is this for?",
-                    body: "Name the user role, buyer, or situation.",
-                  },
-                  use_case: {
-                    title: "What use case does it address?",
-                    body: "Name the specific task, pain, or workflow — not just the category.",
-                  },
-                  mechanism: {
-                    title: "How does the product intervene?",
-                    body: "Name the concrete feature, process, or method.",
-                  },
-                };
+              {/* ===== PER-METRIC CARDS — mockup rail+body layout ===== */}
+              <DeepMetricCard
+                metricKey="market_demand"
+                metric={analysis.evaluation.market_demand}
+                name="Market Demand"
+                weightLabel="37.5% weight"
+                notes={[analysis.evaluation.market_demand.geographic_note, analysis.evaluation.market_demand.trajectory_note]}
+                competitors={analysis.competition?.competitors}
+                t={t}
+              />
+              <DeepMetricCard
+                metricKey="monetization"
+                metric={analysis.evaluation.monetization}
+                name={analysis.evaluation.monetization.label || "Monetization Potential"}
+                weightLabel="31.25% weight"
+                competitors={analysis.competition?.competitors}
+                t={t}
+              />
+              <DeepMetricCard
+                metricKey="originality"
+                metric={analysis.evaluation.originality}
+                name="Originality"
+                weightLabel="31.25% weight"
+                competitors={analysis.competition?.competitors}
+                t={t}
+              />
 
-                // Build the LOW bullets list. Prefer thin_dimensions when present;
-                // fall back to all three prompts if missing or empty (defensive
-                // fallback for evaluations where Stage 2b didn't emit the array).
-                const lowBullets = (() => {
-                  if (!isLow) return [];
-                  const arr = Array.isArray(es.thin_dimensions) ? es.thin_dimensions : [];
-                  const filtered = arr.filter((d) => THIN_DIMENSION_PROMPTS[d]);
-                  if (filtered.length > 0) return filtered;
-                  // Fallback: render all three prompts
-                  return ["target_user", "use_case", "mechanism"];
-                })();
-
-                // Helper: render a single horizontal-bar metric row in the
-                // summary card. Used for MD/MO/OR (with getScoreColor) and TC
-                // (with getTcColor — passed in via colorFn argument).
-                const renderBarRow = ({ label, weightLabel, score, colorFn, subLabel = null }) => {
-                  const color = colorFn(score);
-                  const pct = (score / 10) * 100;
-                  return (
-                    <>
-                      <div style={{ fontSize: 13, color: t.sec, display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
-                        {subLabel ? (
-                          <span style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                            <span>{label}</span>
-                            <span style={{ fontSize: 10, color: t.mut }}>{subLabel}</span>
-                          </span>
-                        ) : (
-                          <>
-                            <span>{label}</span>
-                            {weightLabel && <span style={{ fontSize: 10, color: t.mut }}>{weightLabel}</span>}
-                          </>
-                        )}
-                      </div>
-                      <div style={{ position: "relative", height: 22, background: t.barBg, borderRadius: 4, overflow: "hidden" }}>
-                        <div style={{
-                          width: `${pct}%`,
-                          height: "100%",
-                          background: `linear-gradient(90deg, ${color}26, ${color})`,
-                          borderRadius: 4,
-                          transition: "width 1s ease-out",
-                        }} />
-                      </div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color, textAlign: "right", fontFamily: "monospace" }}>
-                        {score.toFixed(1)}
-                      </div>
-                    </>
-                  );
-                };
-
-                // Helper: render a pill-headed prose section in the prose card.
-                // Used for MD/MO/OR/TC (with appropriate colorFn).
-                const renderProseSection = ({ name, score, weight, explanation, notes, colorFn, subLabel = null }) => {
-                  const color = colorFn(score);
-                  return (
-                    <>
-                      <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
-                        <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0, color: t.text }}>{name}</h3>
-                        <span style={{
-                          padding: "2px 8px",
-                          background: `${color}1A`,
-                          borderRadius: 100,
-                          fontSize: 11,
-                          color,
-                          fontWeight: 600,
-                          fontFamily: "monospace",
-                        }}>
-                          {score.toFixed(1)}/10
-                        </span>
-                        {weight && <span style={{ fontSize: 11, color: t.mut }}>{weight}</span>}
-                        {subLabel && <span style={{ fontSize: 11, color: t.mut }}>{subLabel}</span>}
-                      </div>
-                      <p style={{ fontSize: 13, color: t.sec, lineHeight: 1.65, margin: 0 }}>
-                        {explanation}
-                      </p>
-                      {notes && notes.length > 0 && notes.map((note, i) => (
-                        <p key={i} style={{ fontSize: 12, color: t.mut, marginTop: 4, lineHeight: 1.4, fontStyle: "italic" }}>
-                          {note}
-                        </p>
-                      ))}
-                    </>
-                  );
-                };
-
-                const headerChipLabel = isLow ? "EARLY READ" : "OVERALL";
-
-                return (
-                  <>
-                    {/* ===== SUMMARY CARD ===== */}
-                    <Card style={{ padding: "28px 32px", marginBottom: 14 }} t={t}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 22 }}>
-                        <div style={{ fontSize: 11, color: t.mut, letterSpacing: "1.5px", fontWeight: 600 }}>EVALUATION</div>
-                        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                          <span style={{ fontSize: 11, color: t.mut, letterSpacing: "0.5px", fontWeight: 600 }}>{headerChipLabel}</span>
-                          <span style={{ fontSize: 20, fontWeight: 600, color: t.text }}>
-                            {ev.overall_score.toFixed(1)}
-                          </span>
-                          <span style={{ fontSize: 12, color: t.mut }}>/10</span>
-                          <button
-                            onClick={() => setShowScoreGuide(true)}
-                            style={{
-                              marginLeft: 6,
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
-                              color: t.mut,
-                              fontSize: 13,
-                              padding: "0 4px",
-                            }}
-                            aria-label="What does this score mean?"
-                            title="What does this score mean?"
-                            onMouseEnter={(e) => e.currentTarget.style.color = t.sec}
-                            onMouseLeave={(e) => e.currentTarget.style.color = t.mut}
-                          >
-                            ⓘ
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Bar grid: MD/MO/OR + internal divider + TC */}
-                      <div style={{ display: "grid", gridTemplateColumns: "130px 1fr 50px", gap: "14px 18px", alignItems: "center" }}>
-                        {renderBarRow({
-                          label: "Market Demand",
-                          weightLabel: "37.5%",
-                          score: ev.market_demand.score,
-                          colorFn: getScoreColor,
-                        })}
-                        {renderBarRow({
-                          label: ev.monetization.label || "Monetization",
-                          weightLabel: "31.25%",
-                          score: ev.monetization.score,
-                          colorFn: getScoreColor,
-                        })}
-                        {renderBarRow({
-                          label: "Originality",
-                          weightLabel: "31.25%",
-                          score: ev.originality.score,
-                          colorFn: getScoreColor,
-                        })}
-
-                        {/* Internal divider separating contributors from TC */}
-                        <div style={{ gridColumn: "1 / -1", height: "0.5px", background: t.divider, margin: "6px 0" }} />
-
-                        {renderBarRow({
-                          label: "Tech. Complexity",
-                          subLabel: "build difficulty",
-                          score: ev.technical_complexity.score,
-                          colorFn: getTcColor,
-                        })}
-                      </div>
-
-                      {/* MEDIUM evidence callout — uses evidence_strength.reason */}
-                      {isMedium && (
-                        <div style={{
-                          marginTop: 22,
-                          background: "rgba(59,130,246,0.06)",
-                          border: "1px solid rgba(59,130,246,0.22)",
-                          borderRadius: 8,
-                          padding: "16px 18px",
-                          display: "flex",
-                          alignItems: "flex-start",
-                          gap: 12,
-                        }}>
-                          <span style={{ color: "#3b82f6", fontSize: 14, flexShrink: 0, marginTop: 1 }}>→</span>
-                          <div>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: t.text, marginBottom: 4 }}>
-                              This score could be sharper
-                            </div>
-                            <p style={{ fontSize: 12, color: t.sec, lineHeight: 1.55, margin: 0 }}>
-                              {es.reason}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* LOW evidence callout — partnered framing with dynamic bullets */}
-                      {isLow && (
-                        <div style={{
-                          marginTop: 22,
-                          background: "rgba(59,130,246,0.06)",
-                          border: "1px solid rgba(59,130,246,0.22)",
-                          borderRadius: 8,
-                          padding: "18px 20px",
-                        }}>
-                          <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
-                            <span style={{ color: "#3b82f6", fontSize: 14, flexShrink: 0, marginTop: 1 }}>→</span>
-                            <div>
-                              <div style={{ fontSize: 13, fontWeight: 600, color: t.text, marginBottom: 4 }}>
-                                Want a real read on this idea?
-                              </div>
-                              <p style={{ fontSize: 12, color: t.sec, lineHeight: 1.55, margin: 0 }}>
-                                Right now this is an early read — your input describes the space but not the specific product. The scores above reflect category baselines, not your actual idea.
-                                {lowBullets.length === 1 ? " One thing would change that:" : `\u00a0${lowBullets.length === 2 ? "Two" : "These"} things would change that:`}
-                              </p>
-                            </div>
-                          </div>
-                          <div style={{ marginLeft: 26, display: "flex", flexDirection: "column", gap: 7 }}>
-                            {lowBullets.map((dim) => {
-                              const prompt = THIN_DIMENSION_PROMPTS[dim];
-                              return (
-                                <div key={dim} style={{ display: "flex", gap: 10, fontSize: 12, color: t.sec, lineHeight: 1.5 }}>
-                                  <span style={{ color: t.mut, flexShrink: 0 }}>·</span>
-                                  <span>
-                                    <strong style={{ color: t.text, fontWeight: 600 }}>{prompt.title}</strong> {prompt.body}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </Card>
-
-                    {/* ===== PER-METRIC CARDS (one card each, separated) ===== */}
-                    <Card style={{ padding: "26px 30px", marginBottom: 14 }} t={t}>
-                      <MetricProseDetail
-                        metricKey="market_demand"
-                        metric={ev.market_demand}
-                        name="Market Demand"
-                        weight="37.5% weight"
-                        notes={[ev.market_demand.geographic_note, ev.market_demand.trajectory_note]}
-                        competitors={analysis.competition?.competitors}
-                        t={t}
-                      />
-                    </Card>
-
-                    <Card style={{ padding: "26px 30px", marginBottom: 14 }} t={t}>
-                      <MetricProseDetail
-                        metricKey="monetization"
-                        metric={ev.monetization}
-                        name={ev.monetization.label || "Monetization Potential"}
-                        weight="31.25% weight"
-                        isGated={isGated}
-                        competitors={analysis.competition?.competitors}
-                        t={t}
-                      />
-                    </Card>
-
-                    <Card style={{ padding: "26px 30px", marginBottom: 14 }} t={t}>
-                      <MetricProseDetail
-                        metricKey="originality"
-                        metric={ev.originality}
-                        name="Originality"
-                        weight="31.25% weight"
-                        isGated={isGated}
-                        competitors={analysis.competition?.competitors}
-                        t={t}
-                      />
-                    </Card>
-
-                    {/* TC card — execution context, not in the overall */}
-                    <Card style={{ padding: "26px 30px", marginBottom: 16 }} t={t}>
-                      <div style={{ margin: "0 0 22px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                          <div style={{ height: "0.5px", flex: 1, background: t.divider }} />
-                          <div style={{ fontSize: 9, color: t.mut, letterSpacing: "1.2px", fontWeight: 600 }}>
-                            EXECUTION CONTEXT · NOT IN THE OVERALL
-                          </div>
-                          <div style={{ height: "0.5px", flex: 1, background: t.divider }} />
-                        </div>
-                      </div>
-
-                      {!isGated ? (
-                        renderProseSection({
-                          name: "Technical Complexity",
-                          score: ev.technical_complexity.score,
-                          subLabel: "build difficulty",
-                          explanation: [
-                            ev.technical_complexity.base_score_explanation,
-                            ev.technical_complexity.adjustment_explanation,
-                            ev.technical_complexity.explanation,
-                          ].filter(Boolean).join(" "),
-                          notes: ev.technical_complexity.incremental_note
-                            ? [ev.technical_complexity.incremental_note]
-                            : null,
-                          colorFn: getTcColor,
-                        })
-                      ) : (
-                        <>
-                          <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
-                            <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0, color: t.text }}>Technical Complexity</h3>
-                            <span style={{
-                              padding: "2px 8px",
-                              background: `${getTcColor(ev.technical_complexity.score)}1A`,
-                              borderRadius: 100,
-                              fontSize: 11,
-                              color: getTcColor(ev.technical_complexity.score),
-                              fontWeight: 600,
-                              fontFamily: "monospace",
-                            }}>
-                              {ev.technical_complexity.score.toFixed(1)}/10
-                            </span>
-                            <span style={{ fontSize: 11, color: t.mut }}>build difficulty</span>
-                          </div>
-                          <GateCTA text="Unlock full metric analysis — including your personalized technical assessment" t={t} />
-                        </>
-                      )}
-                    </Card>
-                  </>
-                );
-              })()}
+              {/* TC — the 4th card (execution context, not in the overall) */}
+              <DeepTcCard tc={analysis.evaluation.technical_complexity} t={t} />
 
               {/* Score Guide Popup */}
               {showScoreGuide && (
@@ -837,27 +365,7 @@ export default function EvaluationView({
                 </Card>
               )}
 
-              {/* Summary */}
-              <Card style={{ padding: 32 }} t={t}>
-                <h3 style={{ fontSize: 14, fontWeight: 700, color: t.text, margin: "0 0 12px 0" }}>Summary</h3>
-                {/* F4/A — RELIABILITY INVARIANT (honest degrade). When Stage 2c
-                    synthesis didn't generate, the summary is empty and the Key
-                    Risks section vanishes. Rather than show a blank box with no
-                    explanation (a paying user left guessing), say so plainly and
-                    reassure them their scores are complete. Triggers on the
-                    explicit flag OR a missing summary, so it stays honest even on
-                    older saved analyses persisted before the flag existed. */}
-                {(analysis.evaluation.synthesis_degraded ||
-                  !(typeof analysis.evaluation.summary === "string" && analysis.evaluation.summary.trim())) ? (
-                  <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.7, margin: 0 }}>
-                    We couldn't generate the written summary and key-risks breakdown for this run — one synthesis step didn't complete. Your scores above are complete and unaffected by this. Re-running the evaluation will usually produce the full write-up.
-                  </p>
-                ) : (
-                  <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.7, margin: 0 }}>
-                    {analysis.evaluation.summary}
-                  </p>
-                )}
-              </Card>
+              {/* Verdict moved to the top (PressureRead). No trailing summary card. */}
 
               {/* Disclaimer */}
               <p style={{ fontSize: 12, color: t.mut, textAlign: "center", margin: "16px 0 24px 0", lineHeight: 1.5 }}>
@@ -879,7 +387,7 @@ export default function EvaluationView({
                 cursor: "pointer",
               }}
             >
-              {viewingFromSaved ? "View Execution" : "Continue to Execution"}
+              {viewingFromSaved ? "View Evidence & Reality" : "Continue to Evidence & Reality"}
             </button>
           </PageContainer>
         </main>
@@ -896,7 +404,7 @@ export default function EvaluationView({
         <PageContainer wide>
           <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", padding: "4px 0 0" }}>
             <button onClick={() => setCurrentScreen("results1")} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
-              ← Back to analysis
+              ← Back to Deep Analysis
             </button>
           </div>
         </PageContainer>
@@ -917,132 +425,121 @@ export default function EvaluationView({
             {/* Free Preview Banner */}
             {isPreviewUser && <PreviewBanner t={t} evalsRemaining={evalsRemaining} />}
 
-            {/* Failure Risks */}
+            {/* Competition Landscape — verdict-first (How your idea compares at the
+                top), then the competitor list. The editorial Overlap/You-win/Exposed
+                copy needs a backend synthesis field; the Overlap/Exposed split here is
+                derived honestly from competitor_type. */}
+            {analysis.competition && analysis.competition.competitors && analysis.competition.competitors.length > 0 && (
+              <section style={{ marginBottom: 48 }}>
+                <SectionHeader icon="🌐" title="Competition Landscape" subtitle="Similar existing products in the market" t={t} />
+
+                {analysis.competition.data_source === "verified" ? (
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 18, padding: "6px 14px", borderRadius: 9999, background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
+                    <span style={{ fontSize: 12, color: "#34d399", fontWeight: 600 }}>Verified Sources</span>
+                    <span style={{ fontSize: 11, color: t.sec }}>via GitHub, Tavily, Exa &amp; Google</span>
+                  </div>
+                ) : (
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 18, padding: "6px 14px", borderRadius: 9999, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
+                    <span style={{ fontSize: 12, color: "#fbbf24", fontWeight: 600 }}>AI-Generated</span>
+                    <span style={{ fontSize: 11, color: t.sec }}>use as directional guide</span>
+                  </div>
+                )}
+
+                {(() => {
+                  const comps = analysis.competition.competitors;
+                  const accent = t.mode === "light" ? "#3b6fd0" : "#6b9cf0";
+                  const cp = analysis.evaluation && analysis.evaluation.competitive_position;
+                  const hasCp = cp && typeof cp === "object" && (cp.headline || cp.you_win || cp.overlap || cp.exposed);
+
+                  // Stage 2c tri-split (A13): the judged competitive position.
+                  if (hasCp) {
+                    const cells = [
+                      { key: "overlap", label: "Overlap", color: t.mut, text: cp.overlap },
+                      { key: "you_win", label: "You win", color: "#34d399", text: cp.you_win },
+                      { key: "exposed", label: "Exposed", color: "#fbbf24", text: cp.exposed },
+                    ].filter((c) => c.text);
+                    const cellIcon = (k) => k === "you_win"
+                      ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                      : k === "exposed"
+                      ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+                      : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="13" height="13" rx="2" /><rect x="8" y="8" width="13" height="13" rx="2" /></svg>;
+                    return (
+                      <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", marginBottom: 8, padding: "24px 28px 22px 30px", background: `linear-gradient(180deg, ${accent}14, ${accent}05)`, border: `1px solid ${accent}33` }}>
+                        <div style={{ position: "absolute", left: 0, top: 22, bottom: 22, width: 3, borderRadius: "0 3px 3px 0", background: accent, opacity: 0.6 }} />
+                        <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, marginBottom: 12 }}>How your idea compares</div>
+                        {cp.headline && <h3 style={{ fontSize: 21, fontWeight: 700, lineHeight: 1.34, letterSpacing: "-0.01em", color: t.text, margin: "0 0 20px", maxWidth: 880 }}>{cp.headline}</h3>}
+                        {cells.length > 0 && (
+                          <div style={{ display: "grid", gridTemplateColumns: `repeat(${cells.length}, 1fr)`, gap: "0 28px", paddingTop: 16, borderTop: `1px solid ${t.border}` }}>
+                            {cells.map((c) => (
+                              <div key={c.key}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8, color: c.color }}>
+                                  {cellIcon(c.key)}
+                                  <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em" }}>{c.label}</span>
+                                </div>
+                                <p style={{ fontSize: 13.5, color: t.sec, lineHeight: 1.55, margin: 0 }}>{c.text}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 18, fontSize: 12, color: t.mut }}>
+                          <span>↓</span><span>Drawn from the <strong style={{ color: t.sec, fontWeight: 600 }}>{comps.length} competitor{comps.length === 1 ? "" : "s"}</strong> below</span>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // Fallback (old saved evals / null competitive_position): descriptive split derived from competitor_type.
+                  const overlap = comps.filter((c) => c.competitor_type === "direct" || c.competitor_type === "adjacent").map((c) => c.name);
+                  const exposed = comps.filter((c) => c.competitor_type === "substitute" || c.competitor_type === "internal_build").map((c) => c.name);
+                  const diff = analysis.competition.differentiation;
+                  if (!diff && overlap.length === 0 && exposed.length === 0) return null;
+                  return (
+                    <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", marginBottom: 8, padding: "24px 28px 24px 30px", background: `linear-gradient(180deg, ${accent}14, ${accent}05)`, border: `1px solid ${accent}33` }}>
+                      <div style={{ position: "absolute", left: 0, top: 22, bottom: 22, width: 3, borderRadius: "0 3px 3px 0", background: accent, opacity: 0.6 }} />
+                      <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, marginBottom: 10 }}>How your idea compares</div>
+                      {diff && <p style={{ fontSize: 15, lineHeight: 1.66, color: t.text, margin: "0 0 18px", maxWidth: 820 }}>{diff}</p>}
+                      {(overlap.length > 0 || exposed.length > 0) && (
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px 28px", paddingTop: 4 }}>
+                          {overlap.length > 0 && (
+                            <div>
+                              <div style={{ fontSize: 11, fontWeight: 600, color: t.mut, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5 }}>Overlaps with</div>
+                              <p style={{ fontSize: 13, color: t.sec, lineHeight: 1.5, margin: 0 }}>{overlap.join(" \u00b7 ")}</p>
+                            </div>
+                          )}
+                          {exposed.length > 0 && (
+                            <div>
+                              <div style={{ fontSize: 11, fontWeight: 600, color: t.mut, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5 }}>Exposed to</div>
+                              <p style={{ fontSize: 13, color: t.sec, lineHeight: 1.5, margin: 0 }}>{exposed.join(" \u00b7 ")}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                <CompetitorGrid competitors={analysis.competition.competitors} t={t} />
+              </section>
+            )}
+
+            {/* Key Risks — 3-slot timeline (Market & category / Trust & adoption / Founder fit) */}
             {analysis.evaluation.failure_risks && analysis.evaluation.failure_risks.length > 0 && (
               <section style={{ marginBottom: 48 }}>
-                <SectionHeader icon="⚠️" title="Key Risks" subtitle="Potential challenges to be aware of before building" t={t} />
-                <Card style={{
-                  padding: 24,
-                  background: "rgba(239,68,68,0.04)",
-                  border: "1px solid rgba(239,68,68,0.15)",
-                }} t={t}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    {analysis.evaluation.failure_risks.map((risk, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                        <span style={{
-                          fontSize: 12,
-                          fontWeight: 700,
-                          color: t.riskNum,
-                          flexShrink: 0,
-                          marginTop: 1,
-                        }}>
-                          {i + 1}.
-                        </span>
-                        <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.6, margin: 0 }}>
-                          {typeof risk === "string" ? risk : (risk?.text || "")}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
+                <SectionHeader icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>} accent="#ef6f6c" title="Key Risks" subtitle="The threats that could constrain this, by where they come from" t={t} />
+                <KeyRisks risks={analysis.evaluation.failure_risks} t={t} />
               </section>
             )}
 
 
-            {/* Time & Difficulty + Main Bottleneck (V4S28 B3) */}
+            {/* Execution Reality — mockup ercard (binding constraint + read-out + 3-beat flow) */}
             <section style={{ marginBottom: 48 }}>
-              <SectionHeader icon="⏱" title="Execution Reality" subtitle="Calibrated to your background" t={t} />
-
-              <Card style={{ padding: 32 }} t={t}>
-                {(() => {
-                  const isSparse = analysis.estimates.main_bottleneck === "Specification";
-                  const mb = analysis.estimates.main_bottleneck;
-                  const mbColor = mb ? getMainBottleneckColor(mb, t.mode) : null;
-                  return (
-                    <div style={{ display: "flex", justifyContent: "space-around", alignItems: "center", marginBottom: 24, gap: 12 }}>
-                      <div style={{ textAlign: "center", flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: 12, color: t.sec, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, margin: "0 0 8px 0" }}>
-                          Estimated Duration
-                        </p>
-                        <p style={{ fontSize: isSparse ? 14 : 22, fontWeight: 700, color: t.text, margin: 0, lineHeight: 1.35 }}>
-                          {analysis.estimates.duration}
-                        </p>
-                      </div>
-                      <div style={{ width: 1, height: 64, background: t.divider, flexShrink: 0 }} />
-                      <div style={{ textAlign: "center", flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: 12, color: t.sec, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, margin: "0 0 8px 0" }}>
-                          Difficulty Level
-                        </p>
-                        <span style={{
-                          display: "inline-block",
-                          fontSize: 14,
-                          fontWeight: 700,
-                          padding: "6px 16px",
-                          borderRadius: 9999,
-                          ...(analysis.estimates.difficulty === "Very Hard"
-                            ? { background: "rgba(239,68,68,0.15)", color: "#f87171", border: "1px solid rgba(239,68,68,0.3)" }
-                            : analysis.estimates.difficulty === "Hard"
-                            ? { background: "rgba(245,158,11,0.15)", color: "#fbbf24", border: "1px solid rgba(245,158,11,0.3)" }
-                            : analysis.estimates.difficulty === "Moderate"
-                            ? { background: "rgba(59,130,246,0.15)", color: "#60a5fa", border: "1px solid rgba(59,130,246,0.3)" }
-                            : analysis.estimates.difficulty === "Easy"
-                            ? { background: "rgba(16,185,129,0.15)", color: "#34d399", border: "1px solid rgba(16,185,129,0.3)" }
-                            : { background: "rgba(160,160,160,0.10)", color: t.sec, border: `1px solid ${t.border}` }),
-                        }}>
-                          {analysis.estimates.difficulty || "—"}
-                        </span>
-                      </div>
-                      <div style={{ width: 1, height: 64, background: t.divider, flexShrink: 0 }} />
-                      <div style={{ textAlign: "center", flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: 12, color: t.sec, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, margin: "0 0 8px 0" }}>
-                          Main Bottleneck
-                        </p>
-                        {mb && mbColor ? (
-                          <span style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 6,
-                            fontSize: 14,
-                            fontWeight: 700,
-                            padding: "6px 14px",
-                            borderRadius: 9999,
-                            background: mbColor.bg,
-                            color: mbColor.color,
-                            border: `1px solid ${mbColor.border}`,
-                            whiteSpace: "nowrap",
-                          }}>
-                            <MainBottleneckIcon value={mb} size={14} />
-                            {mb}
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: 14, fontWeight: 700, color: t.sec }}>—</span>
-                        )}
-                        {!isGated && analysis.estimates.mb_ambiguity && (
-                          <MbCloseCallAffordance
-                            ambiguity={analysis.estimates.mb_ambiguity}
-                            primary={mb}
-                            t={t}
-                          />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })()}
-                {!isGated ? (
-                  <MetricProseBody
-                    metricKey="execution_reality"
-                    metric={analysis.estimates}
-                    t={t}
-                  />
-                ) : (
-                  <BlurGate isGated={isGated} text={analysis.estimates.explanation} t={t} />
-                )}
-              </Card>
-              {isGated && (
-                <div style={{ marginTop: 16 }}>
-                  <GateCTA text="Unlock full execution breakdown" t={t} />
-                </div>
-              )}
+              <SectionHeader icon="⏱" title="Execution Reality" subtitle="The one wall to clear first — and what it implies, calibrated to your background" t={t} />
+              <ExecutionReality
+                estimates={analysis.estimates}
+                mbColorFn={getMainBottleneckColor}
+                MbIcon={MainBottleneckIcon}
+                t={t}
+              />
             </section>
 
             {/* Execution Brief CTA (Screen 3 / step-4 handoff).

@@ -31,6 +31,7 @@
 
 import React from "react";
 import { getScoreColor } from "./components";
+import { metricColor } from "./DeepResultParts";
 import SourcesStrip from "./SourcesStrip";
 
 // ---- MD demand-type ladder: archetype name -> { tier (1..7), label } ----------
@@ -230,7 +231,11 @@ export default function MetricProseDetail({ metricKey, metric, name, weight, not
   const shownScore = metricKey === "monetization" && typeof metric.display_score === "number"
     ? metric.display_score
     : coarse;
-  const color = getScoreColor(shownScore);
+  // Fork 5 = B: colour encodes metric IDENTITY (MD green / MO blue / OR purple),
+  // not the score band. The score is carried by the number in the pill, never
+  // re-encoded as red. metricColor falls back to a neutral token for any key
+  // without an identity colour, so execution_reality / unknown keys stay calm.
+  const color = metricColor(metricKey, t) || getScoreColor(shownScore);
 
   const header = (
     <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 18, flexWrap: "wrap" }}>
