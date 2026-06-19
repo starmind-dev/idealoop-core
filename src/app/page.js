@@ -374,6 +374,9 @@ export default function Home() {
     setProfile({ coding: "", ai: "", education: "" });
     setProfileBg({ role: "", build: "", reach: "" });
     localStorage.removeItem("iv_profile");
+    sessionStorage.removeItem("iv_nav");
+    setLineageMode(false);
+    setLineageTargetId(null);
   };
 
   // Load saved profile + eval count after mount (avoids hydration mismatch). The screen is
@@ -393,43 +396,188 @@ export default function Home() {
   const [exploreAnalysis, setExploreAnalysis] = useState(null); // ll2_explore_v1 payload (Explore mode)
 
   // Persist a small navigation snapshot so a refresh returns the user to where they were
-  // (deep view, hub, …) instead of the Overview landing. sessionStorage survives refresh
-  // but resets on a fresh tab, so a brand-new session still lands on Overview. Gated on
+  // (deep view, lineage tree, hub, …) instead of the Overview landing. sessionStorage survives
+  // refresh but resets on a fresh tab, so a brand-new session still lands on Overview. Gated on
   // didRestoreRef so the initial default screen can't overwrite the snapshot before it's read.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (typeof window === "undefined" || !didRestoreRef.current) return;
     try {
+      // Compare is rebuilt from the two selections (ideaId + evaluationId), so persist those;
+      // fall back to the bare ids from compareData if the selections were cleared.
+      let compareSel = null;
+      if (compareMode && compareData) {
+        if (compareSelected && compareSelected.length === 2) compareSel = compareSelected;
+        else if (compareData.ideaA && compareData.ideaB)
+          compareSel = [{ ideaId: compareData.ideaA.id }, { ideaId: compareData.ideaB.id }];
+      }
       sessionStorage.setItem("iv_nav", JSON.stringify({
         screen: currentScreen, dashView, inputMode,
-        ideaId: currentIdeaId, evalId: currentEvaluationId,
+        ideaId: currentIdeaId || savedIdeaId || savedExploreIdeaId || (roughRoomIdea && roughRoomIdea.id) || null,
+        evalId: currentEvaluationId,
+        lineageMode, lineageTargetId,
+        compareMode: !!(compareMode && compareData), compareSel,
       }));
     } catch (e) {}
-  }, [currentScreen, dashView, inputMode, currentIdeaId, currentEvaluationId]);
+  }, [currentScreen, dashView, inputMode, currentIdeaId, savedIdeaId, savedExploreIdeaId, roughRoomIdea, currentEvaluationId, lineageMode, lineageTargetId, compareMode, compareData, compareSelected]);
 
-  // Restore that snapshot once, after auth resolves (idea views need the user). An explicit
-  // ?view=overview / ?hub=new deep-link wins over the snapshot.
+  // A freshly-evaluated result lives only in memory until Save creates its row. Stash the
+  // finished result so a refresh before saving rehydrates it instead of losing it. The moment
+  // it gets a saved id (or the result is cleared / you leave the result screen) the stash is
+  // dropped, and the id-based restore above takes over as the canonical saved copy.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (typeof window === "undefined" || !didRestoreRef.current) return;
+    try {
+      const savedDeep = savedIdeaId || currentIdeaId;
+      if (analysis && !savedDeep && (currentScreen === "results1" || currentScreen === "results2" || currentScreen === "brief")) {
+        sessionStorage.setItem("iv_fresh_result", JSON.stringify({ kind: "deep", screen: currentScreen, analysis, idea, brief: briefData || null }));
+      } else if (exploreAnalysis && !savedExploreIdeaId && currentScreen === "explore") {
+        sessionStorage.setItem("iv_fresh_result", JSON.stringify({ kind: "explore", explore: exploreAnalysis, idea }));
+      } else {
+        sessionStorage.removeItem("iv_fresh_result");
+      }
+    } catch (e) {}
+  }, [analysis, exploreAnalysis, briefData, idea, savedIdeaId, currentIdeaId, savedExploreIdeaId, currentScreen]);
+
+  // Draft autosave for the idea input — what you type survives a refresh (or coming back
+  // later) instead of vanishing into an empty box. Lives on the input screen only; cleared
+  // on submit (in handleAnalyze) and the moment the box is emptied. localStorage so a typed-
+  // but-unsent idea is still there in a new session, the way a mail draft would be.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (typeof window === "undefined" || !didRestoreRef.current) return;
+    if (currentScreen !== "input") return;
+    try {
+      if (idea.trim()) localStorage.setItem("iv_draft_input", idea);
+      else localStorage.removeItem("iv_draft_input");
+    } catch (e) {}
+  }, [idea, currentScreen]);
+
+  // When the input screen opens empty, repopulate the saved draft (covers both a refresh
+  // landing on input and simply returning to the box later).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (currentScreen !== "input" || idea.trim()) return;
+    try {
+      const d = localStorage.getItem("iv_draft_input");
+      if (d) setIdea(d);
+    } catch (e) {}
+  }, [currentScreen]);
+
+  // Draft autosave for the re-eval edits (target / problem / core), keyed per idea so each
+  // idea keeps its own in-progress changes. Cleared on submit (in handleReEvaluate).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (typeof window === "undefined" || !didRestoreRef.current) return;
+    if (currentScreen !== "reeval" || !reEvalMode) return;
+    const id = currentIdeaId || savedIdeaId;
+    if (!id) return;
+    try {
+      const any = reEvalTargetUser.trim() || reEvalProblem.trim() || reEvalCoreIdea.trim();
+      if (any) localStorage.setItem(`iv_draft_reeval_${id}`, JSON.stringify({ t: reEvalTargetUser, p: reEvalProblem, c: reEvalCoreIdea }));
+      else localStorage.removeItem(`iv_draft_reeval_${id}`);
+    } catch (e) {}
+  }, [reEvalTargetUser, reEvalProblem, reEvalCoreIdea, currentScreen, reEvalMode, currentIdeaId, savedIdeaId]);
+
+  // When re-eval opens for an idea with empty fields, repopulate that idea's saved draft.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (currentScreen !== "reeval" || !reEvalMode) return;
+    if (reEvalTargetUser.trim() || reEvalProblem.trim() || reEvalCoreIdea.trim()) return;
+    const id = currentIdeaId || savedIdeaId;
+    if (!id) return;
+    try {
+      const raw = localStorage.getItem(`iv_draft_reeval_${id}`);
+      if (raw) {
+        const d = JSON.parse(raw);
+        if (d.t) setReEvalTargetUser(d.t);
+        if (d.p) setReEvalProblem(d.p);
+        if (d.c) setReEvalCoreIdea(d.c);
+      }
+    } catch (e) {}
+  }, [currentScreen, reEvalMode]);
+
+  // Restore that snapshot once auth resolves. Idea views and the lineage tree need the
+  // signed-in user, so if the user isn't resolved yet we wait for the next run rather than
+  // falling back to Overview. An explicit ?view=overview / ?hub=new deep-link wins.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (authLoading || didRestoreRef.current) return;
-    didRestoreRef.current = true;
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("hub") === "new" || params.get("view") === "overview") return;
     let nav = null;
     try { nav = JSON.parse(sessionStorage.getItem("iv_nav") || "null"); } catch (e) {}
+
+    // Every screen that reopens a saved idea routes through loadSavedIdea, which self-routes by
+    // the idea's own state (deep -> results1, explore -> explore, rough -> roughroom). Deep
+    // sub-screens that survive a reload (results2, brief) are restored on top after the load.
+    // delta / reeval depend on transient context and gracefully fall back to the idea's main view.
+    const IDEA_SCREENS = ["results1", "results2", "explore", "roughroom", "brief", "delta", "reeval"];
+    const isIdeaView = nav && nav.ideaId && IDEA_SCREENS.includes(nav.screen);
+    const isLineage = nav && nav.lineageMode && nav.lineageTargetId;
+    const isCompare = nav && nav.compareMode && nav.compareSel && nav.compareSel.length === 2;
+
+    // Anything that hits the server (idea / lineage / compare) waits for the signed-in user
+    // rather than falling back to Overview before auth resolves.
+    if ((isIdeaView || isLineage || isCompare) && !user) return;
+    didRestoreRef.current = true;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("hub") === "new" || params.get("view") === "overview") return;
     if (!nav || !nav.screen) return; // no snapshot → stay on the Overview landing
-    if (nav.ideaId && nav.screen !== "dashboard" && nav.screen !== "input" && nav.screen !== "profile") {
-      loadSavedIdea(nav.ideaId, nav.evalId || undefined); // self-routes rough / explore / deep
-    } else if (nav.screen === "dashboard") {
+
+    // Fresh, unsaved result still held in the browser stash — rehydrate straight from memory
+    // (no server, no id yet). Only when there's no saved id for this screen; a saved idea
+    // always prefers the id-based reload below.
+    if (!nav.ideaId) {
+      let fresh = null;
+      try { fresh = JSON.parse(sessionStorage.getItem("iv_fresh_result") || "null"); } catch (e) {}
+      if (fresh && fresh.kind === "deep" && fresh.analysis && (nav.screen === "results1" || nav.screen === "results2" || nav.screen === "brief")) {
+        setAnalysis(fresh.analysis);
+        setIdea(fresh.idea || "");
+        if (fresh.brief) setBriefData(fresh.brief);
+        setCurrentScreen(nav.screen);
+        return;
+      }
+      if (fresh && fresh.kind === "explore" && fresh.explore && nav.screen === "explore") {
+        setExploreAnalysis(fresh.explore);
+        setIdea(fresh.idea || "");
+        setCurrentScreen("explore");
+        return;
+      }
+    }
+
+    if (isCompare) {
+      setCurrentScreen("dashboard");
+      setDashView(nav.dashView || "hub");
+      startComparison(nav.compareSel); // re-fetches both ideas and rebuilds the compare view
+      return;
+    }
+    if (isLineage) {
+      setCurrentScreen("dashboard");
+      setDashView(nav.dashView || "hub");
+      setLineageTargetId(nav.lineageTargetId);
+      setLineageMode(true);
+      return;
+    }
+    if (isIdeaView) {
+      const isExploreOrRough = nav.screen === "explore" || nav.screen === "roughroom";
+      const evalId = isExploreOrRough ? undefined : (nav.evalId || undefined);
+      Promise.resolve(loadSavedIdea(nav.ideaId, evalId)).then(() => {
+        if (nav.screen === "results2" || nav.screen === "brief") setCurrentScreen(nav.screen);
+        else if (nav.screen === "delta") { setCurrentScreen("delta"); fetchDelta(nav.ideaId); }
+      });
+      return;
+    }
+    if (nav.screen === "dashboard") {
       setCurrentScreen("dashboard");
       if (nav.dashView) setDashView(nav.dashView);
-    } else if (nav.screen === "input") {
+      return;
+    }
+    if (nav.screen === "input") {
       if (nav.inputMode) setInputMode(nav.inputMode);
       setCurrentScreen("input");
     }
     // profile / unknown → stay on Overview
-  }, [authLoading]);
+  }, [authLoading, user]);
 
   // First Deep entry: if the profile isn't set, route through the profile screen first
   // (its Continue returns to the Deep input). One guard covers every Deep entry point.
@@ -731,6 +879,7 @@ export default function Home() {
         resetExecutionBrief();
         setCurrentScreen("results1");
       }
+      try { localStorage.removeItem("iv_draft_input"); } catch (e) {}
     } catch (err) {
       setError(err.message);
     } finally {
@@ -850,6 +999,7 @@ export default function Home() {
       setReEvalTargetUser("");
       setReEvalProblem("");
       setReEvalCoreIdea("");
+      try { if (currentIdeaId) localStorage.removeItem(`iv_draft_reeval_${currentIdeaId}`); } catch (e) {}
       setCurrentScreen("results1");
     } catch (err) {
       setError(err.message);
