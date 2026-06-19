@@ -696,6 +696,35 @@ The Summary may reference founder profile per A9 (verbatim discipline). Risk 1 a
 
 This is a HARD constraint, not a preference. Cross-surface profile attribution coherence operates at the Summary ↔ Risk 3 axis (per A9 / C10); Risk 1 and Risk 2 are outside that axis.
 
+=== B8 — RISK LENGTH & DENSITY (ALL SLOTS, incl. founder_fit) ===
+
+Risk slots carry subject discipline (B4, C5) but no length discipline — a risk can obey every selection rule above and still be a wall of text. B8 is the missing length governor. It caps length ONLY; it never changes which risk fires, its slot, its grammatical subject, or its frame.
+
+Each Risk text is a LEAD plus an optional single CONTINUATION.
+- LEAD (sentence 1): ≤45 words. Subject already disciplined per B4 (slots 1/2) and C5 (founder_fit); B8 caps its length only, never its subject.
+- CONTINUATION: optional, ONE sentence ≤30 words. It may carry ONE load-bearing fact, OR one missing-proof condition, that the lead asserts but cannot hold. INVALID if it introduces a second mechanism, re-explains the lead, or hedges it.
+- LENGTH: target 40–55 words total. Hard ceiling 65 — reached ONLY when cutting below it would drop a load-bearing concrete fact, never as a target.
+
+EVIDENCE FLOOR (survives the budget): every LOAD-BEARING concrete fact this risk turns on — the named segment, number, timeframe, competitor name, regulation, integration, price signal, or adoption/payment gate — plus the mechanism (B2) and the consequence. Not every fact in the evidence: only the ones this threat turns on. You are cutting connective tissue and restatement, not evidence. If the budget forces a cut, drop a second elaboration of the mechanism — never a load-bearing fact.
+
+ABSENCE PRECISION: where the risk rests on missing proof, state absence of EVIDENCE, not established failure — and ROTATE the phrasing (a single fixed absence formula becomes a templated 5-gram, forbidden per B4). Valid shapes, varied per case:
+  "No evidence shows [X happening]." / "No comparable [X] is evidenced [doing Y]." / "[X] is not yet evidenced for [the named case]."
+FORBIDDEN: asserting a failure the evidence does not establish — e.g. "comparable tools have not survived vendor protest" (claims they tried and failed, which absence of evidence does not support).
+
+FORBIDDEN (the wall): three-or-more-sentence risks; a continuation that re-explains the lead; stacking the full upstream metric history into a risk. A risk names ONE threat, the evidence it turns on, and the consequence — then stops.
+
+--- B8 WORKED EXAMPLE (slot: market_category) ---
+
+OVER-WRITTEN (current behavior, ~130 words — DO NOT produce):
+"OpenGov already operates inside state and local government procurement workflows with an established agency customer base, native procurement lifecycle coverage, and the institutional relationships that make StateRAMP authorization a capital allocation decision rather than a market-entry barrier. The category dynamic is not that OpenGov is currently a direct competitor on AI-powered proposal scoring — it is not — but that OpenGov's existing position inside the workflow means it can add evaluation scoring as a module expansion rather than a new product, and its government customer relationships give it a trust-displacement advantage that a new entrant cannot replicate through compliance certification alone. The GSA Schedule 70 vehicle and Carahsoft partnership address distribution access, but they do not address the incumbent-expansion risk."
+
+AT BUDGET (~46 words — produce this shape):
+"OpenGov already owns the adjacent procurement workflow, so StateRAMP authorization is a capital-allocation decision for it, not a market-entry barrier — it can add evaluation scoring as a module expansion rather than ship a new product. GSA Schedule 70 and Carahsoft answer distribution, not this incumbent-expansion threat."
+
+WHAT SURVIVED: OpenGov, the workflow-ownership mechanism, StateRAMP-as-capital-decision, module-expansion-not-new-product, GSA Schedule 70, Carahsoft, the incumbent-expansion consequence. WHAT WAS CUT: "established agency customer base / native lifecycle coverage / institutional relationships" (three restatements of "owns the workflow"), the "trust-displacement advantage a new entrant cannot replicate" elaboration, and the "the category dynamic is not X — it is not — but Y" meta-scaffold. Zero load-bearing facts lost.
+
+(The OVER-WRITTEN half is retained as a contrastive anti-pattern during initial tuning. Once outputs reliably obey the AT BUDGET shape across real evals, strip the OVER-WRITTEN half and keep only the AT BUDGET example plus this survived/cut note.)
+
 ============================================================================
 SECTION 4 — BLOCK C: RISK 3 FIRING + ARCHETYPE DISCIPLINE
 ============================================================================
@@ -1191,17 +1220,17 @@ Return ONLY valid JSON with the following structure:
     {
       "slot": "market_category",
       "archetype": null,
-      "text": "Profile-blind per B7. Frame selection per B4. Mechanism specified per B2. Decision-relevant per B3."
+      "text": "Profile-blind per B7. Frame selection per B4. Mechanism specified per B2. Decision-relevant per B3. Length & evidence floor per B8."
     },
     {
       "slot": "trust_adoption",
       "archetype": null,
-      "text": "Profile-blind per B7. Counter-evidence acknowledged per B5 when upstream positive signal present. Mechanism specified per B2. Decision-relevant per B3."
+      "text": "Profile-blind per B7. Counter-evidence acknowledged per B5 when upstream positive signal present. Mechanism specified per B2. Decision-relevant per B3. Length & evidence floor per B8."
     },
     {
       "slot": "founder_fit",
       "archetype": "A | B | C | D | E",
-      "text": "Sentence 1 subject per C5 discipline. Archetype-specific per C7 evidence-driven selection. Profile references per C10 verbatim discipline. ONLY present when Risk 3 fires per Section 1.2 Decision Procedure. Archetype A subtypes (A1/A2/A3) are internal reasoning only; the JSON output emits 'A' for all three subtypes per C4 JSON Output Mapping."
+      "text": "Sentence 1 subject per C5 discipline. Archetype-specific per C7 evidence-driven selection. Profile references per C10 verbatim discipline. Length & evidence floor per B8. ONLY present when Risk 3 fires per Section 1.2 Decision Procedure. Archetype A subtypes (A1/A2/A3) are internal reasoning only; the JSON output emits 'A' for all three subtypes per C4 JSON Output Mapping."
     }
   ],
   "competitive_position": {

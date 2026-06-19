@@ -777,7 +777,20 @@ After committing to all predicates and computing the score, generate four prose 
 - binding_constraint_explanation: what primary exposure constrains OR position
 - direction: why the result sits where it does within the band, then what evidence threshold would move OR higher (current-position + next-evidence)
 
-Each field is normally one sentence but may contain two short sentences when rich evidence would otherwise force overloaded clauses. Direction now carries a current-position reason and a next-evidence threshold and may run to two short sentences, max ~70 words.
+Field budgets (target, then hard ceiling). The ceiling is reached ONLY when cutting below it would drop a load-bearing fact — never as a target:
+- differentiation_basis_diagnosis:   target 25-35 words, hard ceiling 40
+- defensibility_diagnosis:           target 25-35 words, hard ceiling 40
+    EXCEPT A6 self-reinforcing: target 50-58 words, hard ceiling 60, ONLY when all four integrated evidence requirements are present and named. This is evidence, not padding — it is not a license for 60+ word defensibility on lower archetypes.
+- binding_constraint_explanation:    target 30-40 words, hard ceiling 45
+- direction:                         target 40-55 words, hard ceiling 70
+    (two-part + the defensibility hierarchy — the heaviest field. 70 is reached only when the hierarchy and next-evidence threshold genuinely require it; it is never a target.)
+
+EVIDENCE FLOOR IS PER-FIELD. Each field protects only its own load-bearing atoms:
+- differentiation protects: the named committed component(s) or their absence, and what is actually different in case terms.
+- defensibility protects: the defensibility assessment in the archetype's register, ATTACHED TO THE CASE EVIDENCE. The register word (articulated / emerging / hard-to-copy / sustained / compounding) is an evidence-backed conclusion, NEVER a bare label — "the basis is emerging: the workflow is specific but no usage loop yet shows it getting harder to copy," never "this is an emerging defensibility source." It may refer to the component with ONE compact anchor phrase ("that dataset," "the registration framework") but must NOT re-describe it — differentiation already did.
+- binding_constraint protects: the named primary exposure, the threat actor / substitute / incumbent when evidenced, AND the mechanism by which it constrains the position — who/what threatens, why it matters, how it holds the case down. Not just the exposure name.
+- direction protects: the fit/depth position and the next-evidence threshold.
+You cut connective tissue and restatement, never a load-bearing fact. Most fields land under target; a field that needs its ceiling is carrying evidence, not air.
 
 --- PROSE GENERATION SEQUENCE ---
 
@@ -819,11 +832,13 @@ NO TEMPLATING: case-specific vocabulary required. Test: if the committed compone
 
 NO CROSS-METRIC FRAMING: OR prose stays in OR's lane. No comparing to MD/MO/Stage 2c/Stage 3 territory.
 
+DIAGNOSIS HANDOFF: differentiation_basis_diagnosis names WHAT the committed component / differentiation is, in case terms. defensibility_diagnosis ASSESSES whether that basis holds (articulated / emerging / hard-to-copy / sustained / compounding per the register rules) — referring to the component with one compact anchor phrase, never re-narrating it. Field 1 says what it is; field 2 says whether it holds, attached to evidence. A defensibility_diagnosis that re-describes the component from scratch has repeated field 1 — assess, don't re-describe. The incumbent / rival / substitute threat belongs in binding_constraint_explanation, not in the defensibility assessment: defensibility judges the case's own source; binding names the exposure and its mechanism.
+
 NO FOUNDER-COACHING: OR describes what the evidence shows. Does not advise founder what to do. "You should accumulate more data" is coaching (banned). "The score would move higher if the evidence included longitudinal capability improvement tied to data accumulation" is direction (required form).
 
 NO VAGUE HEDGING: do not use "it seems," "might suggest," "potentially indicates," "perhaps," "may indicate," "could possibly," "appears to" as softeners. Express uncertainty as evidence absence, not vague hedging — the DIRECT ABSENCE LANGUAGE below is the correct form.
 
-DIRECT ABSENCE LANGUAGE REQUIRED where evidence is absent: "the evidence does not yet show," "the current evidence stops short of," "this is not yet evidenced for the named case."
+ABSENCE PRECISION where evidence is absent: state absence of EVIDENCE, not established failure, and ROTATE the phrasing — a single fixed absence formula becomes a templated phrase (forbidden per NO TEMPLATING). Drop the bureaucratic wrapper ("the current evidence stops short of showing that..."); keep the clean caution. Valid shapes, varied per case: "No evidence yet shows [X]." / "[X] is not yet evidenced for the named case." / "No [component] is evidenced as having [become harder to copy through Y]." PARTIAL-EVIDENCE IS NOT ABSENCE: when weak-but-positive evidence exists, calibrate it ("the component is operational but not yet shown to compound") — do not flatten it to "no evidence shows compounding."
 
 NO MARKETING LANGUAGE: banned: "promising," "exciting," "compelling," "strong moat potential," "robust defensibility," "powerful network effects."
 
@@ -831,7 +846,7 @@ NO NOVELTY-AS-DEFENSIBILITY: prose evaluates DEFENSIBILITY through committed com
 
 NO FLYWHEEL LANGUAGE OUTSIDE EVIDENCED CASES: "flywheel," "compounding," "self-reinforcing," "data network effects" appear ONLY when ADVANTAGE_COMPOUNDING ≥ sustained_compounding AND the prose anchors the language to evidenced mechanism. A5-β static-regulatory cases (ADVANTAGE_COMPOUNDING = static_defensibility) explicitly avoid this language even at A5 band.
 
-ONE LOAD-BEARING CLAIM PER CLAUSE: no stacking more than three evidence elements in a single sentence. Split into two clauses or prioritize highest-leverage evidence when rich.
+ONE LOAD-BEARING CLAIM PER CLAUSE: one load-bearing claim per clause, and at most two evidence atoms may support it. A third atom goes in a second clause, the full read, or the sources strip — never crammed into the visible field. (Exception: a direction next-evidence threshold may name 2-3 specific thresholds for the committed or missing component — that is the targeted anchor, not evidence-cramming.)
 
 --- DIRECTION ANCHOR HIERARCHY ---
 
@@ -920,10 +935,10 @@ Output:
 {
   "originality": {
     "score": 1.0,
-    "differentiation_basis_diagnosis": "The case is positioned around better prompts and context-awareness for knowledge worker tasks, with the product's distinguishing claim being prompt design rather than any structural moat.",
-    "defensibility_diagnosis": "No structural defensibility source is evidenced — prompt design, model selection, and product execution can be replicated by competitors with standard development resources.",
-    "binding_constraint_explanation": "The primary constraint is that knowledge workers can accomplish the same job through ChatGPT, Claude, or Copilot directly, with no segment-specific friction that the case is positioned to overcome.",
-    "direction": "The evidence describes prompt design and context awareness as the differentiation but names no defensibility source produced by the product's own operation, so it stays at the floor. It would move higher only with evidence of a concrete hard-to-copy source arising from how this specific product is actually used, not from the prompt design itself.",
+    "differentiation_basis_diagnosis": "The case is positioned around better prompts and context-awareness for knowledge-worker tasks — the distinguishing claim is prompt design, not a structural moat.",
+    "defensibility_diagnosis": "No structural defensibility source is evidenced — prompt design and product execution are replicable by competitors with standard development resources.",
+    "binding_constraint_explanation": "The primary constraint is that knowledge workers can do the same job through ChatGPT, Claude, or Copilot directly, with no segment-specific friction the case is positioned to overcome.",
+    "direction": "No defensibility source is produced by the product's own operation — only the prompt-design positioning — so it stays at the floor. It would move higher only with a concrete hard-to-copy source arising from how this specific product is actually used, not from the prompt design itself.",
     "_internal": {
       "schema_version": "stage_or_v5",
       "originality_archetype": "no_defensibility_component",
@@ -973,10 +988,10 @@ Output:
 {
   "originality": {
     "score": 3.6,
-    "differentiation_basis_diagnosis": "The case names a planned dataset of B2B sales calls as the differentiation source, with the founder articulating data accumulation through customer call recording as the moat mechanism.",
-    "defensibility_diagnosis": "The planned dataset is articulated with concrete target specifics but is not yet operational — no customers are collecting data, annotation methodology is not specified, and Gong and Chorus already maintain multi-year datasets in the exact segment with documented sustained accumulation.",
-    "binding_constraint_explanation": "The primary constraint is that established competitors in the segment have multi-year head starts on the same data accumulation, making the planned dataset's defensibility advantage structurally hard to establish against incumbents with comparable accumulation mechanisms already operating.",
-    "direction": "What holds this mid-band is that the dataset, though named with concrete target specifics, is still planned rather than operational — articulated depth without live accumulation. It would move higher with operational data collection at named customer accounts, a defined annotation methodology, and measurable accumulation milestones.",
+    "differentiation_basis_diagnosis": "The case names a planned dataset of B2B sales calls as the differentiation source — the founder articulates data accumulation through customer call recording as the moat mechanism.",
+    "defensibility_diagnosis": "That dataset is articulated with concrete target specifics but is not yet operational — no customers are collecting data and no annotation methodology is specified.",
+    "binding_constraint_explanation": "The primary constraint is that Gong and Chorus already maintain multi-year datasets in the exact segment, giving incumbents a head start that makes the planned dataset's advantage structurally hard to establish.",
+    "direction": "What holds this mid-band is articulated depth without live accumulation — the dataset is named with concrete specifics but still planned, not operational. It would move higher with operational data collection at named accounts, a defined annotation methodology, and measurable accumulation milestones.",
     "_internal": {
       "schema_version": "stage_or_v5",
       "originality_archetype": "articulated_defensibility",
@@ -1026,10 +1041,10 @@ Output:
 {
   "originality": {
     "score": 6.0,
-    "differentiation_basis_diagnosis": "The case is differentiated by an operational dataset of 1.2 million reviewed commercial contracts accumulated across 320 paying solo-lawyer customers over 18 months, with annotation methodology tied to measurable accuracy improvement quarter-over-quarter.",
-    "defensibility_diagnosis": "The dataset is operationally established and presents a hard-to-copy source — a competitor would need to accumulate comparable customer volume and contract throughput across a similar period with comparable annotation methodology to reach equivalent capability.",
-    "binding_constraint_explanation": "The primary constraint is that solo lawyers can review standard commercial contracts through ChatGPT or Claude directly, with the dataset's accuracy advantage partially offsetting but not eliminating this substitution option.",
-    "direction": "The dataset is operationally established at real volume across paying customers, but its advantage is not yet shown to compound over time — established depth short of sustained, a middle read. It would move higher with evidence that accumulation widens the capability lead over successive periods, such as longitudinal accuracy gains tied to the growing contract corpus.",
+    "differentiation_basis_diagnosis": "The case is differentiated by an operational dataset of 1.2 million reviewed commercial contracts across 320 paying solo-lawyer customers over 18 months, with annotation methodology tied to quarter-over-quarter accuracy improvement.",
+    "defensibility_diagnosis": "The dataset is operationally established and presents a hard-to-copy source — a competitor would need comparable customer volume, contract throughput, and annotation methodology across a similar period to reach equivalent capability.",
+    "binding_constraint_explanation": "The primary constraint is that solo lawyers can review standard commercial contracts through ChatGPT or Claude directly — the dataset's accuracy advantage partially offsets but does not eliminate this substitution.",
+    "direction": "The dataset is operationally established at real volume across paying customers, but its advantage is not yet shown to compound — established depth short of sustained, a middle read. It would move higher with evidence that accumulation widens the capability lead over successive periods, such as longitudinal accuracy gains tied to the growing contract corpus.",
     "_internal": {
       "schema_version": "stage_or_v5",
       "originality_archetype": "established_defensibility",
@@ -1079,10 +1094,10 @@ Output:
 {
   "originality": {
     "score": 7.0,
-    "differentiation_basis_diagnosis": "The case is differentiated by sustained federal DEA registration plus state-level controlled substance registrations covering 38 states, operated continuously over 4 years to enable Schedule II telehealth prescribing for adults seeking ADHD treatment.",
-    "defensibility_diagnosis": "The registration framework provides a hard-to-copy source sustained by ongoing operational compliance — competitors face Ryan Haight Act requirements plus 12-18 month per-state registration acquisition cycles, and prior named entrants (Done, Cerebral) exited Schedule II prescribing after regulatory enforcement actions.",
-    "binding_constraint_explanation": "The primary constraint is the regulatory regime governing controlled substance telehealth — the registration's defensibility persists while the federal and state rules sustain their current structure, with no named imminent regulatory change.",
-    "direction": "The multi-state registration is sustained operationally over years, giving it durable depth, but it is static rather than strengthened by use — a durable position with a natural top. It would move higher only with a separate compounding mechanism beyond the registration, such as patient-base outcome data that improves the clinical model over time.",
+    "differentiation_basis_diagnosis": "The case is differentiated by sustained federal DEA registration plus state controlled-substance registrations covering 38 states, operated continuously over 4 years to enable Schedule II telehealth prescribing for adults with ADHD.",
+    "defensibility_diagnosis": "The registration framework is a hard-to-copy source sustained by ongoing operational compliance — competitors face Ryan Haight Act requirements plus 12-18 month per-state registration cycles, and prior entrants Done and Cerebral exited Schedule II prescribing after regulatory enforcement.",
+    "binding_constraint_explanation": "The primary constraint is the regulatory regime governing controlled-substance telehealth — the registration's defensibility persists while federal and state rules hold their current structure, with no named imminent change.",
+    "direction": "The multi-state registration is sustained operationally over years, giving durable depth, but it is static rather than strengthened by use — a durable position with a natural top. It would move higher only with a separate compounding mechanism beyond the registration, such as patient-outcome data that improves the clinical model over time.",
     "_internal": {
       "schema_version": "stage_or_v5",
       "originality_archetype": "sustained_defensibility",
@@ -1134,10 +1149,10 @@ Output:
 {
   "originality": {
     "score": 4.9,
-    "differentiation_basis_diagnosis": "The case is differentiated by cross-customer aggregation of B2B buyer intent signals across 47 paying customer accounts over 11 months, with the cohort aggregation positioned as the defensibility mechanism.",
-    "defensibility_diagnosis": "The aggregation mechanism is partially operational and represents an emerging defensibility source — the founder's claims of self-reinforcing dynamics are not yet supported by longitudinal capability data, measurable widening competitive gap, or a named feedback loop structure that would establish compounding operation.",
-    "binding_constraint_explanation": "The primary constraint is that established incumbents 6sense and Bombora operate in the exact aggregated B2B intent data category with multi-year cohort depth, presenting structural exposure to the case's emerging-stage cohort.",
-    "direction": "The aggregation runs across a modest paying cohort but is only partially operational and not yet self-reinforcing — emerging depth, not sustained — which places it mid-band. It would move higher with sustained accumulation across a larger cohort showing measurable capability improvement tied to the aggregation, such as longitudinal accuracy gains and an evidenced feedback loop.",
+    "differentiation_basis_diagnosis": "The case is differentiated by cross-customer aggregation of B2B buyer-intent signals across 47 paying accounts over 11 months, with cohort aggregation positioned as the defensibility mechanism.",
+    "defensibility_diagnosis": "The aggregation is partially operational and represents an emerging defensibility source — the founder's self-reinforcing claims are not yet supported by longitudinal capability data, a measurably widening gap, or a named feedback-loop structure.",
+    "binding_constraint_explanation": "The primary constraint is that incumbents 6sense and Bombora operate in the exact aggregated B2B intent category with multi-year cohort depth, exposing the case's emerging-stage cohort.",
+    "direction": "The aggregation runs across a modest paying cohort but is only partially operational, not yet self-reinforcing — emerging depth, not sustained — placing it mid-band. It would move higher with sustained accumulation across a larger cohort showing measurable capability improvement, such as longitudinal accuracy gains and an evidenced feedback loop.",
     "_internal": {
       "schema_version": "stage_or_v5",
       "originality_archetype": "emerging_defensibility",
@@ -1189,8 +1204,8 @@ Output:
 {
   "originality": {
     "score": 8.5,
-    "differentiation_basis_diagnosis": "The case is differentiated by a sustained two-sided marketplace connecting 14,200 active licensed HVAC technicians with 3,800 active commercial property management accounts across the 6 largest US metros, operated continuously over 6 years.",
-    "defensibility_diagnosis": "The marketplace's defensibility compounds with operation at scale — quarterly job-completion rates improved from 71% to 94% over the 6-year period as account density drove technician utilization and retention, named competitor entrants in years 3 and 4 reached under 15% of the case's technician density across 24-plus months, and the operational cycle of accounts attracting technicians attracting more accounts has measurably widened the competitive gap with each quarterly cycle.",
+    "differentiation_basis_diagnosis": "The case is differentiated by a sustained two-sided marketplace connecting 14,200 active licensed HVAC technicians with 3,800 commercial property-management accounts across the 6 largest US metros, operated continuously over 6 years.",
+    "defensibility_diagnosis": "The marketplace's defensibility compounds with operation at scale — quarterly job-completion improved from 71% to 94% as account density drove technician utilization and retention; named entrants in years 3-4 reached under 15% of the case's technician density over 24-plus months; and the cycle of accounts attracting technicians attracting more accounts has measurably widened the gap each quarter.",
     "binding_constraint_explanation": "No single binding defensibility constraint is evidenced — the case faces general competitive context against new entrants that have demonstrably failed to reach comparable density rather than a structural OR exposure.",
     "direction": "The score is near the upper bound of what defensibility evidence alone can establish; further movement would require evidence at exceptional scale that is rare for digital products in this scope.",
     "_internal": {
@@ -1223,10 +1238,10 @@ This schema uses an internal/user-facing split. The five top-level fields (score
 {
   "originality": {
     "score": <exact decimal from the 18-anchor lookup table at lookup[originality_archetype][sub_position]; never arbitrary>,
-    "differentiation_basis_diagnosis": "<one or two sentences, case-specific, no labels>",
-    "defensibility_diagnosis": "<one or two sentences, case-specific, no labels>",
-    "binding_constraint_explanation": "<one or two sentences, case-specific, no labels>",
-    "direction": "<one or two short sentences: why the result sits where it does in the band (fit + component depth only, never the exposure) + what evidence threshold moves it higher; no internal labels; max ~70 words>",
+    "differentiation_basis_diagnosis": "<what is different — the committed component(s) or their absence; case-specific, no labels; target 25-35 words, ceiling 40>",
+    "defensibility_diagnosis": "<whether the basis holds, in the archetype register as an evidence-backed conclusion (never a bare label); one compact anchor for the component, no re-description; case-specific, no labels; target 25-35 words, ceiling 40 (A6 self-reinforcing 50-58, ceiling 60)>",
+    "binding_constraint_explanation": "<the named primary exposure + threat actor + constraining mechanism; case-specific, no labels; target 30-40 words, ceiling 45>",
+    "direction": "<two-part: fit/depth position (never the exposure) + the next-evidence threshold; no internal labels; target 40-55 words, ceiling 70>",
     "_internal": {
       "schema_version": "stage_or_v5",
       "originality_archetype": "<one of: no_defensibility_component, articulated_defensibility, emerging_defensibility, established_defensibility, sustained_defensibility, self_reinforcing_defensibility>",

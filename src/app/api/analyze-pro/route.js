@@ -20,6 +20,42 @@ import { STAGE_TC_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage-tc";
 import { STAGE3_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage3";
 import { calculateOverallScore, computeMoDisplayScore, computeMoOverrideTrace } from "../../../lib/services/scoring";
 
+// ============================================================================
+// VERDICT-LEAD GUARD (Option B safety net)
+// ============================================================================
+// The Haiku compressor makes a short lead the DEFAULT; this makes the long tail
+// impossible. Haiku obeys a sentence COUNT but cannot reliably self-measure an
+// 80/65-word budget, so a present-but-overlong lead can still reach the card.
+// This bounds it deterministically (no second model call): a lead over the word
+// ceiling is clamped to whole sentences under the ceiling rather than dropped —
+// because dropping it to null lets the VIEW fall back to the full modal-length
+// summary, which is the exact wall this lead exists to prevent. Truly-failed
+// compression (exception / unparseable / empty) still returns null and is handled
+// at the view layer (degrade to headline + score, never the full summary).
+const VERDICT_LEAD_WORD_CEILING = 65;
+function boundVerdictLead(lead) {
+  if (typeof lead !== "string") return null;
+  // Strip a leaked beat label ("Foundation: ...") the prompt bans but Haiku may emit.
+  let t = lead.trim().replace(/^\s*(foundation|constraint|pivot)\s*:\s*/i, "").trim();
+  if (!t) return null;
+  if (t.split(/\s+/).length <= VERDICT_LEAD_WORD_CEILING) return t;
+  // Overlong: keep whole sentences up to the ceiling (preserves the beat spine,
+  // shedding the last beat before a mid-sentence cut).
+  const sentences = t.match(/[^.!?]+[.!?]+/g) || [];
+  let kept = "";
+  for (const s of sentences) {
+    const candidate = (kept ? kept + " " : "") + s.trim();
+    if (candidate.split(/\s+/).length > VERDICT_LEAD_WORD_CEILING && kept) break;
+    kept = candidate;
+  }
+  // Run-on with no sentence boundaries, or a single sentence already over ceiling:
+  // hard-slice to the ceiling as a last-resort backstop.
+  if (!kept || kept.split(/\s+/).length > VERDICT_LEAD_WORD_CEILING) {
+    kept = t.split(/\s+/).slice(0, VERDICT_LEAD_WORD_CEILING).join(" ").replace(/[\s,;:\u2014-]+$/, "") + "\u2026";
+  }
+  return kept;
+}
+
 // ============================================
 // MAIN API HANDLER — PAID TIER CHAINED PIPELINE
 // ============================================
@@ -969,9 +1005,13 @@ ${JSON.stringify({
           // 3-beat lead the card shows. A separate call has CLEAN context, so the
           // word cap binds where in-Block-A prompt rules structurally could not
           // (summary is the gravitational centre of 2c; richness wins there by design).
-          // Non-fatal: on any failure verdictLead stays null and the card falls back
-          // to the full summary. verdict_lead is NOT a Stage 3 input — withheld like
-          // the other verdict fields and applied to ev at assembly.
+          // Non-fatal: a present lead is bounded by boundVerdictLead (clamped, never
+          // shown raw). On hard failure verdictLead stays null; the card currently
+          // falls back to the full summary at the VIEW — that fallback should degrade
+          // to headline + score instead (see DeepResultParts / EvaluationView), so a
+          // failed compression never drops the modal-length wall into the card slot.
+          // verdict_lead is NOT a Stage 3 input — withheld like the other verdict
+          // fields and applied to ev at assembly.
           let verdictLead = null;
           if (!synthesisDegraded && typeof ev.summary === "string" && ev.summary.trim()) {
             try {
@@ -983,9 +1023,9 @@ ${JSON.stringify({
                 messages: [{ role: "user", content: `HEADLINE: ${verdictHeadline || "(none)"}\n\nVERDICT:\n${ev.summary}` }],
               }, "Verdict lead compression");
               const leadParsed = JSON.parse(cleanJsonResponse(leadResponse.content[0].text));
-              verdictLead = (typeof leadParsed.verdict_lead === "string" && leadParsed.verdict_lead.trim())
-                ? leadParsed.verdict_lead.trim()
-                : null;
+              // Bound the lead deterministically: a present-but-overlong lead is clamped
+              // (never shown raw, never dropped to the full-summary fallback). See guard above.
+              verdictLead = boundVerdictLead(leadParsed.verdict_lead);
             } catch (leadError) {
               console.error("Verdict lead compression failed (card falls back to full summary):", leadError);
               verdictLead = null;

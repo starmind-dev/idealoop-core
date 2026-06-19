@@ -624,7 +624,17 @@ After committing to all predicates and computing the score, generate three prose
 - binding_payment_constraint_explanation: what stands between this case and durable payment capture
 - direction: why the result sits where it does within the band, then what evidence would move it higher (current-position + next-evidence)
 
-Each field is normally one sentence but may contain two short sentences when rich evidence would otherwise force overloaded clauses.
+Field budgets (target, then hard ceiling). The ceiling is reached ONLY when cutting below it would drop a load-bearing fact for that field — never as a target:
+- diagnosis:                                target 30-40 words, hard ceiling 45
+- binding_payment_constraint_explanation:   target 30-40 words, hard ceiling 45
+- direction:                                target 45-55 words, hard ceiling 60
+  (direction is the two-part field — current-position + what-moves-it-higher — and legitimately runs longest; the other two do not.)
+
+EVIDENCE FLOOR IS PER-FIELD. Each field protects only its own load-bearing atoms; the floor never forces another field's content back in to be "preserved":
+- diagnosis protects: the named payer, job, shape, price-class evidence, comparable paid adoption, and the grounding gap the archetype calls for (the missing-proof condition). It does NOT protect the structural mechanism — see DIAGNOSIS LANE.
+- binding_payment_constraint_explanation protects: the named binding mechanism (the free substitute, the incumbent, the cold-start sides, the regulatory/payment mechanics, the price-anchor pressure) and its evidence.
+- direction protects: why the result sits where it does in the band, and the specific evidence that would move it higher.
+You cut connective tissue and restatement, never a load-bearing fact. Most fields land under target; a field that needs its ceiling is carrying evidence, not air.
 
 --- PROSE GENERATION SEQUENCE ---
 
@@ -685,17 +695,19 @@ NO TEMPLATING: case-specific vocabulary required. Test: if the payer/shape/price
 
 NO CROSS-METRIC FRAMING: MO prose stays in MO's lane. No comparing to MD/OR/Stage 2c/Stage 3 territory.
 
+DIAGNOSIS LANE: diagnosis names the payment-capture case and, where the archetype requires, the grounding gap — the missing-proof condition that defines the evidence state (no segment-specific willingness-to-pay, no paid-conversion benchmark, no repeat-payment evidence, no price-class precedent for this case). Naming a missing-proof condition is diagnosis's job, NOT a lane violation. What diagnosis must NOT name is the structural payment MECHANISM — the specific reason durable capture fails: the named free substitute the offering must displace, the incumbent the segment already pays, the cold-start sides, the regulatory/payment mechanics (credentialing, CPT-code billing), or the price-anchor pressure that holds the price down. Those belong to binding_payment_constraint_explanation, which follows immediately. The test: "no evidence yet shows segment conversion" is a grounding gap (diagnosis); "free alternatives anchor expected price near zero, so the paid tier must prove retention" is a structural mechanism (binding). Diagnosis says WHERE the payment evidence sits, including what proof is missing; binding says WHAT structurally blocks capture. (This is additive to the sacred distinction: diagnosis describes payment EVIDENCE, never the business model itself.)
+
 NO FOUNDER-COACHING: MO describes what the evidence shows. Does not advise founder what to do. "You should price lower" is coaching (banned). "The score would move higher if comparable products at this price class evidenced sustained adoption" is direction (required form). NO PRICING/GTM PRESCRIPTION (hard ban, both direction jobs): never instruct the founder to change price, packaging, bundling, offer structure, pricing model, or target segment — banned phrasings include "charge more," "raise/lower your price," "price lower," "improve/increase pricing," "switch pricing model," "change packaging," "bundle differently," "adjust the offer," "move upmarket," "target larger customers," "change segment." If payer segment matters, phrase it as missing payment evidence from that payer type, not as advice. Direction uses payment-evidence-threshold language only.
 
 NO HEDGING: banned: "it seems," "might suggest," "potentially indicates," "perhaps," "may indicate," "could possibly," "appears to."
 
-DIRECT ABSENCE LANGUAGE REQUIRED where evidence is absent: "the evidence does not yet show," "the current evidence stops short of," "this is not yet evidenced for the named payer."
+ABSENCE PRECISION where evidence is absent: state absence of EVIDENCE, not established failure, and ROTATE the phrasing — a single fixed absence formula becomes a templated phrase (forbidden per NO TEMPLATING). Drop the bureaucratic wrapper ("the current evidence stops short of showing that..."); keep the clean caution. Valid shapes, varied per case: "No evidence yet shows [X]." / "[X] is not yet evidenced for the named payer." / "No comparable [shape] is evidenced as having [sustained paid adoption at Y]." PARTIAL-EVIDENCE IS NOT ABSENCE: when weak-but-positive evidence exists, calibrate it ("the evidence reaches category pricing but not segment repeat payment") — do not flatten it to "no evidence shows repeat payment."
 
 NO MARKETING LANGUAGE: banned: "promising," "exciting," "compelling," "strong potential," "monetization-friendly," "willingness-to-pay validated," "pricing power demonstrated," "robust revenue model."
 
 NO BUSINESS-MODEL DESCRIPTION (sacred distinction enforcement): diagnosis describes payment-capture EVIDENCE, not the business model itself. Banned phrasing: "The business model is a freemium SaaS subscription," "The monetization strategy is take-rate marketplace," "Revenue comes from per-seat licensing." Required phrasing: "[segment] sustains paid adoption of comparable [shape] at [price class]" (evidence-shape language).
 
-ONE LOAD-BEARING CLAIM PER CLAUSE: no stacking more than three evidence elements in a single sentence. Split into two clauses or prioritize highest-leverage evidence when rich.
+ONE LOAD-BEARING CLAIM PER CLAUSE: one load-bearing claim per clause, and at most two evidence atoms may support it. A third atom goes in a second clause, the full read, or the sources strip — never crammed into the visible field.
 
 --- DIRECTION: TWO-PART STRUCTURE (conceptual roles, not a sentence template) ---
 
@@ -781,9 +793,9 @@ Output:
 {
   "monetization": {
     "score": 1.0,
-    "diagnosis": "The evidence identifies remote workers as a target and proposes a freemium subscription, but does not yet show a coherent payer segment, named price-class precedent, or current payment behavior that would establish payment capture for this product.",
+    "diagnosis": "The evidence names remote workers as a target and a proposed freemium subscription, but shows no coherent payer segment, price-class precedent, or current payment behavior to establish payment capture.",
     "binding_payment_constraint_explanation": "The case does not yet have payment-capture evidence to constrain; payment-capture territory is not yet evidenced for the named payer at the named shape.",
-    "direction": "No coherent payer segment or price-class precedent is evidenced for the proposed remote-worker tool — only a freemium intention — so the payment case remains at the floor. It would move higher with evidence of a defined payer paying for comparable productivity tools at a named shape and price class.",
+    "direction": "No payer segment or price-class precedent is evidenced for the proposed remote-worker tool — only a freemium intention — so the payment case sits at the floor. It would move higher with a defined payer paying for comparable productivity tools at a named shape and price class.",
     "_internal": {
       "monetization_archetype": "insufficient_evidence",
       "archetype_band": "1.0-2.8",
@@ -828,9 +840,9 @@ Output:
 {
   "monetization": {
     "score": 3.6,
-    "diagnosis": "Consumer meditation has category-level subscription pricing infrastructure with established competitors (Headspace, Calm), but the payment evidence is at category level — the founder proposes $9.99/month for stressed knowledge workers without segment-specific willingness-to-pay or paid-tier conversion benchmarks for this entrant.",
-    "binding_payment_constraint_explanation": "The payment-capture constraint is the free-to-paid conversion economics — industry benchmarks of 4-6% conversion exist for the consumer subscription category, but the evidence does not yet show what conversion this specific entrant would achieve at the stressed-knowledge-worker segment.",
-    "direction": "Category-level subscription pricing exists (Headspace, Calm) but the payment evidence stops at that category level rather than the stressed-knowledge-worker segment, holding the result mid-band. It would move higher with paid-tier conversion rates from comparable products at that specific segment, not industry-benchmark claims at the broad consumer category.",
+    "diagnosis": "Consumer meditation has category-level subscription pricing with established competitors (Headspace, Calm), but the evidence sits at category level — the founder proposes $9.99/month for stressed knowledge workers with no segment-specific willingness-to-pay or paid-conversion grounding for this entrant.",
+    "binding_payment_constraint_explanation": "The constraint is free-to-paid conversion economics — category benchmarks of 4-6% exist, but the evidence does not yet show what conversion this entrant achieves at the stressed-knowledge-worker segment.",
+    "direction": "The payment evidence is grounded only at the category level, not the stressed-knowledge-worker segment, holding the result mid-band. It would move higher with paid-tier conversion rates from comparable products at that specific segment — not industry-benchmark claims at the broad consumer category.",
     "_internal": {
       "monetization_archetype": "founder_articulated",
       "archetype_band": "2.8-4.3",
@@ -875,9 +887,9 @@ Output:
 {
   "monetization": {
     "score": 4.3,
-    "diagnosis": "Restaurant tech has paid SaaS infrastructure with category-level pricing precedent (Toast, 7shifts at $50-150/month per location for operations), but the evidence shows that independent restaurant operators sustain free workarounds for inventory specifically — Square's free tier and spreadsheet tracking cover the named job at the named segment.",
-    "binding_payment_constraint_explanation": "The payment-capture constraint is free-substitute pressure at the inventory job — independent restaurant operators have paid budgets for POS and operations, but inventory specifically faces sustained free alternatives that the proposed $79/month must displace.",
-    "direction": "Toast and 7shifts show restaurant-tech payment precedent, but not paid adoption for the inventory job specifically, which places this at the lower end of the band. The next payment proof would be comparable restaurant-inventory products at this price class sustaining paid adoption among independent operators.",
+    "diagnosis": "Restaurant tech has category-level paid SaaS pricing (Toast, 7shifts at $50-150/month per location for operations), but independent operators rely on free workarounds for inventory specifically — no paid adoption grounds the named job at the named segment.",
+    "binding_payment_constraint_explanation": "The constraint is free-substitute pressure at the inventory job — operators hold paid POS and operations budgets, but inventory faces Square's free tier and spreadsheet tracking that the proposed $79/month must displace.",
+    "direction": "The payment precedent is grounded at category operations, not the inventory job specifically, placing this at the lower end of the band. The next payment proof would be comparable restaurant-inventory products at this price class sustaining paid adoption among independent operators.",
     "_internal": {
       "monetization_archetype": "category_grounded",
       "archetype_band": "4.3-5.4",
@@ -923,9 +935,9 @@ Output:
 {
   "monetization": {
     "score": 6.0,
-    "diagnosis": "Compliance officers at SMB SaaS sustain paid adoption of compliance automation tools (Vanta, Drata, Secureframe) at $99-300/month — close-precedent payment infrastructure exists for the named payer + job + shape, with industry-data segment penetration evidenced.",
-    "binding_payment_constraint_explanation": "The payment-capture constraint is price defensibility — the proposed $499/month sits materially above the $99-300 sustained at comparable shape, with no evidence justifying the price-class premium against established alternatives.",
-    "direction": "Close-precedent payment is grounded at the exact segment and shape (Vanta, Drata at $99-300) but the proposed $499 sits above that evidenced price class, holding the result mid-band. It would move higher with evidence that products at the $499 class sustain paid adoption at SMB SaaS, or documented buyer evidence that this job supports payment at that class.",
+    "diagnosis": "Compliance officers at SMB SaaS sustain paid adoption of compliance automation (Vanta, Drata, Secureframe) at $99-300/month — close-precedent payment infrastructure for the named payer, job, and shape, with industry-data segment penetration.",
+    "binding_payment_constraint_explanation": "The constraint is price defensibility — the proposed $499/month sits materially above the $99-300 sustained at comparable shape, with no evidence justifying the premium against established alternatives.",
+    "direction": "The precedent is grounded at the exact segment and shape but below the proposed $499 price class, holding the result mid-band. It would move higher with evidence that products at the $499 class sustain paid adoption at SMB SaaS, or documented buyer evidence that this job supports payment at that class.",
     "_internal": {
       "monetization_archetype": "partial_segment_grounded",
       "archetype_band": "5.4-6.5",
@@ -971,9 +983,9 @@ Output:
 {
   "monetization": {
     "score": 7.0,
-    "diagnosis": "Telehealth MAT through Medicaid has close-precedent payment infrastructure — Bicycle Health and Ophelia evidence sustained reimbursement at comparable price class across MAT-covering states, with CPT codes and state-by-state credentialing documented for the named patient segment.",
-    "binding_payment_constraint_explanation": "The payment-capture constraint is regulated payment friction — Medicaid reimbursement requires state-by-state credentialing, CPT-code billing infrastructure, and reimbursement-rate variation that gates payment flow, with the payer (Medicaid) and beneficiary (patient) operating on separate decision criteria.",
-    "direction": "Direct reimbursement precedent exists at a comparable price class (Bicycle Health, Ophelia across MAT-covering states), but the evidence is still category availability rather than documented paid adoption for this exact Medicaid-MAT reimbursement structure. It would move higher with sustained paid adoption metrics from comparable MAT platforms in Medicaid-covering states.",
+    "diagnosis": "Telehealth MAT through Medicaid has close-precedent payment infrastructure — Bicycle Health and Ophelia evidence sustained reimbursement at comparable price class across MAT-covering states for the named patient segment.",
+    "binding_payment_constraint_explanation": "The constraint is regulated payment friction — Medicaid reimbursement requires state-by-state credentialing, CPT-code billing, and reimbursement-rate variation that gates payment flow, with payer (Medicaid) and beneficiary (patient) on separate decision criteria.",
+    "direction": "The reimbursement precedent is still category availability rather than documented paid adoption for this exact Medicaid-MAT structure, holding the result mid-band. It would move higher with sustained paid-adoption metrics from comparable MAT platforms in Medicaid-covering states.",
     "_internal": {
       "monetization_archetype": "direct_precedent_grounded",
       "archetype_band": "6.5-7.5",
@@ -1019,7 +1031,7 @@ Output:
 {
   "monetization": {
     "score": 8.5,
-    "diagnosis": "Compliance officers at SOC2-required mid-market SaaS sustain paid adoption of compliance automation at the proposed shape and price class — Vanta, Drata, and Secureframe together evidence sustained segment penetration at the named shape, with audit-cycle retention distinguished from contractual lock-in.",
+    "diagnosis": "Compliance officers at SOC2-required mid-market SaaS sustain paid adoption of compliance automation at the proposed shape and price class — Vanta, Drata, and Secureframe evidence sustained segment penetration, with audit-cycle retention distinct from contractual lock-in.",
     "binding_payment_constraint_explanation": "No single binding payment constraint is evidenced — the case faces general competitive context against incumbents that have established payment-capture infrastructure at this segment, rather than a structural payment blocker.",
     "direction": "The score is near the upper bound of what payment-capture evidence alone can establish; further movement would require evidence at exceptional scale that is rare for digital products in this scope.",
     "_internal": {
@@ -1049,9 +1061,9 @@ The four top-level fields (score, diagnosis, binding_payment_constraint_explanat
 {
   "monetization": {
     "score": <exact decimal from lookup[monetization_archetype][sub_position], not an arbitrary decimal>,
-    "diagnosis": "<one or two sentences, case-specific, no labels>",
-    "binding_payment_constraint_explanation": "<one or two sentences, case-specific, no labels>",
-    "direction": "<one or two sentences: why the result sits where it does in the band + what evidence moves it higher; no internal labels; no pricing/packaging/segment prescription; max ~60 words>",
+    "diagnosis": "<payment-capture evidence state + grounding gap; NOT the structural mechanism (see DIAGNOSIS LANE); case-specific, no labels; target 30-40 words, ceiling 45>",
+    "binding_payment_constraint_explanation": "<the structural binding mechanism; case-specific, no labels; target 30-40 words, ceiling 45>",
+    "direction": "<two-part: why the result sits where it does in the band + what evidence moves it higher; no internal labels; no pricing/packaging/segment prescription; target 45-55 words, ceiling 60>",
     "_internal": {
       "schema_version": "stage_mo_v5",
       "monetization_archetype": "<one of: insufficient_evidence, founder_articulated, category_grounded, partial_segment_grounded, direct_precedent_grounded, sustained_adoption_evidenced>",

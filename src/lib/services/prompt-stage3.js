@@ -777,7 +777,16 @@ For sparse-input cases:
 
 Estimates emits the commitment narrative as FOUR labelled prose fields, not one paragraph. Each field answers one user-facing question and owns exactly one beat. This mirrors the MD/MO/OR metric surfaces, which emit labelled fields the frontend renders as question -> answer blocks. (For continuity, the four fields are joined downstream into a single explanation string for the gated teaser and older saved analyses — but the field is the unit of composition; do not write a separate paragraph.)
 
-LENGTH (all four fields): each is normally ONE sentence, and may run to two short sentences only when rich evidence would otherwise force overloaded clauses. This length discipline is what keeps the surface scannable rather than a wall of text — do not write multi-sentence paragraphs into any single field.
+LENGTH (all four fields), target then hard ceiling — the ceiling reached ONLY when cutting below it would drop a load-bearing beat fact, never as a target:
+- constraint_diagnosis:    target 30-40 words, hard ceiling 45
+- commitment_explanation:  target 25-35 words, hard ceiling 45
+- profile_calibration:     target 25-35 words, hard ceiling 45
+- position_basis:          target 30-40 words, hard ceiling 45
+(constraint_diagnosis names the bottleneck AND why it gates, and position_basis justifies the duration AND difficulty band — both carry slightly more than the other two. The budgets compress; they are not meant to flatten the four diagnostic beats into identical dashboard labels.)
+
+Default is ONE sentence. A second short sentence is allowed ONLY when it adds a distinct load-bearing beat fact from the same field — never a restatement, a consequence tail, or a "why it matters" significance gloss. This kills the core-claim -> gloss -> significance-tail pattern and keeps the surface scannable rather than a wall of text; never write a multi-sentence paragraph into any single field.
+
+EVIDENCE FLOOR (per field, beat-specific): each field keeps its own load-bearing fact — constraint_diagnosis the named MB and why it gates; commitment_explanation the dominant work type; profile_calibration the founder asset or the capability to acquire; position_basis what controls the duration band and difficulty. Cut connective tissue and restatement, never the beat fact. (The OWNERSHIP FENCES below already prevent cross-field repeat; the budget governs only length within each beat.)
 
 OWNERSHIP FENCES (anti-redundancy): each field owns its beat and must not restate another field's content. Do not re-name the constraint outside constraint_diagnosis; do not re-explain the workstreams outside commitment_explanation; do not re-narrate founder fit outside profile_calibration; do not restate the duration/difficulty rationale outside position_basis. Four fields that paraphrase one another is the failure mode.
 
@@ -914,10 +923,10 @@ Failure protocol: first apply the compatibility test to each risk. If no materia
     "difficulty": "Easy | Moderate | Hard | Very Hard  (or \\"N/A\\" under LOW evidence strength)",
     "main_bottleneck": "Technical build | Buyer access | Trust/credibility | Compliance | Distribution | Data acquisition | Capital/runway | Specification",
     "main_bottleneck_explanation": "1-2 sentences. Why this enum value is the binding constraint for THIS idea + profile pair. Names the constraint mechanism directly. Cross-references the founder gap or founder fit in natural prose (no section names).",
-    "constraint_diagnosis": "1 sentence (2 short max). 'What's the binding constraint here?' — why the selected MB is the wall that gates the next step, in case-specific prose, inheriting the skeleton family discipline. Empty cases: never.",
-    "commitment_explanation": "1 sentence (2 short max). 'What does clearing it actually take?' — the real workstreams that consume the calendar time. No matrix re-derivation, no score restatement. \"\" for sparse (Specification) cases.",
-    "profile_calibration": "1 sentence (2 short max). 'How does your background change the work?' — how the founder's profile calibrates the commitment (eases it, or names capability to acquire/partner for). Calibration only, not Risk 3 re-diagnosis. \"\" for sparse cases.",
-    "position_basis": "1 sentence (2 short max). 'Why this timeline and difficulty?' — the commitment-shape beat justifying the duration band and difficulty shown in the chips. Position-justification, not a 'move it higher' beat. \"\" for sparse cases.",
+    "constraint_diagnosis": "1 sentence (2 short max; target 30-40w, ceiling 45). 'What's the binding constraint here?' — why the selected MB is the wall that gates the next step, in case-specific prose, inheriting the skeleton family discipline. Empty cases: never.",
+    "commitment_explanation": "1 sentence (2 short max; target 25-35w, ceiling 45). 'What does clearing it actually take?' — the real workstreams that consume the calendar time. No matrix re-derivation, no score restatement. \"\" for sparse (Specification) cases.",
+    "profile_calibration": "1 sentence (2 short max; target 25-35w, ceiling 45). 'How does your background change the work?' — how the founder's profile calibrates the commitment (eases it, or names capability to acquire/partner for). Calibration only, not Risk 3 re-diagnosis. \"\" for sparse cases.",
+    "position_basis": "1 sentence (2 short max; target 30-40w, ceiling 45). 'Why this timeline and difficulty?' — the commitment-shape beat justifying the duration band and difficulty shown in the chips. Position-justification, not a 'move it higher' beat. \"\" for sparse cases.",
     "mb_ambiguity": {
       "is_close_call": false,
       "runner_up": null,

@@ -513,7 +513,17 @@ After committing to all predicates and computing the score, generate three prose
 - binding_friction_explanation: what stands between this buyer and adoption
 - direction: why the result sits where it does within the band, then what evidence would move it higher (current-position + next-evidence)
 
-Each field is normally one sentence but may contain two short sentences when rich evidence would otherwise force overloaded clauses.
+Field budgets (target, then hard ceiling). The ceiling is reached ONLY when cutting below it would drop a load-bearing fact for that field — never as a target:
+- diagnosis:                     target 30-40 words, hard ceiling 45
+- binding_friction_explanation:  target 30-40 words, hard ceiling 45
+- direction:                     target 45-55 words, hard ceiling 60
+  (direction is the two-part field — current-position + what-moves-it-higher — and legitimately runs longest; the other two do not.)
+
+EVIDENCE FLOOR IS PER-FIELD. Each field protects only its own load-bearing atoms; the floor never forces another field's content back in to be "preserved":
+- diagnosis protects: the named target, the pain and its cost, the behavior evidence, and comparable adoption / traction / density when that is what proves demand. It does NOT protect the friction — see DIAGNOSIS LANE.
+- binding_friction_explanation protects: the named friction / adoption blocker, the trust / procurement / workflow / regulatory gate, and the evidence-absence when the friction is unresolved.
+- direction protects: why the result sits where it does in the band, and the specific evidence that would move it higher.
+You cut connective tissue and restatement, never a load-bearing fact. Most fields land under target; a field that needs its ceiling is carrying evidence, not air.
 
 --- PROSE GENERATION SEQUENCE ---
 
@@ -548,15 +558,17 @@ NO TEMPLATING: case-specific vocabulary required. Test: if the target/pain/frict
 
 NO CROSS-METRIC FRAMING: MD prose stays in MD's lane. No comparing to MO/OR/Stage 2c/Stage 3 territory.
 
+DIAGNOSIS LANE: diagnosis names the demand case, then hands off cleanly. It MAY carry target, pain and cost, current workaround, comparable adoption, usage/traction signal, and segment density — the evidence that demand is real. It must NOT carry the procurement gate, trust gate, switching friction, regulatory adoption barrier, or any "why adoption hasn't happened yet" — that is binding_friction_explanation's field, which follows immediately. A diagnosis that turns to "...but the adoption gate is..." or "...before adoption can occur..." has crossed the lane; stop at the demand picture. Comparable adoption is demand evidence (allowed); interpreting it as "friction crossed" or "friction survivable" is a friction reading (not allowed in diagnosis — direction may make that call).
+
 NO FOUNDER-COACHING: MD describes what the evidence shows. Does not advise founder what to do. "You should run interviews" is coaching (banned). "The score would move higher if the evidence included sustained workaround behavior" is direction (required form).
 
 NO HEDGING: banned: "it seems," "might suggest," "potentially indicates," "perhaps," "may indicate," "could possibly," "appears to."
 
-DIRECT ABSENCE LANGUAGE REQUIRED where evidence is absent: "the evidence does not yet show," "the current evidence stops short of," "this is not yet evidenced for the named target."
+ABSENCE PRECISION where evidence is absent: state absence of EVIDENCE, not established failure, and ROTATE the phrasing — a single fixed absence formula becomes a templated phrase (forbidden per NO TEMPLATING). Drop the bureaucratic wrapper ("the current evidence stops short of showing that..."); keep the clean caution. Valid shapes, varied per case: "No evidence yet shows [X]." / "[X] is not yet evidenced for the named target." / "No comparable [X] is evidenced as having [done Y]."
 
 NO MARKETING LANGUAGE: banned: "promising," "exciting," "compelling," "strong potential," "significant opportunity."
 
-ONE LOAD-BEARING CLAIM PER CLAUSE: no stacking more than three evidence elements in a single sentence. Split into two clauses or prioritize highest-leverage evidence when rich.
+ONE LOAD-BEARING CLAIM PER CLAUSE: one load-bearing claim per clause, and at most two evidence atoms may support it. A third atom goes in a second clause, the full read, or the sources strip — never crammed into the visible field.
 
 --- DIRECTION: TWO-PART STRUCTURE (conceptual roles, not a sentence template) ---
 
@@ -623,9 +635,9 @@ Output:
 {
   "market_demand": {
     "score": 7.0,
-    "diagnosis": "Solo-practitioner dental practice managers face documented missed-call pain costing $300-500 per lost lead, with sustained spreadsheet workarounds evidenced across the segment. Comparable communication tools (Weave, NexHealth) demonstrate that trust friction has been crossed for this exact buyer.",
-    "binding_friction_explanation": "The remaining adoption barrier is the displacement of those manual tracking workflows — practice managers would need to integrate the AI receptionist into ongoing operational rhythms before realizing the call-recovery value.",
-    "direction": "Missed-call cost and sustained workarounds are directly documented, and comparable tools show the trust friction is survivable, so this lands mid-band rather than at the top. It would move higher with evidence that solo-practitioner clinics adopt a close-comparable receptionist at measurable density.",
+    "diagnosis": "Solo-practitioner dental practice managers face missed-call pain at $300-500 per lost lead, with sustained spreadsheet workarounds and comparable tools (Weave, NexHealth) already adopted across the segment.",
+    "binding_friction_explanation": "The remaining barrier is displacing those manual tracking workflows — the receptionist must fold into daily operational rhythms before the call-recovery value lands.",
+    "direction": "Missed-call cost and sustained workarounds are documented and the trust friction reads survivable, so this lands mid-band rather than at the top. It would move higher with evidence that solo-practitioner clinics adopt a close-comparable receptionist at measurable density.",
     "_internal": {
       "demand_archetype": "demonstrated_pull_with_friction_survival",
       "archetype_band": "6.6-7.5",
@@ -663,9 +675,9 @@ Binding friction tiebreaker: FP-1 fires weak_positive (generic workflow signal),
 Sub-position arithmetic produces middle. Decimal lookup A4 middle = 6.0.
 
 Output (prose only):
-diagnosis: "Solo-practitioner dental practice managers face the recurring missed-call pain documented across the segment, with manual tracking present but no sustained workaround patterns or third-party services currently in use."
-binding_friction_explanation: "The adoption gate is the clinical-trust signaling these practices rely on for vendor selection — without referenced peer adoption or established practice-management trust signals, the AI receptionist faces credibility friction before workflow even becomes the conversation."
-direction: "The next demand proof would be evidence that these clinics sustain costly answering-service spend, dedicated staff time, or other measurable ongoing workaround for missed calls — without costly behavior, the constant pain does not become an active adoption trigger."
+diagnosis: "Solo-practitioner dental practice managers face recurring missed-call pain across the segment, with manual tracking present but no sustained paid workaround or third-party service in use."
+binding_friction_explanation: "The adoption gate is clinical-trust signaling: without peer adoption or established trust markers, the receptionist faces credibility friction before workflow displacement can begin."
+direction: "The next demand proof is evidence that these clinics sustain costly answering-service spend, dedicated staff time, or another measurable ongoing workaround — without costly behavior, the constant pain never becomes an active adoption trigger."
 
 --- Example 3: Archetype 2 case (category-level, sparse target-specific evidence) ---
 
@@ -684,9 +696,9 @@ Pain is category-level (not target-specific): fails Archetype 3 entry. Pain at c
 Sub-position arithmetic produces middle. Decimal lookup A2 middle = 5.0.
 
 Output (prose only):
-diagnosis: "Content creators operate in a category where AI writing tools have multiple established competitors and active market growth, but the pain evidence describes content creation challenges at category level — not specifically tied to creator-segment workflows that this entrant would address differently."
-binding_friction_explanation: "The adoption barrier is the established workflow content creators already use across multiple existing tools, and the evidence doesn't yet show that this segment is dissatisfied enough with current options to seek alternatives."
-direction: "The missing evidence is pain specifically tied to the creator segment's workflow — what the existing tools fail to deliver for them concretely, not general category friction."
+diagnosis: "Content creators operate in a category with multiple established AI writing tools and active growth, but the pain evidence sits at category level — not tied to the creator-segment workflows this entrant would address differently."
+binding_friction_explanation: "The adoption barrier is the established workflow creators already run across existing tools; no evidence yet shows this segment dissatisfied enough with current options to seek alternatives."
+direction: "The missing evidence is pain tied specifically to the creator segment's workflow — what existing tools fail to deliver for them, not general category friction."
 
 --- Example 4: Sparse packet case ---
 
@@ -708,9 +720,9 @@ Archetype lookup: fails all entry criteria for A2-A7. Falls to A1.
 Sub-position arithmetic: SP-A=weak (0), SP-B=moderate_unresolved (0), SP-C=narrow (0). Combined = 0. Bucket = lower. Decimal lookup A1 lower = 3.0.
 
 Output (prose only):
-diagnosis: "The evidence describes remote workers as a target but does not yet show a coherent buyer segment, named pain cost, or current behavior pattern that would establish demand for this specific product."
+diagnosis: "The evidence names remote workers as a target but shows no coherent buyer segment, named pain cost, or current behavior that would establish demand for this product."
 binding_friction_explanation: "No specific binding friction is evidenced; the case faces general competitive context rather than a single named adoption blocker."
-direction: "Movement above this band would require evidence of a coherent target segment (specific role, named workflow circumstance) with documented pain cost and current behavior — without these, the case sits at speculative territory."
+direction: "Movement above this band would require a coherent target segment (specific role, named workflow), documented pain cost, and current behavior — without these, the case stays in speculative territory."
 
 --- Example 5: Near-ceiling Archetype 7 case ---
 
@@ -739,8 +751,8 @@ Sub-position arithmetic: SP-A=documented_adoption (+3), SP-B=strong_confidence_r
 8.5 ceiling: the case reaches the upper A7 bucket under the normal scoring table. The prompt caps at 8.5; this is the final emitted score.
 
 Output (prose only):
-diagnosis: "Compliance officers at SOC2-required SaaS companies face critical audit-prep pain costing $50K-200K annually per industry data, with sustained paid adoption of comparable compliance tools (Vanta, Drata, Secureframe) documented across 70%+ of the segment — but existing platforms leave AI-specific automation gaps that compliance officers still handle manually."
-binding_friction_explanation: "The remaining adoption work is procurement-cycle mechanics — even with the segment's clear pull and documented comparable adoption, SOC2-required SaaS companies bring AI compliance tools through security review and committee approval before contract signing."
+diagnosis: "Compliance officers at SOC2-required SaaS companies face critical audit-prep pain at $50K-200K annually, with sustained paid adoption of comparable tools (Vanta, Drata, Secureframe) across 70%+ of the segment — yet existing platforms leave AI-specific automation gaps still handled manually."
+binding_friction_explanation: "The remaining work is procurement-cycle mechanics — even with clear segment pull and comparable adoption, these companies route AI compliance tools through security review and committee approval before signing."
 direction: "The score is near the upper bound of what demand-evidence alone can establish; further movement would require demand evidence at exceptional scale that is rare for digital products in this scope."
 
 === REQUIRED OUTPUT SCHEMA ===
@@ -752,9 +764,9 @@ The four top-level fields (score, diagnosis, binding_friction_explanation, direc
 {
   "market_demand": {
     "score": <exact decimal from lookup[demand_archetype][sub_position], not an arbitrary decimal>,
-    "diagnosis": "<one or two sentences, case-specific, no labels>",
-    "binding_friction_explanation": "<one or two sentences, case-specific, no labels>",
-    "direction": "<one or two sentences: why the result sits where it does in the band + what evidence moves it higher; no internal labels; max ~60 words>",
+    "diagnosis": "<demand picture only — target, pain, behavior, comparable adoption; NOT the friction (see DIAGNOSIS LANE); case-specific, no labels; target 30-40 words, ceiling 45>",
+    "binding_friction_explanation": "<the named friction / adoption gate; case-specific, no labels; target 30-40 words, ceiling 45>",
+    "direction": "<two-part: why the result sits where it does in the band + what evidence moves it higher; no internal labels; target 45-55 words, ceiling 60>",
     "_internal": {
       "schema_version": "stage_md_v5",
       "demand_archetype": "<one of: speculative_need, category_validated_entrant_unspecific, clear_pain_weak_pull, specific_buyer_unresolved_adoption_friction, specific_buyer_with_active_trigger, demonstrated_pull_with_friction_survival, demonstrated_pull_with_capturable_density>",
