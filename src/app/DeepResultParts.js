@@ -850,9 +850,9 @@ function RiskRow({ r, isLast, t }) {
         <div style={{ width: 36, height: 36, borderRadius: 10, display: "grid", placeItems: "center", background: `${red}1A`, border: `1px solid ${red}38`, color: red, flexShrink: 0 }}>
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{RISK_ICONS[r.slot] || RISK_ICONS._default}</svg>
         </div>
-        {!isLast && <div style={{ width: 2, background: t.divider, flex: 1, minHeight: 16, margin: "7px 0" }} />}
+        {!isLast && <div style={{ width: 2, background: `${red}40`, flex: 1, minHeight: 14, margin: "7px 0", borderRadius: 2 }} />}
       </div>
-      <div style={{ flex: 1, paddingBottom: isLast ? 0 : 22 }}>
+      <div style={{ flex: 1, paddingBottom: isLast ? 0 : 18 }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: red }}>{meta ? meta.title : "Risk"}</div>
         {meta && <div style={{ fontSize: 12, color: t.mut, marginBottom: 7 }}>{meta.sub}</div>}
         <p style={{ fontSize: 14, lineHeight: 1.62, color: t.sec, margin: meta ? "0" : "5px 0 0", ...clamp }}>{r.text}</p>
@@ -873,7 +873,7 @@ export function KeyRisks({ risks, t }) {
   const items = [...known, ...extras];
 
   return (
-    <div>
+    <div style={{ border: `1px solid ${t.border}`, borderRadius: 18, padding: "30px 34px", background: t.mode === "light" ? t.surface : "rgba(255,255,255,0.018)" }}>
       {items.map((r, i) => <RiskRow key={i} r={r} isLast={i === items.length - 1} t={t} />)}
     </div>
   );
