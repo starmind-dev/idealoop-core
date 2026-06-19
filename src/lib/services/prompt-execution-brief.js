@@ -290,6 +290,41 @@ handoff is the half-step across the line that costs the position. Cut it.
 (The handoff LINE's own clean ending is a voice property — that lives in 4f. This
 rule is the survival property: no element ANYWHERE trails into accompaniment.)
 
+THE OVER-WRITING KILL (the gate's length edge):
+
+A structural field can pass all four kill-tests, be perfectly wall-specific, and
+STILL be wrong — because it says its one thing in three passes. The disease has a
+fixed grammar:
+
+  [core claim] — [em-dash gloss re-saying the core at finer grain] — [tail:
+  "that is the X the wall requires," "so that Y," "the distinction is exactly
+  what Z depends on"]
+
+The core is the field; the gloss and the tail are the disease. A structural field
+states its content ONCE, at one grain, and stops — it never re-says itself at finer
+resolution and never narrates why it matters. The brief's STRUCTURE carries
+significance (that is what the section headers, the produces/signal split, and the
+gated order are FOR); a field that explains its own importance has done the
+structure's job in the field's words and doubled its length to do it.
+
+The cut removes the gloss and the tail, NEVER the wall-specific object. Three-way:
+  bloated     — "a single-pass scoring pipeline from idea text alone, no live
+                search, no payment layer, no tiered auth — that is the build proof
+                the wall requires"   (object buried under enumeration + tail)
+  right       — "a single-pass scoring pipeline from idea text alone"   (object, stop)
+  too generic — "build the core"   (object dissolved — the cut went too far)
+Cut to the middle line, never the third. Specific object, no explanatory tail.
+
+THE LENGTH ANCHOR. The illustrations in 4a-4f are LENGTH models, not only shape
+models — the illustrated bars, steps, decoys, and gates run ten to fifteen words,
+fully wall-specific and fully fenced at that length: proof that tight, specific, and
+fenced coexist. A field at two to three times its section's illustration has
+over-written, not added rigor. Match the illustration's length.
+
+This kill governs the STRUCTURAL fields only — evidence, bar, action, produces,
+signal, the won't-count entries, the gate thresholds, the two clauses. The bet and
+handoff are serif lines with their own one-sentence caps (4a, 4f), already bounded.
+
 THE GATE IS A FILTER, NOT A SECTION. Nothing in this block appears in the output.
 It governs what survives into 4a-4f; it never gets written down.
 
@@ -510,7 +545,12 @@ OWNERSHIP FENCE.
     one wall no matter how many things the product does. If the input is two products,
     the diagnosis already picked the single bottleneck; you prove that one.
 
-CAP. The evidence is one concrete proof. The bar is one concrete threshold. Tight.
+CAP. evidence — ONE sentence, the missing proof named once. bar — ONE sentence,
+the threshold stated once. Neither carries an em-dash gloss re-saying it or a tail
+explaining its significance (the over-writing kill, Block 2). "Enough looks like"
+is the bar itself, not a preamble to it; if the bar needs a second sentence, that
+second sentence IS the over-writing — cut it. Match the length of this block's
+illustrated bars.
 
 VOICE — PRESCRIPTIVE, NOT TENTATIVE. The bar is stated as a standard, flatly.
 "Enough is a signed pilot with a paying institution" — not "you might consider
@@ -563,7 +603,12 @@ made the spine of each:
              defensible position," "readiness," "momentum"), not an artifact, and the
              step needs rethinking. A state in produces is the rot path: it lets
              signal carry all the falsifiable weight and collapses the two-field
-             discipline back to one. Both fields stay concrete, or the step isn't a step.
+             discipline back to one. LENGTH — produces is ONE artifact phrase ("a
+             signed pilot agreement," "a pre-launch list of 200 organic opt-ins," "a
+             deployed endpoint that accepts cold input"), never a sentence that
+             explains what the artifact proves or why it matters; a "so that..." or
+             "which proves..." tail is the over-writing kill firing (Block 2) — cut
+             to the phrase. Both fields stay concrete, or the step isn't a step.
   signal   — how you'd know it worked. Falsifiable. This is the salvaged
              success-criteria concept: every step names the evidence that it
              succeeded, so the sequence is structured-and-checkable (ours), never a
@@ -591,6 +636,14 @@ not the whole journey. Bounded at the wall (Block 3's posture-is-bounded rule): 
 order reaches to where the wall clears and STOPS. Do not sequence the post-clearing
 future — no "then hire," "then scale," "then expand." If you have more than four
 steps, you are projecting past the gate; cut back to the steps that clear THIS wall.
+
+PER-FIELD LENGTH (the over-writing kill, Block 2, applied to the step). action —
+one sentence. produces — one artifact phrase, no why-it-matters clause (see the
+produces field above). signal — one sentence. A clause that fires (resource_clause
+/ close_call_clause) is ONE sentence — a clause, never a paragraph; the pileup
+ceiling is a LENGTH rule as much as a count rule, enforce both. This block's
+illustrated steps carry all three fields plus a clause in the space the bloated
+output spends on a single field — match them.
 
 THE STANDING-SECTION KILL (the old disease's main door — hold it shut). Distribution,
 marketing, capital, team, and tools NEVER appear as their own steps or sections. They
@@ -737,6 +790,12 @@ of everything the founder could do wrong; over-listing turns protective restrain
 into nagging and dilutes the few that matter. Pick the few decoys most likely to fool
 THIS founder on THIS wall.
 
+LENGTH — each entry is ONE sentence. The counterfeit/ordering fence is satisfied IN
+one sentence: this block's illustrations ("a waitlist of 500 is not a pilot,"
+"interest is not a signed commitment") run ten to fifteen words and honor the fence
+fully. An entry at forty words has over-written the fence (Block 2), not satisfied it
+harder.
+
 VOICE — cold and protective, not scolding. Each face has its OWN micro-fence, because
 the two faces have different subjects and a single rule misses one of them:
 
@@ -860,6 +919,19 @@ if..." (IdeaLoop deciding) and never "the idea will fail if..." (re-evaluation).
 grammar is the founder's own rule: a cost, an unmet bar, a decision that follows.
 
 CAP — one revise_if, one stop_if. Each one sentence. No sub-thresholds, no ladders.
+One sentence is the cost-anchored threshold AND the decision it forces, in one tight
+line — not a threshold trailed by a clause re-explaining what failing it means (the
+over-writing kill, Block 2). The illustrations below set the length.
+
+THE TWO-ELEMENT RULE (structural, paraphrase-proof — NOT a list of banned phrasings).
+Each threshold is EXACTLY two elements: a cost (time / money / attempts) and the
+unmet bar (the specific evidence that has not landed) — and then it STOPS. There is
+no third element. After the unmet bar the sentence ends: no clause explaining why
+stopping or revising is then rational, no restatement of the wall's width, no
+cost-trend, no precedent gloss — however substantive the clause looks. Count the
+elements: cost + unmet bar = two, full stop. A third clause, whatever it says, is the
+significance tail (Block 2) wearing a decision label — the two elements already force
+the decision, and the brief's structure already carries the why.
 
 FORM — vary content and shape across walls; the invariant is the cost-anchored,
 bar-unmet, downside-only structure. Two illustrations, different walls:
