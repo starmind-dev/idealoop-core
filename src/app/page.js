@@ -395,6 +395,11 @@ export default function Home() {
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState(null);
   const [exploreAnalysis, setExploreAnalysis] = useState(null); // ll2_explore_v1 payload (Explore mode)
+  // Declared above the persistence/restore effects below: their dependency arrays reference
+  // these, and a dep on a const declared lower in the component hits a TDZ during prerender.
+  const [roughRoomIdea, setRoughRoomIdea] = useState(null); // { id, text, title }
+  const [savedExploreIdeaId, setSavedExploreIdeaId] = useState(null); // explored idea saved this session
+  const [briefData, setBriefData] = useState(null); // assembled six-block execution brief
 
   // Persist a small navigation snapshot so a refresh returns the user to where they were
   // (deep view, lineage tree, hub, …) instead of the Overview landing. sessionStorage survives
@@ -588,16 +593,10 @@ export default function Home() {
       setCurrentScreen("profile");
     }
   }, [currentScreen, inputMode, profile.coding, profile.ai]);
-  // Rough room: the rough idea currently open in its two-door room.
-  const [roughRoomIdea, setRoughRoomIdea] = useState(null); // { id, text, title }
   // Graduation intent: when set, the next deep save flips THIS idea forward in
   // place (rough -> deep) instead of creating a new idea. Declared per analysis
   // run via handleAnalyze, so a fresh (non-rough-room) run always clears it.
   const [graduatingIdeaId, setGraduatingIdeaId] = useState(null);
-  // The id of an explored idea SAVED in this Explore session. Set on a
-  // successful explore-result save; lets angles saved afterward branch under it
-  // (orphan rule) and lets "take to Deep as it stands" graduate it in place.
-  const [savedExploreIdeaId, setSavedExploreIdeaId] = useState(null);
 
   // ============================================
   // EXECUTION BRIEF STATE (Screen 3 / step-4 handoff)
@@ -617,7 +616,6 @@ export default function Home() {
   const [briefStatus, setBriefStatus] = useState("idle");
   const [briefError, setBriefError] = useState("");
   const [briefRetrying, setBriefRetrying] = useState(false);
-  const [briefData, setBriefData] = useState(null);
 
   // Clear brief state when analysis switches to a fresh/different idea so a
   // stale brief never bleeds across ideas. (Saved loads seed instead, in
