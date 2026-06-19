@@ -372,7 +372,7 @@ export function PressureRead({ analysis, t, onScoreGuide }) {
       </div>
       <TcLadder score={ev.technical_complexity.score} t={t} />
 
-      {showFull && detail && (
+      {showFull && (fullVerdict || detail) && (
         <div onClick={(e) => { if (e.target === e.currentTarget) setShowFull(false); }}
           style={{ position: "fixed", inset: 0, background: "rgba(6,7,11,0.72)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "60px 24px", zIndex: 1000, overflowY: "auto" }}>
           <div style={{ position: "relative", background: t.mode === "light" ? t.surface : "#0e1015", border: `1px solid ${t.border}`, borderRadius: 20, maxWidth: 740, width: "100%", padding: "34px 40px 36px", boxShadow: "0 30px 80px rgba(0,0,0,0.6)" }}>
@@ -381,11 +381,15 @@ export function PressureRead({ analysis, t, onScoreGuide }) {
             <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase", color: accent, opacity: 0.85, marginBottom: 12 }}>The full read</div>
             {headline && <h3 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.015em", color: t.text, margin: "0 0 18px" }}>{headline}</h3>}
             <p style={{ fontSize: 15.5, lineHeight: 1.8, color: t.sec, margin: 0, whiteSpace: "pre-line" }}>{ev.summary}</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "24px 0 14px" }}>
-              <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: t.mut }}>The deeper read</span>
-              <span style={{ flex: 1, height: 1, background: t.divider }} />
-            </div>
-            <p style={{ fontSize: 15.5, lineHeight: 1.8, color: t.sec, margin: 0, whiteSpace: "pre-line" }}>{detail}</p>
+            {detail && (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "24px 0 14px" }}>
+                  <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: t.mut }}>The deeper read</span>
+                  <span style={{ flex: 1, height: 1, background: t.divider }} />
+                </div>
+                <p style={{ fontSize: 15.5, lineHeight: 1.8, color: t.sec, margin: 0, whiteSpace: "pre-line" }}>{detail}</p>
+              </>
+            )}
           </div>
         </div>
       )}
