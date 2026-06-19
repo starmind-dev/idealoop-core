@@ -668,6 +668,11 @@ export function ExecutionReality({ estimates, mbColorFn, MbIcon, t }) {
   const isClose = amb && amb.is_close_call;
   const commitment = COMMITMENT_WORD[estimates.difficulty] || "—";
 
+  // beat-rail / whisper accents — tinted to the binding-constraint color, neutral fallback
+  const accent = (mbColor && mbColor.color) || t.sec;
+  const accentSoft = (mbColor && mbColor.border) || t.divider;
+  const nodeRing = t.mode === "light" ? (t.surface || t.bg) : (t.bg || "rgb(11,14,20)");
+
   const flow = [
     { l: "What clearing it takes", v: estimates.commitment_explanation },
     { l: "How your profile changes it", v: estimates.profile_calibration },
@@ -684,7 +689,7 @@ export function ExecutionReality({ estimates, mbColorFn, MbIcon, t }) {
 
   return (
     <div style={{ border: `1px solid ${t.border}`, borderRadius: 18, padding: "30px 34px", background: t.mode === "light" ? t.surface : "rgba(255,255,255,0.018)" }}>
-      <div style={{ display: "flex", gap: 36, flexWrap: "wrap", alignItems: "flex-start" }}>
+      <div style={{ display: "flex", gap: 28, flexWrap: "wrap", alignItems: "flex-start" }}>
         {/* hero */}
         <div style={{ flex: 2, minWidth: 320 }}>
           <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: t.mut, marginBottom: 10 }}>The binding constraint</div>
@@ -716,6 +721,9 @@ export function ExecutionReality({ estimates, mbColorFn, MbIcon, t }) {
           )}
         </div>
 
+        {/* whisper line — soft constraint-tinted hairline, fades top & bottom; collapses when columns stack */}
+        <div aria-hidden="true" style={{ alignSelf: "stretch", width: 1, flexShrink: 0, background: `linear-gradient(180deg, transparent, ${accentSoft} 16%, ${accentSoft} 84%, transparent)` }} />
+
         {/* read-out */}
         <div style={{ flex: 1, minWidth: 180 }}>
           <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: t.mut, marginBottom: 12 }}>What it implies</div>
@@ -729,9 +737,13 @@ export function ExecutionReality({ estimates, mbColorFn, MbIcon, t }) {
           <div style={{ height: 1, background: t.divider, margin: "20px 0 4px" }} />
           <MoreToggle open={showFlow} onClick={() => setShowFlow(!showFlow)} closed="What it takes to clear it" opened="Show less" color={t.sec} t={t} mt={8} />
           {showFlow && (
-            <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 20 }}>
+            <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 22 }}>
               {flow.map((it, i) => (
-                <div key={i}>
+                <div key={i} style={{ position: "relative", paddingLeft: 28 }}>
+                  {i < flow.length - 1 && (
+                    <span aria-hidden="true" style={{ position: "absolute", left: 5, top: 16, bottom: -24, width: 2, background: accentSoft }} />
+                  )}
+                  <span aria-hidden="true" style={{ position: "absolute", left: 0, top: 3, width: 12, height: 12, borderRadius: "50%", background: accent, border: `2px solid ${nodeRing}`, boxSizing: "border-box" }} />
                   <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: t.mut, marginBottom: 7 }}>{it.l}</div>
                   <p style={{ fontSize: 14, lineHeight: 1.66, color: t.sec, margin: 0 }}>{it.v}</p>
                 </div>
