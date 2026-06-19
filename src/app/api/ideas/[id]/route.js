@@ -46,32 +46,46 @@ async function authenticate(request) {
   return user;
 }
 
-// Build the DEEP `analysis` object from an evaluation row. BYTE-IDENTICAL to the
-// prior route's assembly so the deep-open path (applyLoadedIdea) is unaffected.
+// Build the DEEP `analysis` object from an evaluation row.
+//
+// LOSSLESS by construction: `scoring_json` holds the full evaluation snapshot as
+// it was rendered at eval time, so we SPREAD it first — that carries every field
+// the result view reads off `analysis.evaluation` (verdict_lead, verdict_headline,
+// verdict_detail, competitive_position, synthesis_degraded, and any field a future
+// 2c surface adds) through the save round-trip with no per-field hand-copying. The
+// explicit fields below then OVERLAY the spread, so the column-authoritative values
+// (overall_score, summary) win and the per-metric fallbacks for older rows (whose
+// scoring_json may predate a metric object) still apply. The previous version
+// hand-copied a fixed list and silently dropped anything new — which is why the
+// compressed lead + headline and the you_win/overlap/exposed split disappeared on
+// reload. (Requires the save path to persist the full evaluation into scoring_json;
+// see note in the save route.)
 function buildDeepAnalysis(evaluation) {
+  const sj = evaluation.scoring_json || {};
   return {
     evaluation: {
+      ...sj,
       overall_score: evaluation.weighted_overall_score,
-      market_demand: evaluation.scoring_json?.market_demand || {
+      market_demand: sj.market_demand || {
         score: evaluation.market_demand_score,
         explanation: "",
       },
-      monetization: evaluation.scoring_json?.monetization || {
+      monetization: sj.monetization || {
         score: evaluation.monetization_score,
         explanation: "",
       },
-      originality: evaluation.scoring_json?.originality || {
+      originality: sj.originality || {
         score: evaluation.originality_score,
         explanation: "",
       },
-      technical_complexity: evaluation.scoring_json?.technical_complexity || {
+      technical_complexity: sj.technical_complexity || {
         score: evaluation.technical_complexity_score,
         explanation: "",
       },
-      marketplace_note: evaluation.scoring_json?.marketplace_note || null,
-      failure_risks: evaluation.scoring_json?.failure_risks || [],
-      evidence_strength: evaluation.scoring_json?.evidence_strength || null,
-      summary: evaluation.summary_text || "",
+      marketplace_note: sj.marketplace_note || null,
+      failure_risks: sj.failure_risks || [],
+      evidence_strength: sj.evidence_strength || null,
+      summary: evaluation.summary_text || sj.summary || "",
     },
     competition: {
       competitors: evaluation.competitors_json || [],

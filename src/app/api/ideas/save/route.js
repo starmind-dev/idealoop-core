@@ -57,15 +57,18 @@ function buildDeepEvalRow(ideaId, userId, analysis, execution_brief) {
     data_source: analysis.competition?.data_source || "llm_generated",
     classification: analysis.classification || "commercial",
     scope_warning: analysis.scope_warning || false,
-    scoring_json: {
-      market_demand: eval_.market_demand,
-      monetization: eval_.monetization,
-      originality: eval_.originality,
-      technical_complexity: eval_.technical_complexity,
-      marketplace_note: eval_.marketplace_note || null,
-      failure_risks: eval_.failure_risks || [],
-      evidence_strength: eval_.evidence_strength || null,
-    },
+    // LOSSLESS: persist the FULL evaluation snapshot exactly as it was rendered,
+    // so the stored record IS what the user saw. The previous version cherry-picked
+    // seven keys and silently dropped every field the V83 redesign added —
+    // verdict_lead, verdict_headline, verdict_detail, competitive_position,
+    // synthesis_degraded — which is why the compressed lead + headline and the
+    // you_win/overlap/exposed split vanished on reload. Spreading eval_ carries all
+    // of those, plus any field a future 2c surface adds, with no field list to
+    // hand-maintain. (overall_score + the per-metric scores + summary also have
+    // their own columns below for hub/list/score reads; the read side overlays
+    // those, so duplicating them inside scoring_json here is harmless.) Pairs with
+    // the spread-on-read in api/ideas/[id]/route.js — both sides lossless.
+    scoring_json: { ...eval_ },
     estimates_json: analysis.estimates || {},
     // The execution brief, when one was generated before saving.
     // Absent → null → "generate" CTA shows on reload until one is made.
