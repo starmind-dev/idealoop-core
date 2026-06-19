@@ -163,11 +163,12 @@ function StreamOverlay({ streamSteps, t, mode = "deep" }) {
 }
 
 export default function Home() {
-  const [currentScreen, setCurrentScreen] = useState("profile");
+  const [currentScreen, setCurrentScreen] = useState("dashboard");
   // Which view the Dashboard shell shows; the rail stays put, only this swaps.
   const [dashView, setDashView] = useState("overview"); // "overview" | "hub"
   const [profile, setProfile] = useState({ coding: "", ai: "", education: "" });
   const [profileMoreOpen, setProfileMoreOpen] = useState(false);
+  const [profileBg, setProfileBg] = useState({ role: "", build: "", reach: "" });
   const [evalsRemaining, setEvalsRemaining] = useState(EVAL_LIMIT);
   const [user, setUser] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -201,6 +202,7 @@ export default function Home() {
 
   // Evaluation cache — avoids re-fetching already-viewed ideas
   const evaluationCacheRef = useRef({});
+  const didRestoreRef = useRef(false);
 
   // Preview entry: ?view=overview -> Dashboard/Overview.
   useEffect(() => {
@@ -280,34 +282,52 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Migrate localStorage profile to database when user logs in
+  // On login: load THIS account's profile from the DB into state. Profile is per-account;
+  // localStorage is per-device, so reading it back from the DB is what makes the profile
+  // switch correctly between accounts. Only migrate localStorage -> DB when the account has
+  // no saved profile yet, so a previous account's localStorage can't overwrite this one.
   useEffect(() => {
     if (!user) return;
-    const saved = localStorage.getItem("iv_profile");
-    if (!saved) return;
-
-    const localProfile = JSON.parse(saved);
-    // Only migrate if the local profile has data
-    if (localProfile.coding || localProfile.ai || localProfile.education) {
-      // Use server-side API route to bypass RLS
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (!session) return;
-        fetch("/api/profile", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            coding_level: localProfile.coding,
-            ai_experience: localProfile.ai,
-            education: localProfile.education,
-          }),
-        }).then((res) => {
-          if (!res.ok) res.json().then((d) => console.error("Profile migration failed:", d.error));
+    let cancelled = false;
+    supabase
+      .from("profiles")
+      .select("coding_level, ai_experience, education")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return;
+        const hasDbProfile = data && (data.coding_level || data.ai_experience || data.education);
+        if (hasDbProfile) {
+          const dbProfile = {
+            coding: data.coding_level || "",
+            ai: data.ai_experience || "",
+            education: data.education || "",
+          };
+          setProfile(dbProfile);
+          localStorage.setItem("iv_profile", JSON.stringify(dbProfile));
+          return;
+        }
+        // No saved profile for this account — migrate localStorage up if it holds data.
+        const saved = localStorage.getItem("iv_profile");
+        if (!saved) return;
+        const localProfile = JSON.parse(saved);
+        if (!(localProfile.coding || localProfile.ai || localProfile.education)) return;
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (!session) return;
+          fetch("/api/profile", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+            body: JSON.stringify({
+              coding_level: localProfile.coding,
+              ai_experience: localProfile.ai,
+              education: localProfile.education,
+            }),
+          }).then((res) => {
+            if (!res.ok) res.json().then((d) => console.error("Profile migration failed:", d.error));
+          });
         });
       });
-    }
+    return () => { cancelled = true; };
   }, [user]);
 
   // Fetch saved ideas count when user logs in
@@ -351,19 +371,18 @@ export default function Home() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    setProfile({ coding: "", ai: "", education: "" });
+    setProfileBg({ role: "", build: "", reach: "" });
+    localStorage.removeItem("iv_profile");
   };
 
-  // Load saved profile + eval count after mount (avoids hydration mismatch)
+  // Load saved profile + eval count after mount (avoids hydration mismatch). The screen is
+  // no longer forced here — the landing default is Overview, and the restore effect below
+  // returns the user to wherever they were before a refresh.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const saved = localStorage.getItem("iv_profile");
-    if (saved) {
-      setProfile(JSON.parse(saved));
-      // Don't override a preview entry (?hub=new or ?view=overview — the mount effect above sets those).
-      const previewParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-      const previewEntry = !!previewParams && (previewParams.get("hub") === "new" || previewParams.get("view") === "overview");
-      if (!previewEntry) setCurrentScreen("input");
-    }
+    if (saved) setProfile(JSON.parse(saved));
     setEvalsRemaining(getEvalsRemaining());
   }, []);
   const [idea, setIdea] = useState("");
@@ -372,6 +391,54 @@ export default function Home() {
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState(null);
   const [exploreAnalysis, setExploreAnalysis] = useState(null); // ll2_explore_v1 payload (Explore mode)
+
+  // Persist a small navigation snapshot so a refresh returns the user to where they were
+  // (deep view, hub, …) instead of the Overview landing. sessionStorage survives refresh
+  // but resets on a fresh tab, so a brand-new session still lands on Overview. Gated on
+  // didRestoreRef so the initial default screen can't overwrite the snapshot before it's read.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (typeof window === "undefined" || !didRestoreRef.current) return;
+    try {
+      sessionStorage.setItem("iv_nav", JSON.stringify({
+        screen: currentScreen, dashView, inputMode,
+        ideaId: currentIdeaId, evalId: currentEvaluationId,
+      }));
+    } catch (e) {}
+  }, [currentScreen, dashView, inputMode, currentIdeaId, currentEvaluationId]);
+
+  // Restore that snapshot once, after auth resolves (idea views need the user). An explicit
+  // ?view=overview / ?hub=new deep-link wins over the snapshot.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (authLoading || didRestoreRef.current) return;
+    didRestoreRef.current = true;
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("hub") === "new" || params.get("view") === "overview") return;
+    let nav = null;
+    try { nav = JSON.parse(sessionStorage.getItem("iv_nav") || "null"); } catch (e) {}
+    if (!nav || !nav.screen) return; // no snapshot → stay on the Overview landing
+    if (nav.ideaId && nav.screen !== "dashboard" && nav.screen !== "input" && nav.screen !== "profile") {
+      loadSavedIdea(nav.ideaId, nav.evalId || undefined); // self-routes rough / explore / deep
+    } else if (nav.screen === "dashboard") {
+      setCurrentScreen("dashboard");
+      if (nav.dashView) setDashView(nav.dashView);
+    } else if (nav.screen === "input") {
+      if (nav.inputMode) setInputMode(nav.inputMode);
+      setCurrentScreen("input");
+    }
+    // profile / unknown → stay on Overview
+  }, [authLoading]);
+
+  // First Deep entry: if the profile isn't set, route through the profile screen first
+  // (its Continue returns to the Deep input). One guard covers every Deep entry point.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (currentScreen === "input" && inputMode === "deep" && !(profile.coding && profile.ai)) {
+      setCurrentScreen("profile");
+    }
+  }, [currentScreen, inputMode, profile.coding, profile.ai]);
   // Rough room: the rough idea currently open in its two-door room.
   const [roughRoomIdea, setRoughRoomIdea] = useState(null); // { id, text, title }
   // Graduation intent: when set, the next deep save flips THIS idea forward in
@@ -1621,6 +1688,8 @@ export default function Home() {
   // ==========================================
   if (currentScreen === "profile") {
     const canContinue = profile.coding && profile.ai;
+    const bgFieldStyle = { width: "100%", background: t.inputBg, border: `1px solid ${t.inputBorder}`, borderRadius: 12, padding: "12px 16px", fontSize: 14, color: t.inputText, outline: "none", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit", lineHeight: 1.6 };
+    const bgFieldLabel = { fontSize: 13.5, fontWeight: 600, color: t.text, display: "block", marginBottom: 8 };
 
     return (
       <DashboardShell
@@ -1719,42 +1788,69 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Background — single field (round-trips); "more detail" guides toward richer anchors */}
+              {/* Background — single field by default; "add more detail" expands into three structured fields. All compose into the single education string the engine reads. */}
               <div>
-                <label style={{ fontSize: 14, fontWeight: 600, color: t.text, display: "block", marginBottom: 12 }}>
-                  Your background
-                </label>
-                <textarea
-                  value={profile.education}
-                  onChange={(e) => setProfile((p) => ({ ...p, education: e.target.value }))}
-                  placeholder="e.g., Clinical ops lead in pharma, 8 yrs — or: final-year CS student — or: marketing, switching to product"
-                  rows={profileMoreOpen ? 4 : 2}
-                  style={{
-                    width: "100%",
-                    background: t.inputBg,
-                    border: `1px solid ${t.inputBorder}`,
-                    borderRadius: 12,
-                    padding: "12px 16px",
-                    fontSize: 14,
-                    color: t.inputText,
-                    outline: "none",
-                    boxSizing: "border-box",
-                    resize: "vertical",
-                    fontFamily: "inherit",
-                    lineHeight: 1.6,
-                  }}
-                />
+                {!profileMoreOpen && (
+                  <>
+                    <label style={{ fontSize: 14, fontWeight: 600, color: t.text, display: "block", marginBottom: 12 }}>
+                      Your background
+                    </label>
+                    <textarea
+                      value={profile.education}
+                      onChange={(e) => setProfile((p) => ({ ...p, education: e.target.value }))}
+                      placeholder="e.g., Clinical ops lead in pharma, 8 yrs — or: final-year CS student — or: marketing, switching to product"
+                      rows={2}
+                      style={bgFieldStyle}
+                    />
+                  </>
+                )}
+                {profileMoreOpen && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                    <div>
+                      <label style={bgFieldLabel}>Your role or experience</label>
+                      <textarea
+                        value={profileBg.role}
+                        onChange={(e) => setProfileBg((b) => ({ ...b, role: e.target.value }))}
+                        placeholder="e.g., Clinical ops lead at a pharma, 8 yrs — or: final-year CS student — or: marketing, switching to product"
+                        rows={2}
+                        style={bgFieldStyle}
+                      />
+                    </div>
+                    <div>
+                      <label style={bgFieldLabel}>How do you handle the building?</label>
+                      <textarea
+                        value={profileBg.build}
+                        onChange={(e) => setProfileBg((b) => ({ ...b, build: e.target.value }))}
+                        placeholder="e.g., I ship my own apps in Python — or: non-technical, I'll partner or hire for it"
+                        rows={2}
+                        style={bgFieldStyle}
+                      />
+                    </div>
+                    <div>
+                      <label style={bgFieldLabel}>
+                        Any relevant connections? <span style={{ fontSize: 11, fontWeight: 400, color: t.mut }}>optional</span>
+                      </label>
+                      <textarea
+                        value={profileBg.reach}
+                        onChange={(e) => setProfileBg((b) => ({ ...b, reach: e.target.value }))}
+                        placeholder="e.g., I know hospital procurement managers — or: starting cold, which is completely normal"
+                        rows={2}
+                        style={bgFieldStyle}
+                      />
+                    </div>
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() => setProfileMoreOpen((v) => !v)}
-                  style={{ marginTop: 12, display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: 0, cursor: "pointer", color: t.link || t.sec, fontSize: 13 }}
+                  style={{ marginTop: 14, display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: 0, cursor: "pointer", color: t.link || t.sec, fontSize: 13 }}
                 >
-                  {profileMoreOpen ? "Show less" : "Add more detail for a sharper read"}
+                  {profileMoreOpen ? "Use a single line instead" : "Add more detail for a sharper read"}
                   <span style={{ display: "inline-block", transform: profileMoreOpen ? "rotate(180deg)" : "none", transition: "transform 0.18s", fontSize: 11 }}>▾</span>
                 </button>
                 {profileMoreOpen && (
-                  <p style={{ fontSize: 12.5, color: t.mut, lineHeight: 1.55, margin: "12px 0 0" }}>
-                    Include your role and years, how you handle the building, and any connections you can tap — the more concrete, the sharper your founder-fit, bottleneck, and risk read. A single honest line works fine too.
+                  <p style={{ fontSize: 12.5, color: t.mut, lineHeight: 1.55, margin: "14px 0 0" }}>
+                    The more concrete, the sharper your founder-fit, bottleneck, and risk read. A single honest line works fine too.
                   </p>
                 )}
               </div>
@@ -1762,7 +1858,14 @@ export default function Home() {
 
             <button
               onClick={() => {
-                localStorage.setItem("iv_profile", JSON.stringify(profile));
+                const composed = profileMoreOpen
+                  ? [profileBg.role, profileBg.build ? `Building: ${profileBg.build}` : "", profileBg.reach ? `Reach: ${profileBg.reach}` : ""]
+                      .map((s) => s.trim()).filter(Boolean).join(". ")
+                  : profile.education;
+                const eduToSave = composed.trim() ? composed : profile.education;
+                const toSave = { ...profile, education: eduToSave };
+                setProfile(toSave);
+                localStorage.setItem("iv_profile", JSON.stringify(toSave));
                 // Save to database via server-side API route (bypasses RLS)
                 if (user) {
                   supabase.auth.getSession().then(({ data: { session } }) => {
@@ -1776,7 +1879,7 @@ export default function Home() {
                       body: JSON.stringify({
                         coding_level: profile.coding,
                         ai_experience: profile.ai,
-                        education: profile.education,
+                        education: eduToSave,
                       }),
                     }).then((res) => {
                       if (!res.ok) res.json().then((d) => console.error("Profile save to DB failed:", d.error));
