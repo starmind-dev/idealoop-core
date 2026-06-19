@@ -167,6 +167,7 @@ export default function Home() {
   // Which view the Dashboard shell shows; the rail stays put, only this swaps.
   const [dashView, setDashView] = useState("overview"); // "overview" | "hub"
   const [profile, setProfile] = useState({ coding: "", ai: "", education: "" });
+  const [profileMoreOpen, setProfileMoreOpen] = useState(false);
   const [evalsRemaining, setEvalsRemaining] = useState(EVAL_LIMIT);
   const [user, setUser] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -1649,8 +1650,7 @@ export default function Home() {
                 Tell us about yourself
               </h2>
               <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.6, margin: 0 }}>
-                We'll calibrate the analysis to your experience level<br />
-                so the recommendations are relevant to you.
+                We calibrate the analysis to your background, so the read is specific to you.
               </p>
             </div>
 
@@ -1719,16 +1719,16 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Education */}
+              {/* Background — single field (round-trips); "more detail" guides toward richer anchors */}
               <div>
                 <label style={{ fontSize: 14, fontWeight: 600, color: t.text, display: "block", marginBottom: 12 }}>
-                  What is your education or professional background?
+                  Your background
                 </label>
-                <input
-                  type="text"
+                <textarea
                   value={profile.education}
                   onChange={(e) => setProfile((p) => ({ ...p, education: e.target.value }))}
-                  placeholder="e.g., Software Engineer, Marketing Manager, Student..."
+                  placeholder="e.g., Clinical ops lead in pharma, 8 yrs — or: final-year CS student — or: marketing, switching to product"
+                  rows={profileMoreOpen ? 4 : 2}
                   style={{
                     width: "100%",
                     background: t.inputBg,
@@ -1739,8 +1739,24 @@ export default function Home() {
                     color: t.inputText,
                     outline: "none",
                     boxSizing: "border-box",
+                    resize: "vertical",
+                    fontFamily: "inherit",
+                    lineHeight: 1.6,
                   }}
                 />
+                <button
+                  type="button"
+                  onClick={() => setProfileMoreOpen((v) => !v)}
+                  style={{ marginTop: 12, display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: 0, cursor: "pointer", color: t.link || t.sec, fontSize: 13 }}
+                >
+                  {profileMoreOpen ? "Show less" : "Add more detail for a sharper read"}
+                  <span style={{ display: "inline-block", transform: profileMoreOpen ? "rotate(180deg)" : "none", transition: "transform 0.18s", fontSize: 11 }}>▾</span>
+                </button>
+                {profileMoreOpen && (
+                  <p style={{ fontSize: 12.5, color: t.mut, lineHeight: 1.55, margin: "12px 0 0" }}>
+                    Include your role and years, how you handle the building, and any connections you can tap — the more concrete, the sharper your founder-fit, bottleneck, and risk read. A single honest line works fine too.
+                  </p>
+                )}
               </div>
             </Card>
 
