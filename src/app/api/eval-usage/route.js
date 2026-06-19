@@ -6,8 +6,13 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+// Free allotment is a LIFETIME cap (no rolling window) until the credit system lands.
+// plan_type drives access:
+//   "dev"  -> unlimited (never recorded, never blocked)
+//   "free" -> EVAL_LIMIT evaluations, lifetime
+// Future credit model (not built yet): deep = 4 credits, explore = 1-2, sold in packs.
+// A future "credits" plan would check/decrement a balance here instead of counting rows.
 const EVAL_LIMIT = 3;
-const EVAL_WINDOW_DAYS = 7;
 
 // Helper: authenticate request
 async function authenticate(request) {
@@ -24,10 +29,22 @@ async function authenticate(request) {
   return user;
 }
 
+// Helper: read the caller's plan_type ("free" when absent)
+async function getPlan(userId) {
+  const { data } = await supabaseAdmin
+    .from("profiles")
+    .select("plan_type")
+    .eq("id", userId)
+    .single();
+  return data?.plan_type || "free";
+}
+
+// Response shape for dev (unlimited) accounts.
+const UNLIMITED = { used: 0, remaining: 9999, limit: 9999, lifetime: true, dev: true, next_reset_time: null };
+
 // ============================================
 // GET /api/eval-usage
-// Returns how many evaluations the user has remaining
-// in the current rolling 7-day window.
+// Returns how many evaluations the user has remaining (lifetime).
 // ============================================
 export async function GET(request) {
   try {
@@ -36,13 +53,14 @@ export async function GET(request) {
       return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
     }
 
-    const cutoff = new Date(Date.now() - EVAL_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    if ((await getPlan(user.id)) === "dev") {
+      return NextResponse.json(UNLIMITED);
+    }
 
     const { count, error: countError } = await supabaseAdmin
       .from("eval_usage")
       .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .gte("evaluated_at", cutoff);
+      .eq("user_id", user.id);
 
     if (countError) {
       console.error("Eval usage count failed:", countError);
@@ -55,30 +73,12 @@ export async function GET(request) {
     const used = count || 0;
     const remaining = Math.max(0, EVAL_LIMIT - used);
 
-    // Find when the oldest eval in window expires (for "next slot opens in" display)
-    let nextResetTime = null;
-    if (remaining === 0) {
-      const { data: oldest, error: oldestError } = await supabaseAdmin
-        .from("eval_usage")
-        .select("evaluated_at")
-        .eq("user_id", user.id)
-        .gte("evaluated_at", cutoff)
-        .order("evaluated_at", { ascending: true })
-        .limit(1)
-        .single();
-
-      if (!oldestError && oldest) {
-        const expiresAt = new Date(new Date(oldest.evaluated_at).getTime() + EVAL_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-        nextResetTime = expiresAt.toISOString();
-      }
-    }
-
     return NextResponse.json({
       used,
       remaining,
       limit: EVAL_LIMIT,
-      window_days: EVAL_WINDOW_DAYS,
-      next_reset_time: nextResetTime,
+      lifetime: true,
+      next_reset_time: null, // lifetime cap — no rolling reset
     });
   } catch (err) {
     console.error("Eval usage error:", err);
@@ -88,9 +88,8 @@ export async function GET(request) {
 
 // ============================================
 // POST /api/eval-usage
-// Record that the user used one evaluation.
-// Called after a successful evaluation completes.
-// Returns updated remaining count.
+// Record that the user used one evaluation. Dev accounts are not recorded
+// (unlimited). Returns updated remaining count.
 // ============================================
 export async function POST(request) {
   try {
@@ -99,14 +98,15 @@ export async function POST(request) {
       return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
     }
 
-    // Check if they're already at the limit before recording
-    const cutoff = new Date(Date.now() - EVAL_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    if ((await getPlan(user.id)) === "dev") {
+      return NextResponse.json({ success: true, ...UNLIMITED });
+    }
 
+    // Lifetime count before recording
     const { count: currentCount, error: countError } = await supabaseAdmin
       .from("eval_usage")
       .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .gte("evaluated_at", cutoff);
+      .eq("user_id", user.id);
 
     if (countError) {
       console.error("Eval usage pre-check failed:", countError);
@@ -137,6 +137,7 @@ export async function POST(request) {
       used,
       remaining,
       limit: EVAL_LIMIT,
+      lifetime: true,
     });
   } catch (err) {
     console.error("Record eval usage error:", err);

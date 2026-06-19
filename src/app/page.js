@@ -30,16 +30,15 @@ import {
 // ============================================
 // EVALUATION LIMIT HELPERS
 // ============================================
-const EVAL_LIMIT = 2;
+const EVAL_LIMIT = 3;
 const EVAL_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 function getRecentEvals() {
+  // Lifetime cap: every recorded eval counts, no rolling window.
   try {
     const raw = localStorage.getItem("iv_eval_timestamps");
     if (!raw) return [];
-    const timestamps = JSON.parse(raw);
-    const cutoff = Date.now() - EVAL_WINDOW_MS;
-    return timestamps.filter((t) => t > cutoff);
+    return JSON.parse(raw) || [];
   } catch {
     return [];
   }
@@ -170,6 +169,7 @@ export default function Home() {
   const [profileMoreOpen, setProfileMoreOpen] = useState(false);
   const [profileBg, setProfileBg] = useState({ role: "", build: "", reach: "" });
   const [evalsRemaining, setEvalsRemaining] = useState(EVAL_LIMIT);
+  const [evalUnlimited, setEvalUnlimited] = useState(false); // dev plan → no eval limit
   const [user, setUser] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
@@ -359,6 +359,7 @@ export default function Home() {
         const data = await res.json();
         if (res.ok) {
           setEvalsRemaining(data.remaining);
+          setEvalUnlimited(!!data.dev);
           if (data.next_reset_time) setDbNextResetTime(data.next_reset_time);
         }
       } catch (err) {
@@ -2312,7 +2313,9 @@ export default function Home() {
                 fontSize: 13,
                 color: evalsRemaining <= 0 ? "#f87171" : evalsRemaining === 1 ? "#fbbf24" : t.sec,
               }}>
-                {evalsRemaining <= 0
+                {evalUnlimited
+                  ? "Developer — unlimited evaluations"
+                  : evalsRemaining <= 0
                   ? "You've used your free evaluations. Get credits to keep going."
                   : `${evalsRemaining} of ${EVAL_LIMIT} free evaluations remaining`}
               </span>
@@ -2850,7 +2853,9 @@ export default function Home() {
                 fontSize: 13,
                 color: evalsRemaining <= 0 ? "#f87171" : evalsRemaining === 1 ? "#fbbf24" : t.sec,
               }}>
-                {evalsRemaining <= 0
+                {evalUnlimited
+                  ? "Developer — unlimited evaluations"
+                  : evalsRemaining <= 0
                   ? "You've used your free evaluations. Get credits to keep going."
                   : `${evalsRemaining} of ${EVAL_LIMIT} free evaluations remaining`}
               </span>
