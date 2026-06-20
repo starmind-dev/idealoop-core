@@ -30,10 +30,16 @@ import { supabaseAdmin } from "../supabase-admin";
 const FORWARD_RANK = { rough: 0, explore: 1, deep: 2 };
 
 // Light select for hub/canvas reads — never leaks heavy eval payloads.
+// The four per-metric scores are plain numeric columns (cheap) so the hub's deep
+// hover-preview can paint MD/MO/OR bars + the TC ladder INSTANTLY off the list,
+// with no per-card [id] round-trip. The heavy payloads (scoring_json / explore_json)
+// are still omitted — the verdict line and explore fan lazy-load on hover.
 const IDEA_LIGHT_SELECT = `
   id, title, raw_idea_text, parent_idea_id, branch_reason, changed_dimensions,
   is_main_version, status, source, folder_id, created_at, updated_at,
-  evaluations ( id, mode, evaluation_mode, weighted_overall_score, execution_brief_json, created_at )
+  evaluations ( id, mode, evaluation_mode, weighted_overall_score,
+    market_demand_score, monetization_score, originality_score, technical_complexity_score,
+    execution_brief_json, created_at )
 `;
 
 // ============================================================================
@@ -58,12 +64,19 @@ export function resolveState(idea) {
 function shapeNode(idea, { isRoot } = {}) {
   const state = resolveState(idea);
   const latest = (idea.evaluations || [])[0] || null;
+  const num = (v) => (v === null || v === undefined || v === "" ? null : Number(v));
   return {
     id: idea.id,
     parent_id: idea.parent_idea_id || null,
     title: idea.title,
     mode: state.mode,                 // 'rough' | 'explore' | 'deep'
     score: state.score,               // number | null (deep only)
+    // Per-metric scores for the hub deep-hover bars/ladder (deep cards only; null
+    // for rough/explore). Composite stays code-derived — these are display inputs.
+    md: num(latest && latest.market_demand_score),
+    mo: num(latest && latest.monetization_score),
+    or: num(latest && latest.originality_score),
+    tc: num(latest && latest.technical_complexity_score),
     is_root: isRoot ?? (idea.parent_idea_id == null),
     is_main: !!idea.is_main_version,
     branch_reason: idea.branch_reason || null,
