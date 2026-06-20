@@ -17,7 +17,9 @@
 //       eval mode 'deep'    -> 'deep'     (microscope, weighted score)
 //   ONE LIVE EVAL PER IDEA. Moving forward REPLACES the eval — "explore leaves
 //   for good" when deep takes over. Branches and re-evals are SEPARATE rows.
-//   ONE CARD PER FAMILY = its main (is_main_version); the rest live in lineage.
+//   ONE CARD PER FAMILY = its ROOT (fixed identity); the rest live in lineage.
+//   'main'/Lead (is_main_version) is a VISUAL marker in the lineage only — it does
+//   NOT pick the hub card. Root and Lead are decoupled.
 //   FORWARD-ONLY: rough -> explore, rough -> deep, explore -> deep. Never back.
 //   BRANCHING IS EXPLORE-ONLY: a saved angle (rough child) may only sit under an
 //   explored parent. Deep ideas have no angle room.
@@ -36,7 +38,7 @@ const FORWARD_RANK = { rough: 0, explore: 1, deep: 2 };
 // are still omitted — the verdict line and explore fan lazy-load on hover.
 const IDEA_LIGHT_SELECT = `
   id, title, raw_idea_text, parent_idea_id, branch_reason, changed_dimensions,
-  is_main_version, status, source, folder_id, created_at, updated_at,
+  is_main_version, is_favorite, disposition, status, source, folder_id, created_at, updated_at,
   evaluations ( id, mode, evaluation_mode, weighted_overall_score,
     market_demand_score, monetization_score, originality_score, technical_complexity_score,
     execution_brief_json, created_at )
@@ -80,6 +82,9 @@ function shapeNode(idea, { isRoot } = {}) {
     is_root: isRoot ?? (idea.parent_idea_id == null),
     is_main: !!idea.is_main_version,
     branch_reason: idea.branch_reason || null,
+    changed_dimensions: idea.changed_dimensions || null,  // jsonb: what moved between this node and its parent
+    is_favorite: !!idea.is_favorite,                      // explore's "best" = user favorite
+    disposition: idea.disposition || null,                // null | 'parked' | 'killed'
     folder_id: idea.folder_id || null,
     source: idea.source || null,
     has_brief: !!(latest && latest.execution_brief_json),
@@ -117,9 +122,11 @@ function rootIdOf(id, byId) {
 // ============================================================================
 
 // The hub: one card per family, split into two shelves by the card's state.
-// Returns { folders, rough: [card], ideas: [card] }. A card = the family's main
-// (is_main_version), else its root. Rough cards are quarantined to their shelf;
-// every card in `ideas` is already explore or deep.
+// Returns { folders, rough: [card], ideas: [card] }. A card = the family's ROOT,
+// always — never its Lead. (Lead is a visual-only marker in the lineage view.)
+// Rough cards are quarantined to their shelf; every card in `ideas` is explore/deep
+// BY ITS ROOT'S state — a family rooted in explore stays on the explored shelf even
+// if it has deep branches; those live in its lineage.
 export async function listHub(userId) {
   const [ideaRes, folderRes] = await Promise.all([
     supabaseAdmin.from("ideas").select(IDEA_LIGHT_SELECT)
@@ -140,8 +147,12 @@ export async function listHub(userId) {
   });
 
   const cards = Object.entries(families).map(([rootId, members]) => {
-    const main = members.find((m) => m.is_main_version) || byId[rootId] || members[0];
-    const node = shapeNode(main, { isRoot: main.id === rootId });
+    // The hub ALWAYS shows the family by its ROOT — a fixed identity that never
+    // moves. "Lead" (is_main_version) is a purely visual marker in the lineage view
+    // and deliberately does NOT change which card the hub shows. Root and Lead are
+    // decoupled: re-eval / branch / set-lead can never reshuffle the hub.
+    const root = byId[rootId] || members[0];
+    const node = shapeNode(root, { isRoot: true });
     return { ...node, family_size: members.length };
   });
 
@@ -275,10 +286,17 @@ export async function createIdea(userId, opts = {}) {
 
 // Rename, move-to-folder, edit branch note. Whitelisted fields only.
 export async function updateIdea(userId, ideaId, patch = {}) {
+  // Lead promotion is a family-wide move (clear siblings, set this one) — delegate
+  // to setMain so the rule lives in one place; reuses the existing PATCH route.
+  if (patch.is_main === true) await setMain(userId, ideaId);
+
   const set = {};
   if (typeof patch.title === "string") set.title = patch.title.trim().slice(0, 80);
   if ("folder_id" in patch) set.folder_id = patch.folder_id || null;
   if ("branch_reason" in patch) set.branch_reason = patch.branch_reason || null;
+  if ("is_favorite" in patch) set.is_favorite = !!patch.is_favorite;
+  if ("disposition" in patch)
+    set.disposition = patch.disposition === "parked" || patch.disposition === "killed" ? patch.disposition : null;
   if (Object.keys(set).length === 0) return { ok: true };
   set.updated_at = new Date().toISOString();
   const { error } = await supabaseAdmin.from("ideas").update(set)

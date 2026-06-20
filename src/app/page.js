@@ -236,7 +236,7 @@ export default function Home() {
   // Branch creation form state (V4S14)
   const [branchReason, setBranchReason] = useState("");
   const [branchDimensions, setBranchDimensions] = useState([]); // array of strings like ["target_user", "problem"]
-  const [branchSetAsMain, setBranchSetAsMain] = useState(false); // if true, set-main after saving branch
+  const [branchSetAsMain, setBranchSetAsMain] = useState(false); // INERT — Lead is set only via SET LEAD (lineage). Remove its checkbox from EvaluationView.
   const [reEvalEditTarget, setReEvalEditTarget] = useState(false); // toggle for target user edit field
   const [reEvalEditProblem, setReEvalEditProblem] = useState(false); // toggle for problem edit field
   const [reEvalEditCore, setReEvalEditCore] = useState(false); // toggle for core idea edit field
@@ -1127,24 +1127,10 @@ export default function Home() {
         setCurrentEvaluationId(data.evaluation_id);
         setIsReEvalResult(false);
 
-        // If user chose "Set as main version", call set-main after branch is created
-        if (branchSetAsMain) {
-          try {
-            await fetch(`/api/ideas/${data.idea_id}/set-main`, {
-              method: "PATCH",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${session.access_token}`,
-              },
-            });
-          } catch (e) {
-            console.error("Set-main failed:", e);
-            // Branch is already saved — don't fail the whole operation
-          }
-          setBranchSetAsMain(false);
-        }
+        // Saving a branch GROWS the tree only — it never moves the Lead. The Lead
+        // is set in exactly one place now: the SET LEAD control in the lineage view.
 
-        // Refresh hub data so lineage view and hub reflect the new branch + main status
+        // Refresh hub data so lineage view and hub reflect the new branch
         fetchMyIdeas();
       } else {
         // Normal save: create new idea + evaluation
@@ -1760,19 +1746,12 @@ export default function Home() {
     goToMyIdeas();
   };
 
-  const onSetAsMain = async (ideaId) => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      await fetch(`/api/ideas/${ideaId}/set-main`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      fetchMyIdeas();
-    } catch (e) {
-      console.error("Set-main failed:", e);
-    }
-  };
+  // RETIRED. The Lead (is_main_version) moves in ONE place only: the SET LEAD
+  // control in the lineage view. This was the "saving promotes to main" reflex from
+  // the single-idea era — it overrode the family root on re-eval. Kept as a no-op so
+  // EvaluationView's prop wiring doesn't break; its set-as-main button is now inert
+  // and should be removed from that component.
+  const onSetAsMain = async () => {};
 
   const onNavigateToDelta = () => {
     setCurrentScreen("delta");
@@ -3378,42 +3357,6 @@ export default function Home() {
             >
               {evalsRemaining <= 0 ? "No evaluations remaining" : "Evolve this idea"}
             </button>
-            {/* Set as main version — only for branches that aren't already main */}
-            {currentIdeaId && (() => {
-              const ci = myIdeas.find(i => i.id === currentIdeaId);
-              if (!ci?.parent_idea_id || ci?.is_main_version) return null;
-              return (
-                <button
-                  onClick={async () => {
-                    try {
-                      const { data: { session } } = await supabase.auth.getSession();
-                      if (!session) return;
-                      await fetch(`/api/ideas/${currentIdeaId}/set-main`, {
-                        method: "PATCH",
-                        headers: { Authorization: `Bearer ${session.access_token}` },
-                      });
-                      fetchMyIdeas();
-                    } catch (e) {
-                      console.error("Set-main failed:", e);
-                    }
-                  }}
-                  style={{
-                    width: "100%",
-                    padding: "12px 0",
-                    borderRadius: 12,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    border: "1px solid rgba(16,185,129,0.3)",
-                    background: "rgba(16,185,129,0.06)",
-                    color: "#34d399",
-                    cursor: "pointer",
-                    marginBottom: 10,
-                  }}
-                >
-                  ★ Set as main version
-                </button>
-              );
-            })()}
             <button
               onClick={() => {
                 setViewingFromSaved(false);

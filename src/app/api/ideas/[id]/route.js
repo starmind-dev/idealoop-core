@@ -199,7 +199,8 @@ export async function PATCH(request, { params }) {
     const body = await request.json().catch(() => ({}));
 
     // Build the patch against the service's whitelist (title / folder_id /
-    // branch_reason). status_label is intentionally NOT accepted — see header.
+    // branch_reason / is_favorite / disposition / is_main). status_label is
+    // intentionally NOT accepted — see header.
     const patch = {};
 
     if (body.title !== undefined) {
@@ -236,6 +237,23 @@ export async function PATCH(request, { params }) {
         }
       }
       patch.folder_id = fid;
+    }
+
+    // Lineage: explore's "favorite" (boolean), lifecycle disposition (null |
+    // 'parked' | 'killed'), and Lead promotion. is_main only accepts `true` —
+    // you don't un-set a lead, you set a different node; updateIdea delegates the
+    // family-wide flag move to setMain.
+    if ("is_favorite" in body) {
+      patch.is_favorite = !!body.is_favorite;
+    }
+
+    if ("disposition" in body) {
+      const d = body.disposition;
+      patch.disposition = d === "parked" || d === "killed" ? d : null;
+    }
+
+    if (body.is_main === true) {
+      patch.is_main = true;
     }
 
     if (Object.keys(patch).length === 0) {
