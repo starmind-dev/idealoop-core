@@ -68,7 +68,13 @@ function buildDeepEvalRow(ideaId, userId, analysis, execution_brief) {
     // their own columns below for hub/list/score reads; the read side overlays
     // those, so duplicating them inside scoring_json here is harmless.) Pairs with
     // the spread-on-read in api/ideas/[id]/route.js — both sides lossless.
-    scoring_json: { ...eval_ },
+    // V87 Stage 3a — carry the evidence packets forward under scoring_json._pro,
+    // the exact path the change-diff reads a saved parent's evidence from. Without
+    // this a re-evaluated parent has no evidence lane and the diff degrades every
+    // metric to read-only. Conditional spread: a no-op when the pipeline emitted
+    // no _pro, never writing an empty key. (evaluation engine untouched — this
+    // only persists what the analysis already carries.)
+    scoring_json: { ...eval_, ...(analysis._pro ? { _pro: analysis._pro } : {}) },
     estimates_json: analysis.estimates || {},
     // The execution brief, when one was generated before saving.
     // Absent → null → "generate" CTA shows on reload until one is made.

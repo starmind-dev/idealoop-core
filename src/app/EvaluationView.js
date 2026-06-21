@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import {
   StepProgress,
   SectionHeader,
@@ -11,6 +13,7 @@ import {
   PreviewBanner,
 } from "./components";
 import { ProvenanceStrip, PressureRead, DeepMetricCard, DeepTcCard, ExecutionReality, KeyRisks, CompetitorGrid } from "./DeepResultParts";
+import { ChangeWalkthrough, ChangeMarker } from "./ChangeWalkthrough";
 
 export default function EvaluationView({
   // Screen
@@ -19,6 +22,7 @@ export default function EvaluationView({
   t,
   // Core data
   analysis,
+  walkthroughData,
   profile,
   user,
   // Navigation context
@@ -41,8 +45,6 @@ export default function EvaluationView({
   // Re-eval state
   isReEvalResult,
   evalsRemaining,
-  deltaData,
-  deltaLoading,
   // Execution Brief (Screen 3)
   openExecutionBrief,
   hasExecutionBrief,
@@ -68,14 +70,14 @@ export default function EvaluationView({
   onResetAndNewIdea,
   onBackToMyIdeasCleanup,
   onDiscardReEval,
-  onSetAsMain,
-  onNavigateToDelta,
 }) {
 
   // V4S23 entitlement system removed. Content gating retired — all content is full.
   // PreviewBanner teaser left dormant (isPreviewUser=false) pending M5/Paddle credit wiring.
   const isGated = false;
   const isPreviewUser = false;
+  const [openWT, setOpenWT] = useState(null);
+  const wt = walkthroughData && walkthroughData.anchors;
 
   // Deep provenance (V6 lineage strip). Today cold-open is the only live path,
   // so most results show the gray "straight to Deep" state. reeval and branched
@@ -93,6 +95,7 @@ export default function EvaluationView({
   if (screen === "results1") {
     return (
       <>
+        <ChangeWalkthrough anchor={openWT} onClose={() => setOpenWT(null)} />
         <PageContainer wide>
           <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", padding: "4px 0 0" }}>
             <button onClick={() => {
@@ -183,11 +186,13 @@ export default function EvaluationView({
                 ============================================================
               */}
 
-              <PressureRead analysis={analysis} t={t} onScoreGuide={() => setShowScoreGuide(true)} />
+              <PressureRead analysis={analysis} t={t} onScoreGuide={() => setShowScoreGuide(true)} wt={wt} onWt={setOpenWT} />
 
               {/* ===== PER-METRIC CARDS — mockup rail+body layout ===== */}
               <DeepMetricCard
                 metricKey="market_demand"
+                wt={wt}
+                onWt={setOpenWT}
                 metric={analysis.evaluation.market_demand}
                 name="Market Demand"
                 weightLabel="37.5% weight"
@@ -197,6 +202,8 @@ export default function EvaluationView({
               />
               <DeepMetricCard
                 metricKey="monetization"
+                wt={wt}
+                onWt={setOpenWT}
                 metric={analysis.evaluation.monetization}
                 name={analysis.evaluation.monetization.label || "Monetization Potential"}
                 weightLabel="31.25% weight"
@@ -205,6 +212,8 @@ export default function EvaluationView({
               />
               <DeepMetricCard
                 metricKey="originality"
+                wt={wt}
+                onWt={setOpenWT}
                 metric={analysis.evaluation.originality}
                 name="Originality"
                 weightLabel="31.25% weight"
@@ -213,7 +222,7 @@ export default function EvaluationView({
               />
 
               {/* TC — the 4th card (execution context, not in the overall) */}
-              <DeepTcCard tc={analysis.evaluation.technical_complexity} t={t} />
+              <DeepTcCard tc={analysis.evaluation.technical_complexity} t={t} wt={wt} onWt={setOpenWT} />
 
               {/* Score Guide Popup */}
               {showScoreGuide && (
@@ -401,6 +410,7 @@ export default function EvaluationView({
   if (screen === "results2") {
     return (
       <>
+        <ChangeWalkthrough anchor={openWT} onClose={() => setOpenWT(null)} />
         <PageContainer wide>
           <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", padding: "4px 0 0" }}>
             <button onClick={() => setCurrentScreen("results1")} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
@@ -466,7 +476,7 @@ export default function EvaluationView({
                     return (
                       <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", marginBottom: 8, padding: "24px 28px 22px 30px", background: `linear-gradient(180deg, ${accent}14, ${accent}05)`, border: `1px solid ${accent}33` }}>
                         <div style={{ position: "absolute", left: 0, top: 22, bottom: 22, width: 3, borderRadius: "0 3px 3px 0", background: accent, opacity: 0.6 }} />
-                        <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, marginBottom: 12 }}>How your idea compares</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 12 }}><span style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: accent }}>How your idea compares</span><ChangeMarker bundle={wt && wt.compare} onOpen={setOpenWT} title="How your idea compares — re-read" /></div>
                         {cp.headline && <h3 style={{ fontSize: 21, fontWeight: 700, lineHeight: 1.34, letterSpacing: "-0.01em", color: t.text, margin: "0 0 20px", maxWidth: 880 }}>{cp.headline}</h3>}
                         {cells.length > 0 && (
                           <div style={{ display: "grid", gridTemplateColumns: `repeat(${cells.length}, 1fr)`, gap: "0 28px", paddingTop: 16, borderTop: `1px solid ${t.border}` }}>
@@ -496,7 +506,7 @@ export default function EvaluationView({
                   return (
                     <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", marginBottom: 8, padding: "24px 28px 24px 30px", background: `linear-gradient(180deg, ${accent}14, ${accent}05)`, border: `1px solid ${accent}33` }}>
                       <div style={{ position: "absolute", left: 0, top: 22, bottom: 22, width: 3, borderRadius: "0 3px 3px 0", background: accent, opacity: 0.6 }} />
-                      <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, marginBottom: 10 }}>How your idea compares</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 10 }}><span style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: accent }}>How your idea compares</span><ChangeMarker bundle={wt && wt.compare} onOpen={setOpenWT} title="How your idea compares — re-read" /></div>
                       {diff && <p style={{ fontSize: 15, lineHeight: 1.66, color: t.text, margin: "0 0 18px", maxWidth: 820 }}>{diff}</p>}
                       {(overlap.length > 0 || exposed.length > 0) && (
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px 28px", paddingTop: 4 }}>
@@ -526,7 +536,7 @@ export default function EvaluationView({
             {analysis.evaluation.failure_risks && analysis.evaluation.failure_risks.length > 0 && (
               <section style={{ marginBottom: 48 }}>
                 <SectionHeader icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>} accent="#ef6f6c" title="Key Risks" subtitle="The threats that could constrain this, by where they come from" t={t} />
-                <KeyRisks risks={analysis.evaluation.failure_risks} t={t} />
+                <KeyRisks risks={analysis.evaluation.failure_risks} t={t} wt={wt} onWt={setOpenWT} />
               </section>
             )}
 
@@ -538,6 +548,8 @@ export default function EvaluationView({
                 estimates={analysis.estimates}
                 mbColorFn={getMainBottleneckColor}
                 MbIcon={MainBottleneckIcon}
+                wt={wt}
+                onWt={setOpenWT}
                 t={t}
               />
             </section>
@@ -1002,7 +1014,7 @@ export default function EvaluationView({
 
             {viewingFromSaved ? (
               <>
-                {/* Branch ideas get "See what changed" button leading to delta screen */}
+                {/* Branch ideas: Evolve entry — result-screen markers replace the old delta screen */}
                 {isBranchIdea ? (
                   <>
                     {(
@@ -1024,23 +1036,6 @@ export default function EvaluationView({
                           }}
                         >
                           {evalsRemaining <= 0 ? "No evaluations remaining" : "Evolve this idea"}
-                        </button>
-                        <button
-                          onClick={onNavigateToDelta}
-                          style={{
-                            width: "100%",
-                            padding: "14px 0",
-                            borderRadius: 12,
-                            fontSize: 14,
-                            fontWeight: 600,
-                            border: "none",
-                            cursor: "pointer",
-                            background: "rgba(139,92,246,0.15)",
-                            color: "#a78bfa",
-                            marginBottom: 10,
-                          }}
-                        >
-                          See what changed →
                         </button>
                       </>
                     )}
@@ -1083,30 +1078,6 @@ export default function EvaluationView({
                         >
                           {evalsRemaining <= 0 ? "No evaluations remaining" : "Evolve this idea"}
                         </button>
-                        {/* Set as main version — only for branches that aren't already main */}
-                        {currentIdeaId && (() => {
-                          const currentIdea = myIdeas.find(i => i.id === currentIdeaId);
-                          if (!currentIdea?.parent_idea_id || currentIdea?.is_main_version) return null;
-                          return (
-                            <button
-                              onClick={() => onSetAsMain(currentIdeaId)}
-                              style={{
-                                width: "100%",
-                                padding: "12px 0",
-                                borderRadius: 12,
-                                fontSize: 13,
-                                fontWeight: 600,
-                                border: "1px solid rgba(16,185,129,0.3)",
-                                background: "rgba(16,185,129,0.06)",
-                                color: "#34d399",
-                                cursor: "pointer",
-                                marginBottom: 10,
-                              }}
-                            >
-                              ★ Set as main version
-                            </button>
-                          );
-                        })()}
                       </>
                     )}
                     <button

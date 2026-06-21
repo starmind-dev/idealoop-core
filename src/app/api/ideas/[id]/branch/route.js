@@ -67,6 +67,7 @@ export async function POST(request, { params }) {
       analysis,
       profile,
       changed_fields,
+      walkthrough, // V87 Stage 3b — change-walkthrough payload { markers, anchors }, persisted for reload
       execution_brief, // normally absent (Option A); null-safe below
     } = body;
 
@@ -110,20 +111,25 @@ export async function POST(request, { params }) {
     }
 
     // 2. Create evaluation row under the new idea
-    const scoringJson = {
-      market_demand: analysis.evaluation?.market_demand || null,
-      monetization: analysis.evaluation?.monetization || null,
-      originality: analysis.evaluation?.originality || null,
-      technical_complexity: analysis.evaluation?.technical_complexity || null,
-      marketplace_note: analysis.evaluation?.marketplace_note || null,
-      failure_risks: analysis.evaluation?.failure_risks || [],
-      evidence_strength: analysis.evaluation?.evidence_strength || null,
-    };
+    // V87 Stage 3b — LOSSLESS, mirroring buildDeepEvalRow in /api/ideas/save.
+    // The old version cherry-picked seven keys and silently dropped every field
+    // the V83 redesign added (verdict_lead, verdict_headline, verdict_detail,
+    // competitive_position, synthesis_degraded), so those vanished from a branch
+    // on reload — the same bug already fixed on the save side. Spreading the whole
+    // evaluation carries them all. _pro carries the evidence packets forward under
+    // scoring_json._pro, the exact path the change-diff reads a saved parent's
+    // evidence from — so this branch, re-evaluated later, diffs accurately instead
+    // of degrading every metric to read-only. (Per-metric score columns below are
+    // unchanged; the read side overlays them, so duplication here is harmless.)
+    const scoringJson = { ...(analysis.evaluation || {}), ...(analysis._pro ? { _pro: analysis._pro } : {}) };
 
     const metaJson = {
       ...(analysis._meta || {}),
       changed_fields: changed_fields || null,
       branch_of: parentIdeaId,
+      // V87 Stage 3b — the markers + narration this re-eval produced, so reopening
+      // the branch restores them without recomputing. Null on a plain branch.
+      walkthrough: walkthrough || null,
     };
 
     const { data: evalData, error: evalError } = await supabaseAdmin

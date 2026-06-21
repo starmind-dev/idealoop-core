@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
+import { buildTaggedIdeaHtml } from "../lib/services/tagIdeaHtml";
 import ComparisonView from "./ComparisonView";
 import LineageView from "./LineageView";
 import EvaluationView from "./EvaluationView";
@@ -9,6 +10,7 @@ import ExecutionBriefView from "./ExecutionBriefView";
 import ExploreView from "./ExploreView.js";
 import ExploreInputView from "./ExploreInputView";
 import DeepInputView from "./DeepInputView";
+import DeepEvolveView from "./DeepEvolveView";
 import HubView from "./HubView";
 import OverviewView from "./OverviewView";
 import DashboardShell from "./DashboardShell";
@@ -226,12 +228,17 @@ export default function Home() {
   const [reEvalProblem, setReEvalProblem] = useState(""); // changed problem text
   const [reEvalCoreIdea, setReEvalCoreIdea] = useState(""); // changed core idea text
   const [reEvalOriginalIdea, setReEvalOriginalIdea] = useState(""); // original idea text for display
+  const [ideaTagging, setIdeaTagging] = useState(false);     // colour pass in flight (blur the canvas)
+  const [taggedIdeaHtml, setTaggedIdeaHtml] = useState(null); // Haiku-tagged idea HTML; null → plain fallback
   const [loadedIdeaText, setLoadedIdeaText] = useState(""); // full idea text including revisions (for re-eval of alternatives)
   const [isReEvaluating, setIsReEvaluating] = useState(false);
   const [isReEvalResult, setIsReEvalResult] = useState(false); // true when showing re-eval results (not yet saved)
   const [reEvalRevisionNotes, setReEvalRevisionNotes] = useState(null); // stored for saving later
-  const [reEvalChangedFields, setReEvalChangedFields] = useState(null); // changed_fields metadata for delta explanation
+  const [reEvalChangedFields, setReEvalChangedFields] = useState(null); // changed_fields metadata (sent with the branch save + the change walkthrough)
   const [reEvalContextSnapshot, setReEvalContextSnapshot] = useState(null); // analysis snapshot from before re-eval
+  const [reEvalPrevAnalysis, setReEvalPrevAnalysis] = useState(null); // FULL prior analysis (V_prev) — the change-walkthrough diffs against this
+  const [walkthroughData, setWalkthroughData] = useState(null); // change-walkthrough result { markers, anchors } from the re-evaluate-walkthrough route
+  const [walkthroughLoading, setWalkthroughLoading] = useState(false); // true while the walkthrough is being computed in the background
 
   // Branch creation form state (V4S14)
   const [branchReason, setBranchReason] = useState("");
@@ -241,10 +248,6 @@ export default function Home() {
   const [reEvalEditProblem, setReEvalEditProblem] = useState(false); // toggle for problem edit field
   const [reEvalEditCore, setReEvalEditCore] = useState(false); // toggle for core idea edit field
 
-  // Delta explanation state (V4S16)
-  const [deltaData, setDeltaData] = useState(null); // cached delta result from Sonnet
-  const [deltaLoading, setDeltaLoading] = useState(false);
-  const [deltaError, setDeltaError] = useState("");
 
   // Alternatives popup state
   const [showAlternativesPopup, setShowAlternativesPopup] = useState(false);
@@ -516,8 +519,8 @@ export default function Home() {
     // Every screen that reopens a saved idea routes through loadSavedIdea, which self-routes by
     // the idea's own state (deep -> results1, explore -> explore, rough -> roughroom). Deep
     // sub-screens that survive a reload (results2, brief) are restored on top after the load.
-    // delta / reeval depend on transient context and gracefully fall back to the idea's main view.
-    const IDEA_SCREENS = ["results1", "results2", "explore", "roughroom", "brief", "delta", "reeval"];
+    // reeval depends on transient context and gracefully falls back to the idea's main view.
+    const IDEA_SCREENS = ["results1", "results2", "explore", "roughroom", "brief", "reeval"];
     const isIdeaView = nav && nav.ideaId && IDEA_SCREENS.includes(nav.screen);
     const isLineage = nav && nav.lineageMode && nav.lineageTargetId;
     const isCompare = nav && nav.compareMode && nav.compareSel && nav.compareSel.length === 2;
@@ -569,7 +572,6 @@ export default function Home() {
       const evalId = isExploreOrRough ? undefined : (nav.evalId || undefined);
       Promise.resolve(loadSavedIdea(nav.ideaId, evalId)).then(() => {
         if (nav.screen === "results2" || nav.screen === "brief") setCurrentScreen(nav.screen);
-        else if (nav.screen === "delta") { setCurrentScreen("delta"); fetchDelta(nav.ideaId); }
       });
       return;
     }
@@ -632,7 +634,7 @@ export default function Home() {
     // Deep arc (V6): Idea(1) · Deep Analysis(2) · Evidence & Reality(3) ·
     // Handoff(4) · Evolve(5). results1 is the Deep Analysis screen, results2 is
     // Evidence & Reality, brief is the Handoff. Profile/input fold into Idea.
-    const map = { profile: 1, input: 1, myideas: 1, reeval: 5, results1: 2, results2: 3, brief: 4, delta: 5 };
+    const map = { profile: 1, input: 1, myideas: 1, reeval: 5, results1: 2, results2: 3, brief: 4 };
     return map[currentScreen] || 1;
   };
 
@@ -772,6 +774,35 @@ export default function Home() {
     return { ethicsBlocked: false, analysis: finalAnalysis };
   };
 
+  // CHANGE WALKTHROUGH (V87 Stage 3a) — after a deep re-eval lands, ask the diff
+  // route to compute the markers and narrate them. The route is stateless: it
+  // takes BOTH full analyses in the body and never touches the DB. Fire-and-forget
+  // by design — the result screen reads `walkthroughData` from state, and on ANY
+  // failure it simply stays null and no markers render. Never blocks the result.
+  const runWalkthrough = async (prevAnalysis, nextAnalysis, changedFieldNames) => {
+    if (!prevAnalysis || !nextAnalysis) return;
+    setWalkthroughData(null);
+    setWalkthroughLoading(true);
+    try {
+      const res = await fetch(`/api/ideas/${currentIdeaId || "pending"}/re-evaluate-walkthrough`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prevAnalysis,
+          nextAnalysis,
+          changedFields: Array.isArray(changedFieldNames) ? changedFieldNames : [],
+        }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && data.ok) setWalkthroughData(data);
+    } catch (e) {
+      // non-fatal — the result screen renders without markers
+    } finally {
+      setWalkthroughLoading(false);
+    }
+  };
+
   const handleAnalyze = async (mode = "deep", ideaTextOverride = null, graduateId = null) => {
     const ideaToUse = ideaTextOverride != null ? ideaTextOverride : idea;
     if (!ideaToUse.trim()) return;
@@ -875,6 +906,7 @@ export default function Home() {
         setCurrentScreen("explore");
       } else {
         setAnalysis(result.analysis);
+        setWalkthroughData(null);
         resetExecutionBrief();
         setCurrentScreen("results1");
       }
@@ -888,7 +920,7 @@ export default function Home() {
   };
 
   // Re-evaluate a saved idea with optional changes
-  const handleReEvaluate = async () => {
+  const handleReEvaluate = async (payload) => {
     if (!currentIdeaId || !user) return;
 
     // Check eval limits (same as handleAnalyze)
@@ -920,28 +952,22 @@ export default function Home() {
     setError("");
 
     try {
-      // Build the modified idea text and track changed fields
-      let modifiedIdea = reEvalOriginalIdea;
-      const revisions = [];
-      const changedFields = [];
-
-      if (reEvalTargetUser.trim()) {
-        revisions.push({ type: "target_user", text: reEvalTargetUser.trim() });
-        changedFields.push({ field: "target_user", original_value: null, new_value: reEvalTargetUser.trim() });
-        modifiedIdea += `\n\n[REVISION — Target user changed to: ${reEvalTargetUser.trim()}]`;
-      }
-
-      if (reEvalProblem.trim()) {
-        revisions.push({ type: "problem", text: reEvalProblem.trim() });
-        changedFields.push({ field: "problem", original_value: null, new_value: reEvalProblem.trim() });
-        modifiedIdea += `\n\n[REVISION — Problem it solves changed to: ${reEvalProblem.trim()}]`;
-      }
-
-      if (reEvalCoreIdea.trim()) {
-        revisions.push({ type: "core_idea", text: reEvalCoreIdea.trim() });
-        changedFields.push({ field: "core_idea", original_value: null, new_value: reEvalCoreIdea.trim() });
-        modifiedIdea += `\n\n[REVISION — Core idea changed to: ${reEvalCoreIdea.trim()}]`;
-      }
+      // V87 Stage 5b — Evolve screen payload: the founder reshapes the full idea
+      // text directly (and optionally tags the parts they touched, or describes the
+      // change in the freecard). modifiedIdea is the edited text; changedFields are
+      // the touched parts mapped to the canonical part vocabulary (ideaParts.PARTS)
+      // the change-walkthrough diff understands.
+      const p = payload || {};
+      const PART_FIELD = { target: "target_user", problem: "use_case", mechanism: "mechanism", money: "payment_shape", moat: "defensibility", scope: "build_profile" };
+      let modifiedIdea = (typeof p.ideaText === "string" && p.ideaText.trim()) ? p.ideaText.trim() : reEvalOriginalIdea;
+      const freeNote = (typeof p.freeNote === "string" ? p.freeNote.trim() : "");
+      if (freeNote) modifiedIdea += `\n\n[CHANGE REQUEST — ${freeNote}]`;
+      const partList = Array.isArray(p.changedParts) ? p.changedParts.map((c) => c && c.part).filter(Boolean) : [];
+      if (p.branchLabel && /_shift$/.test(p.branchLabel)) partList.push(p.branchLabel.replace(/_shift$/, ""));
+      const fieldSet = [];
+      for (const part of partList) { const f = PART_FIELD[part] || part; if (f && !fieldSet.includes(f)) fieldSet.push(f); }
+      const revisions = fieldSet.map((f) => ({ type: f, text: null }));
+      const changedFields = fieldSet.map((f) => ({ field: f, original_value: null, new_value: null }));
 
       // Use SSE streaming
       const reEvalEndpoint = "/api/analyze-pro";
@@ -986,6 +1012,10 @@ export default function Home() {
 
       // Show results as FRESH evaluation (not saved, not viewing from saved)
       setAnalysis(result.analysis);
+      // V87 Stage 3a — fire the change walkthrough off the FULL prior analysis vs
+      // the just-computed one. changedFields here are the edited input fields; the
+      // diff route maps each to the part it touches. Non-blocking, result-safe.
+      runWalkthrough(reEvalPrevAnalysis, result.analysis, changedFields.map((c) => c.field));
       resetExecutionBrief();
       setViewingFromSaved(false);
       setSaveStatus("idle");
@@ -1009,6 +1039,39 @@ export default function Home() {
   };
 
   // Start re-evaluation flow from saved idea view
+  // Evolve colour pass — a Haiku display-call that tags the load-bearing clauses
+  // so the canvas loads pre-coloured. Non-fatal: any failure falls back to plain
+  // text. Engine untouched. The canvas blurs while ideaTagging is true.
+  const runIdeaTagging = async (analysisObj, rawIdea, ideaId) => {
+    setTaggedIdeaHtml(null);
+    setIdeaTagging(true);
+    try {
+      const clean = (rawIdea || "").trim()
+        .replace(/^idea\s*:\s*/i, "").replace(/^["\x27\s]+/, "").replace(/["\x27,\s]+$/, "").trim();
+      if (!clean) { setIdeaTagging(false); return; }
+      const ev = (analysisObj && analysisObj.evaluation) || {};
+      const anatomy = {
+        target_problem: ev.market_demand?.diagnosis || "",
+        mechanism: ev.originality?.differentiation_basis_diagnosis || "",
+        moat: ev.originality?.defensibility_diagnosis || "",
+        money: ev.monetization?.diagnosis || "",
+        scope: ev.technical_complexity?.base_score_explanation || "",
+      };
+      const res = await fetch(`/api/ideas/${ideaId}/tag-parts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ideaText: clean, anatomy }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const tags = Array.isArray(data && data.tags) ? data.tags : [];
+      setTaggedIdeaHtml(buildTaggedIdeaHtml(clean, tags));
+    } catch (e) {
+      setTaggedIdeaHtml(null); // render falls back to the plain ideaHtml
+    } finally {
+      setIdeaTagging(false);
+    }
+  };
+
   const startReEvaluation = () => {
     // Capture context snapshot for the "Evolve This Idea" screen
     const ideaTitle = myIdeas.find(i => i.id === currentIdeaId)?.title || "";
@@ -1022,6 +1085,10 @@ export default function Home() {
       failure_risks: analysis.evaluation?.failure_risks || [],
       evidence_strength: analysis.evaluation?.evidence_strength || null,
     } : null);
+    // V87 Stage 3a — keep the FULL prior analysis (not just the scores snapshot
+    // above); the change-walkthrough diffs the new analysis against this one.
+    setReEvalPrevAnalysis(analysis || null);
+    setWalkthroughData(null);
     setReEvalOriginalIdea(loadedIdeaText || idea);
     setReEvalTargetUser("");
     setReEvalProblem("");
@@ -1032,6 +1099,7 @@ export default function Home() {
     setError("");
     setReEvalMode(true);
     setCurrentScreen("reeval");
+    runIdeaTagging(analysis || null, loadedIdeaText || idea, currentIdeaId);
   };
 
   // Helper: format a reset time ISO string to human-readable
@@ -1111,6 +1179,9 @@ export default function Home() {
             analysis,
             profile,
             changed_fields: reEvalChangedFields,
+            // V87 Stage 3b — persist the change-walkthrough with the branch so its
+            // markers survive a reload (null on a non-re-eval branch).
+            walkthrough: walkthroughData || null,
           }),
         });
 
@@ -1215,6 +1286,10 @@ export default function Home() {
   const applyLoadedIdea = (data, ideaId) => {
     setIdea(data.idea.raw_idea_text);
     setAnalysis(data.analysis);
+    // V87 Stage 3c — restore persisted walkthrough markers on reload. The GET
+    // route surfaces meta_json as analysis._meta, and the branch route stored the
+    // walkthrough under meta_json.walkthrough; null for non-re-eval ideas.
+    setWalkthroughData(data.analysis?._meta?.walkthrough || null);
     setSaveStatus("saved");
     setSavedIdeaId(ideaId);
     setCurrentIdeaId(ideaId);
@@ -1301,8 +1376,6 @@ export default function Home() {
     if (!user) return;
     setMyIdeasError("");
     setShowAlternativesPopup(false);
-    setDeltaData(null); // Clear previous delta
-    setDeltaError("");
 
     const cacheKey = evaluationId ? `${ideaId}-${evaluationId}` : ideaId;
 
@@ -1335,44 +1408,6 @@ export default function Home() {
       setMyIdeasError(err.message || "Failed to load idea.");
     } finally {
       setMyIdeasLoading(false);
-    }
-  };
-
-  // Fetch delta explanation for a branch idea
-  const fetchDelta = async (ideaId) => {
-    if (!user || !ideaId) return;
-
-    // Check client-side cache first
-    const cacheKey = `delta-${ideaId}`;
-    if (evaluationCacheRef.current[cacheKey]) {
-      setDeltaData(evaluationCacheRef.current[cacheKey]);
-      return;
-    }
-
-    setDeltaLoading(true);
-    setDeltaError("");
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const res = await fetch(`/api/ideas/${ideaId}/delta`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load delta");
-      setDeltaData(data.delta);
-
-      // Cache for instant revisits
-      evaluationCacheRef.current[cacheKey] = data.delta;
-    } catch (err) {
-      console.error("Delta fetch failed:", err);
-      setDeltaError(err.message || "Failed to analyze changes");
-    } finally {
-      setDeltaLoading(false);
     }
   };
 
@@ -1730,8 +1765,6 @@ export default function Home() {
     setViewingFromSaved(false);
     setCurrentEvaluationId(null);
     setCurrentIdeaId(null);
-    setDeltaData(null);
-    setDeltaError("");
     resetExecutionBrief();
     goToMyIdeas();
   };
@@ -1751,15 +1784,6 @@ export default function Home() {
   // the single-idea era — it overrode the family root on re-eval. Kept as a no-op so
   // EvaluationView's prop wiring doesn't break; its set-as-main button is now inert
   // and should be removed from that component.
-  const onSetAsMain = async () => {};
-
-  const onNavigateToDelta = () => {
-    setCurrentScreen("delta");
-    if (!deltaData && !deltaLoading) {
-      fetchDelta(currentIdeaId);
-    }
-  };
-
   // ==========================================
   // AUTH LOADING GATE — prevent screen flash on refresh
   // ==========================================
@@ -2493,24 +2517,94 @@ export default function Home() {
   // EVOLVE THIS IDEA (Re-evaluation Screen)
   // ==========================================
   if (currentScreen === "reeval" && reEvalMode) {
-    const hasAnyChange = reEvalTargetUser.trim() || reEvalProblem.trim() || reEvalCoreIdea.trim();
-
-    // Find weakest metric from context snapshot
-    const getWeakestMetric = () => {
-      if (!reEvalContextSnapshot) return null;
-      const metrics = [
-        { key: "md", label: "Market Demand", score: reEvalContextSnapshot.md },
-        { key: "mo", label: "Monetization", score: reEvalContextSnapshot.mo },
-        { key: "or", label: "Originality", score: reEvalContextSnapshot.or },
-      ];
-      // For TC, lower is better (inverted in formula), so weakest = highest TC
-      const tcEffective = reEvalContextSnapshot.tc ? (10 - reEvalContextSnapshot.tc) : 10;
-      metrics.push({ key: "tc", label: "Technical Complexity", score: tcEffective, rawScore: reEvalContextSnapshot.tc });
-      return metrics.reduce((min, m) => (m.score < min.score ? m : min), metrics[0]);
+    // V87 Stage 5b — the Evolve (re-evaluate) INPUT screen is DeepEvolveView, fed
+    // from the prior analysis. The founder reshapes the full idea text (with inline
+    // part-tagging + an optional freecard); onReEvaluate runs the deep pipeline on
+    // the edited text and the change-walkthrough diffs it against the prior version.
+    const prev = reEvalPrevAnalysis || analysis;
+    const ev = (prev && prev.evaluation) || {};
+    const num = (x, d = 1) => (typeof x === "number" ? x.toFixed(d) : "—");
+    const moScore = typeof ev.monetization?.display_score === "number" ? ev.monetization.display_score : ev.monetization?.score;
+    const cap = (str) => (typeof str === "string" && str.length ? str.charAt(0).toUpperCase() + str.slice(1) : str);
+    // Mockup card sizes are fixed; make the real prose FIT. clip() trims to a sentence
+    // boundary when one lands past half the budget, else a word boundary + ellipsis.
+    const clip = (str, max) => {
+      const x = (typeof str === "string" ? str.trim() : "");
+      if (x.length <= max) return x;
+      const head = x.slice(0, max);
+      const m = head.match(/^[\s\S]*[.!?](?=\s|$)/);
+      if (m && m[0].length >= max * 0.5) return m[0].trim();
+      return head.replace(/\s+\S*$/, "").trim() + "\u2026";
     };
-    const weakest = getWeakestMetric();
 
-    // getScoreColor imported from components.js
+    const evolveMetrics = {
+      md: { name: "Market demand", color: "#6f8ff5", score: num(ev.market_demand?.score),
+        last: ev.market_demand?.diagnosis || ev.market_demand?.binding_friction_explanation || "The last read for this axis.",
+        win: ev.market_demand?.direction || "Demand lifts when a specific buyer feels this as a recurring, expensive problem — name who, and what it costs them." },
+      mo: { name: "Monetization", color: "#5fd08a", score: num(moScore),
+        last: ev.monetization?.diagnosis || ev.monetization?.binding_payment_constraint_explanation || "The last read for this axis.",
+        win: ev.monetization?.direction || "Monetization lifts when the charge ties to a moment the buyer already pays for." },
+      or: { name: "Originality", color: "#a99cff", score: num(ev.originality?.score),
+        last: ev.originality?.differentiation_basis_diagnosis || ev.originality?.defensibility_diagnosis || ev.originality?.binding_constraint_explanation || "The last read for this axis.",
+        win: ev.originality?.direction || "Originality lifts when there's a hard-to-copy source — data, network, or accumulation a competitor can't clone." },
+      tc: { name: "Technical", color: "#e3c14a", score: num(ev.technical_complexity?.score),
+        last: ev.technical_complexity?.base_score_explanation || "The last read for this axis.",
+        win: ev.technical_complexity?.incremental_note || ev.technical_complexity?.adjustment_explanation || "Technical confidence lifts when the hard part is a bounded build, not open research." },
+    };
+    // x-ray panel has no max-height in the mockup; it relied on short copy. Clip
+    // the real diagnosis/direction prose so the panel keeps the mockup's height.
+    Object.keys(evolveMetrics).forEach((k) => {
+      evolveMetrics[k].lastFull = (evolveMetrics[k].last || "").trim();
+      evolveMetrics[k].winFull = (evolveMetrics[k].win || "").trim();
+      evolveMetrics[k].last = clip(evolveMetrics[k].last, 220);
+      evolveMetrics[k].win = clip(evolveMetrics[k].win, 220);
+    });
+
+    const trio = [
+      { k: "md", key: "market_demand", s: ev.market_demand?.score },
+      { k: "mo", key: "monetization", s: moScore },
+      { k: "or", key: "originality", s: ev.originality?.score },
+    ].filter((x) => typeof x.s === "number");
+    const strongest = trio.length ? trio.reduce((a, b) => (b.s > a.s ? b : a)) : null;
+    const weakest = trio.length ? trio.reduce((a, b) => (b.s < a.s ? b : a)) : null;
+    // verdict line must stay SHORT (one-liner) — never dump the full summary into
+    // the narrow verdict cell. Headline → short lead → hard-truncated summary clause.
+    // Verdict cell is ~300px wide => keep it ~2 lines. Pressure descriptions ~2 lines.
+    const verdictRead = ev.verdict_headline || clip(ev.verdict_lead, 80) || clip(ev.summary, 72) || "Your latest read.";
+    const verdictFull = (typeof ev.summary === "string" && ev.summary.trim()) || (typeof ev.verdict_lead === "string" && ev.verdict_lead.trim()) || "";
+    const verdictTitle = (typeof ev.verdict_headline === "string" && ev.verdict_headline.trim()) || "";
+    const evolvePressure = {
+      verdict: { score: num(ev.overall_score), read: verdictRead, readFull: verdictFull, title: verdictTitle },
+      asset: strongest ? { metricKey: strongest.k, score: num(strongest.s), desc: clip(evolveMetrics[strongest.k].lastFull, 95), descFull: evolveMetrics[strongest.k].lastFull, dir: "Don't break this while fixing the rest." } : null,
+      constraint: weakest ? { metricKey: weakest.k, score: num(weakest.s), desc: clip(evolveMetrics[weakest.k].lastFull, 95), descFull: evolveMetrics[weakest.k].lastFull, dir: "The floor. Most leverage is here." } : null,
+    };
+
+    // Real lineage: walk parent_idea_id up from the current idea (root → here).
+    // A root idea has no ancestors → a single node, which is correct.
+    const chain = [];
+    { let cur = myIdeas.find((x) => x.id === currentIdeaId) || null; let guard = 0;
+      while (cur && guard++ < 25) { chain.unshift(cur); cur = cur.parent_idea_id ? (myIdeas.find((x) => x.id === cur.parent_idea_id) || null) : null; } }
+    const scoreOf = (nd) => { if (!nd) return null; if (typeof nd.overall_score === "number") return nd.overall_score; if (typeof nd.score === "number") return nd.score; if (nd.evaluation && typeof nd.evaluation.overall_score === "number") return nd.evaluation.overall_score; return null; };
+    const dimLabel = (nd) => { const d = Array.isArray(nd.changed_dimensions) ? nd.changed_dimensions[0] : null; if (typeof d === "string" && d) return d.replace(/_explanation$/, "") + "_shift"; return nd.branch_reason ? "branch" : null; };
+    const evolveLineage = chain.length
+      ? chain.map((nd, i) => {
+          const isHere = nd.id === currentIdeaId;
+          const sc = isHere ? ev.overall_score : scoreOf(nd);
+          return { ver: `V${i + 1}`, score: typeof sc === "number" ? num(sc) : null, note: isHere ? (reEvalContextSnapshot?.title || nd.title || "current idea") : (nd.title || "—"), edge: i > 0 ? dimLabel(nd) : null, here: isHere };
+        })
+      : [{ ver: "V1", score: num(ev.overall_score), note: reEvalContextSnapshot?.title || ideaName || "current idea", here: true }];
+
+    // Sanitize bad-paste cruft so a serialized fragment can't leak into the editor:
+    // drop a leading `idea:` label and strip wrapping quotes / a trailing `",` tail.
+    let cleanIdea = (reEvalOriginalIdea || loadedIdeaText || idea || "").trim();
+    cleanIdea = cleanIdea.replace(/^idea\s*:\s*/i, "").replace(/^["'\s]+/, "").replace(/["',\s]+$/, "").trim();
+    const esc = (txt) => txt.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const paras = cleanIdea.split(/\n\s*\n/).map((para) => para.trim()).filter(Boolean);
+    const ideaHtml = (paras.length ? paras : [cleanIdea]).map((para) => `<p>${esc(para)}</p>`).join("\n");
+
+    const profLabel = profile
+      ? ([profile.coding ? cap(profile.coding) : null, profile.ai ? cap(profile.ai) + " AI" : null].filter(Boolean).join(" · ") || "Your profile")
+      : "Your profile";
 
     return (
       <DashboardShell
@@ -2524,10 +2618,7 @@ export default function Home() {
       >
         <PageContainer>
           <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", padding: "4px 0 0" }}>
-            <button onClick={() => {
-              setReEvalMode(false);
-              setCurrentScreen("results2");
-            }} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
+            <button onClick={() => { setReEvalMode(false); setCurrentScreen("results2"); }} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
               ← Back to evaluation
             </button>
           </div>
@@ -2536,311 +2627,26 @@ export default function Home() {
         <StepProgress currentStep={getStepNumber()} savedMode={true} branchMode={isBranchIdea} t={t} />
 
         <main style={{ flex: 1, paddingBottom: 48 }}>
-          <PageContainer>
-            <div style={{ marginBottom: 32 }}>
-              <h2 style={{ fontSize: 30, fontWeight: 600, margin: "0 0 12px 0" }}>
-                Evolve This Idea
-              </h2>
-              <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.5, margin: 0 }}>
-                Review your current evaluation, then change one or more dimensions to test a different strategic angle.
-              </p>
-            </div>
-
-            {/* SECTION 1: Context Snapshot */}
-            {reEvalContextSnapshot && (
-              <Card style={{ padding: 20, marginBottom: 24 }} t={t}>
-                {/* Title row + score circle */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
-                  <div>
-                    <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: t.mut, margin: "0 0 6px" }}>Current evaluation</p>
-                    <p style={{ fontSize: 15, fontWeight: 600, color: t.text, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{reEvalContextSnapshot.title || "Untitled"}</p>
-                  </div>
-                  <div style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: "50%",
-                    background: `rgba(${(reEvalContextSnapshot.overall || 0) >= 7 ? "16,185,129" : (reEvalContextSnapshot.overall || 0) >= 5 ? "59,130,246" : (reEvalContextSnapshot.overall || 0) >= 3 ? "245,158,11" : "239,68,68"},0.15)`,
-                    border: `2px solid ${getScoreColor(reEvalContextSnapshot.overall || 0)}`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}>
-                    <span style={{ fontSize: 16, fontWeight: 700, fontFamily: "monospace", color: getScoreColor(reEvalContextSnapshot.overall || 0) }}>
-                      {(reEvalContextSnapshot.overall || 0).toFixed(1)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Horizontal metric bars */}
-                <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                  {[
-                    { label: "MD", score: reEvalContextSnapshot.md },
-                    { label: "MO", score: reEvalContextSnapshot.mo },
-                    { label: "OR", score: reEvalContextSnapshot.or },
-                    { label: "TC", score: reEvalContextSnapshot.tc, isTC: true },
-                  ].map((m, i) => {
-                    const s = m.score || 0;
-                    // V4S28 B8: TC uses inverted+shifted boundaries via getTcColor
-                    const color = m.isTC
-                      ? getTcColor(s)
-                      : getScoreColor(s);
-                    return (
-                      <div key={i} style={{ flex: 1 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                          <span style={{ fontSize: 11, color: t.mut }}>{m.label}</span>
-                          <span style={{ fontSize: 11, fontFamily: "monospace", color }}>{s.toFixed(1)}</span>
-                        </div>
-                        <div style={{ height: 4, background: "#1a1a1a", borderRadius: 4, overflow: "hidden" }}>
-                          <div style={{ width: `${(s / 10) * 100}%`, height: "100%", background: color, borderRadius: 4 }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Weakest metric pill */}
-                {weakest && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
-                    <span style={{ fontSize: 11, color: "#ef4444", fontWeight: 500 }}>Weakest:</span>
-                    <span style={{
-                      fontSize: 11,
-                      padding: "2px 8px",
-                      borderRadius: 9999,
-                      background: "rgba(245,158,11,0.12)",
-                      border: "1px solid rgba(245,158,11,0.25)",
-                      color: "#fbbf24",
-                    }}>
-                      {weakest.label} — {(weakest.key === "tc" ? weakest.rawScore : weakest.score)?.toFixed(1)}
-                    </span>
-                  </div>
-                )}
-
-                {/* Top risks — separated by border */}
-                {reEvalContextSnapshot.failure_risks?.length > 0 && (
-                  <div style={{ borderTop: `1px solid ${t.border}`, paddingTop: 12 }}>
-                    <p style={{ fontSize: 11, color: t.mut, fontWeight: 500, margin: "0 0 6px" }}>Top risks</p>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      {reEvalContextSnapshot.failure_risks.slice(0, 2).map((risk, i) => (
-                        <p key={i} style={{ fontSize: 12, color: t.sec, margin: 0, lineHeight: 1.4 }}>• {typeof risk === "string" ? risk : (risk?.text || "")}</p>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Evidence Strength — hidden when HIGH (asymmetric display rule, V4S28 B4) */}
-                {reEvalContextSnapshot.evidence_strength && reEvalContextSnapshot.evidence_strength.level !== "HIGH" && (
-                  <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{
-                      fontSize: 11,
-                      padding: "2px 8px",
-                      borderRadius: 9999,
-                      fontWeight: 500,
-                      ...(reEvalContextSnapshot.evidence_strength.level === "MEDIUM"
-                        ? { background: "rgba(245,158,11,0.12)", color: "#fbbf24", border: "1px solid rgba(245,158,11,0.25)" }
-                        : { background: "rgba(239,68,68,0.12)", color: "#f87171", border: "1px solid rgba(239,68,68,0.25)" }),
-                    }}>
-                      {reEvalContextSnapshot.evidence_strength.level} evidence strength
-                    </span>
-                  </div>
-                )}
-              </Card>
-            )}
-
-            {/* Original idea — read-only */}
-            <div style={{ marginBottom: 24 }}>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: t.sec, marginBottom: 8 }}>
-                Original idea
-              </label>
-              <Card style={{ padding: "16px 20px", maxHeight: 150, overflowY: "auto" }} t={t}>
-                <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>
-                  {reEvalOriginalIdea}
-                </p>
-              </Card>
-            </div>
-
-            {/* SECTION 2: What do you want to change? */}
-            <div style={{ marginBottom: 20 }}>
-              <p style={{ fontSize: 13, fontWeight: 500, color: t.sec, margin: "0 0 12px" }}>What do you want to change?</p>
-
-              {/* Target User */}
-              <div style={{
-                background: reEvalEditTarget ? "rgba(108,99,255,0.04)" : "rgba(255,255,255,0.02)",
-                border: `1px solid ${reEvalEditTarget ? "rgba(108,99,255,0.3)" : "rgba(255,255,255,0.08)"}`,
-                borderRadius: 12,
-                padding: 16,
-                marginBottom: 8,
-                transition: "all 0.2s",
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: t.sec }}>Target user</span>
-                  <button
-                    onClick={() => { setReEvalEditTarget(!reEvalEditTarget); if (reEvalEditTarget) setReEvalTargetUser(""); }}
-                    style={{ fontSize: 12, color: t.link, background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}
-                  >
-                    {reEvalEditTarget ? "Cancel" : "Edit"}
-                  </button>
-                </div>
-                {reEvalEditTarget && (
-                  <div style={{ marginTop: 10 }}>
-                    <input
-                      type="text"
-                      value={reEvalTargetUser}
-                      onChange={(e) => setReEvalTargetUser(e.target.value)}
-                      placeholder="e.g. Busy professionals aged 30-45 tracking macros"
-                      style={{
-                        width: "100%",
-                        background: t.inputBg,
-                        border: `1px solid ${t.inputBorder}`,
-                        borderRadius: 8,
-                        padding: "10px 14px",
-                        fontSize: 13,
-                        color: t.inputText,
-                        outline: "none",
-                        boxSizing: "border-box",
-                        fontFamily: "inherit",
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Problem */}
-              <div style={{
-                background: reEvalEditProblem ? "rgba(108,99,255,0.04)" : "rgba(255,255,255,0.02)",
-                border: `1px solid ${reEvalEditProblem ? "rgba(108,99,255,0.3)" : "rgba(255,255,255,0.08)"}`,
-                borderRadius: 12,
-                padding: 16,
-                marginBottom: 8,
-                transition: "all 0.2s",
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: t.sec }}>Problem it solves</span>
-                  <button
-                    onClick={() => { setReEvalEditProblem(!reEvalEditProblem); if (reEvalEditProblem) setReEvalProblem(""); }}
-                    style={{ fontSize: 12, color: t.link, background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}
-                  >
-                    {reEvalEditProblem ? "Cancel" : "Edit"}
-                  </button>
-                </div>
-                {reEvalEditProblem && (
-                  <div style={{ marginTop: 10 }}>
-                    <input
-                      type="text"
-                      value={reEvalProblem}
-                      onChange={(e) => setReEvalProblem(e.target.value)}
-                      placeholder="e.g. People waste money on meal plans they never follow"
-                      style={{
-                        width: "100%",
-                        background: t.inputBg,
-                        border: `1px solid ${t.inputBorder}`,
-                        borderRadius: 8,
-                        padding: "10px 14px",
-                        fontSize: 13,
-                        color: t.inputText,
-                        outline: "none",
-                        boxSizing: "border-box",
-                        fontFamily: "inherit",
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Core Idea */}
-              <div style={{
-                background: reEvalEditCore ? "rgba(108,99,255,0.04)" : "rgba(255,255,255,0.02)",
-                border: `1px solid ${reEvalEditCore ? "rgba(108,99,255,0.3)" : "rgba(255,255,255,0.08)"}`,
-                borderRadius: 12,
-                padding: 16,
-                marginBottom: 0,
-                transition: "all 0.2s",
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: t.sec }}>Core idea</span>
-                  <button
-                    onClick={() => { setReEvalEditCore(!reEvalEditCore); if (reEvalEditCore) setReEvalCoreIdea(""); }}
-                    style={{ fontSize: 12, color: t.link, background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}
-                  >
-                    {reEvalEditCore ? "Cancel" : "Edit"}
-                  </button>
-                </div>
-                {reEvalEditCore && (
-                  <div style={{ marginTop: 10 }}>
-                    <input
-                      type="text"
-                      value={reEvalCoreIdea}
-                      onChange={(e) => setReEvalCoreIdea(e.target.value)}
-                      placeholder="e.g. Instead of general nutrition, focus on post-workout recovery meals"
-                      style={{
-                        width: "100%",
-                        background: t.inputBg,
-                        border: `1px solid ${t.inputBorder}`,
-                        borderRadius: 8,
-                        padding: "10px 14px",
-                        fontSize: 13,
-                        color: t.inputText,
-                        outline: "none",
-                        boxSizing: "border-box",
-                        fontFamily: "inherit",
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {error && (
-              <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 12, padding: "12px 20px", marginBottom: 24 }}>
+          {error && (
+            <PageContainer>
+              <div style={{ margin: "0 0 16px", padding: "12px 16px", borderRadius: 10, border: "1px solid rgba(248,113,113,0.3)", background: "rgba(248,113,113,0.08)" }}>
                 <p style={{ fontSize: 14, color: "#f87171", margin: 0 }}>{error}</p>
               </div>
-            )}
-            {/* Evaluate button */}
-            <button
-              onClick={handleReEvaluate}
-              disabled={isReEvaluating || evalsRemaining <= 0}
-              style={{
-                width: "100%",
-                padding: "14px 0",
-                borderRadius: 12,
-                fontSize: 14,
-                fontWeight: 600,
-                border: "none",
-                cursor: isReEvaluating || evalsRemaining <= 0 ? "not-allowed" : "pointer",
-                background: isReEvaluating || evalsRemaining <= 0 ? t.surfAlt : hasAnyChange ? "#8b5cf6" : t.ctaBg,
-                color: isReEvaluating || evalsRemaining <= 0 ? t.mut : hasAnyChange ? "#fff" : t.ctaText,
-                marginBottom: 12,
-              }}
-            >
-              {isReEvaluating ? "Evaluating..." : evalsRemaining <= 0 ? "No evaluations remaining" : hasAnyChange ? "Evaluate new version" : "Re-evaluate with fresh data"}
-            </button>
-
-            {/* Eval limit indicator */}
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              padding: "10px 16px",
-              borderRadius: 12,
-              background: evalsRemaining <= 0 ? "rgba(239,68,68,0.08)" : evalsRemaining === 1 ? "rgba(245,158,11,0.08)" : t.surfAlt,
-              border: `1px solid ${evalsRemaining <= 0 ? "rgba(239,68,68,0.2)" : evalsRemaining === 1 ? "rgba(245,158,11,0.2)" : t.border}`,
-            }}>
-              <span style={{
-                fontSize: 13,
-                color: evalsRemaining <= 0 ? "#f87171" : evalsRemaining === 1 ? "#fbbf24" : t.sec,
-              }}>
-                {evalUnlimited
-                  ? "Developer — unlimited evaluations"
-                  : evalsRemaining <= 0
-                  ? "You've used your free evaluations. Get credits to keep going."
-                  : `${evalsRemaining} of ${EVAL_LIMIT} free evaluations remaining`}
-              </span>
-            </div>
-
-            {isReEvaluating && <StreamOverlay streamSteps={streamSteps} t={t} mode="reeval" />}
-          </PageContainer>
+            </PageContainer>
+          )}
+          <DeepEvolveView
+            metrics={evolveMetrics}
+            pressure={evolvePressure}
+            lineage={evolveLineage}
+            profileLabel={profLabel}
+            credits={typeof evalsRemaining === "number" ? evalsRemaining : "—"}
+            initialIdeaHtml={taggedIdeaHtml || ideaHtml}
+            ideaLoading={ideaTagging}
+            onReEvaluate={handleReEvaluate}
+          />
         </main>
+
+        {isReEvaluating && <StreamOverlay streamSteps={streamSteps} t={t} mode="reeval" />}
       </DashboardShell>
     );
   }
@@ -2991,6 +2797,7 @@ export default function Home() {
         screen={currentScreen}
         t={t}
         analysis={analysis}
+        walkthroughData={walkthroughData}
         profile={profile}
         user={user}
         viewingFromSaved={viewingFromSaved}
@@ -3010,8 +2817,6 @@ export default function Home() {
         branchDimensions={branchDimensions}
         isReEvalResult={isReEvalResult}
         evalsRemaining={evalsRemaining}
-        deltaData={deltaData}
-        deltaLoading={deltaLoading}
         setCurrentScreen={setCurrentScreen}
         setShowAuthModal={setShowAuthModal}
         setShowScoreGuide={setShowScoreGuide}
@@ -3031,8 +2836,6 @@ export default function Home() {
         onResetAndNewIdea={onResetAndNewIdea}
         onBackToMyIdeasCleanup={onBackToMyIdeasCleanup}
         onDiscardReEval={onDiscardReEval}
-        onSetAsMain={onSetAsMain}
-        onNavigateToDelta={onNavigateToDelta}
       />
       </DashboardShell>
     );
@@ -3074,315 +2877,6 @@ export default function Home() {
           onSaveIdea={openSaveFromBrief}
           onNewIdea={onResetAndNewIdea}
         />
-      </DashboardShell>
-    );
-  }
-
-  // ============================================
-  // SCREEN: DELTA EXPLANATION (branches only)
-  // ============================================
-  if (currentScreen === "delta" && viewingFromSaved && isBranchIdea) {
-    const currentIdea = myIdeas.find(i => i.id === currentIdeaId);
-    const parentIdea = currentIdea ? myIdeas.find(i => i.id === currentIdea.parent_idea_id) : null;
-
-    // Color helpers
-    const deltaColor = (delta) => {
-      if (delta > 0.3) return "#34d399"; // green
-      if (delta < -0.3) return "#f87171"; // red
-      return t.sec; // gray — negligible
-    };
-    const deltaArrow = (delta) => {
-      if (delta > 0.3) return "↑";
-      if (delta < -0.3) return "↓";
-      return "→";
-    };
-
-    return (
-      <DashboardShell
-        t={t}
-        active=""
-        userEmail={user?.email}
-        authLoading={authLoading}
-        onLogin={() => setShowAuthModal(true)}
-        onLogout={handleLogout}
-        onNavigate={railNav}
-      >
-        <PageContainer wide>
-          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", padding: "4px 0 0" }}>
-            <button onClick={() => setCurrentScreen("results2")} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
-              ← Back to execution
-            </button>
-          </div>
-        </PageContainer>
-
-        {showAuthModal && (
-          <AuthModal
-            onClose={() => setShowAuthModal(false)}
-            onAuth={(u) => setUser(u)}
-            t={t}
-          />
-        )}
-
-        <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} branchMode={viewingFromSaved && isBranchIdea} t={t} />
-
-        <main style={{ flex: 1, paddingBottom: 64 }}>
-          <PageContainer wide>
-            {/* Delta screen header */}
-            <SectionHeader
-              icon="△"
-              title="What Changed"
-              subtitle={parentIdea ? `Changes from "${parentIdea.title}" to "${currentIdea?.title}"` : "How this branch differs from its parent"}
-              t={t}
-            />
-
-            {/* Loading state */}
-            {deltaLoading && (
-              <div style={{
-                background: t.surface,
-                border: `1px solid ${t.border}`,
-                borderRadius: 16,
-                padding: 40,
-                textAlign: "center",
-                marginBottom: 20,
-              }}>
-                <div style={{ fontSize: 14, color: t.sec, marginBottom: 8 }}>Analyzing changes...</div>
-                <div style={{ fontSize: 12, color: t.mut }}>Comparing evaluations and attributing score movements</div>
-              </div>
-            )}
-
-            {/* Error state */}
-            {deltaError && !deltaLoading && (
-              <div style={{
-                background: "rgba(239,68,68,0.08)",
-                border: "1px solid rgba(239,68,68,0.3)",
-                borderRadius: 16,
-                padding: 24,
-                marginBottom: 20,
-              }}>
-                <div style={{ fontSize: 14, color: "#f87171", marginBottom: 8 }}>{deltaError}</div>
-                <button
-                  onClick={() => fetchDelta(currentIdeaId)}
-                  style={{
-                    padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600,
-                    border: "1px solid rgba(239,68,68,0.3)", background: "transparent",
-                    color: "#f87171", cursor: "pointer",
-                  }}
-                >
-                  Try again
-                </button>
-              </div>
-            )}
-
-            {/* Delta content */}
-            {deltaData && !deltaLoading && (
-              <>
-                {/* Block 1: Change Summary */}
-                <div style={{
-                  background: t.surface,
-                  border: `1px solid ${t.border}`,
-                  borderRadius: 16,
-                  padding: 24,
-                  marginBottom: 16,
-                }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "#a78bfa", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                    What you changed
-                  </div>
-                  <div style={{ fontSize: 14, color: t.text, lineHeight: 1.7 }}>
-                    {deltaData.change_summary}
-                  </div>
-                </div>
-
-                {/* Block 2: Improvements */}
-                {deltaData.improvements && deltaData.improvements.length > 0 && (
-                  <div style={{
-                    background: "rgba(16,185,129,0.04)",
-                    border: "1px solid rgba(16,185,129,0.2)",
-                    borderRadius: 16,
-                    padding: 24,
-                    marginBottom: 16,
-                  }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "#34d399", marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                      What improved
-                    </div>
-                    {deltaData.improvements.map((item, idx) => (
-                      <div key={idx} style={{
-                        display: "flex",
-                        gap: 12,
-                        marginBottom: idx < deltaData.improvements.length - 1 ? 16 : 0,
-                        alignItems: "flex-start",
-                      }}>
-                        <div style={{
-                          flexShrink: 0,
-                          width: 36,
-                          height: 36,
-                          borderRadius: 8,
-                          background: "rgba(16,185,129,0.12)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 14,
-                          fontWeight: 700,
-                          color: "#34d399",
-                        }}>
-                          {item.delta != null ? `+${Math.abs(item.delta).toFixed(1)}` : "↑"}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 12, color: "#34d399", fontWeight: 600, marginBottom: 4, textTransform: "uppercase" }}>
-                            {(item.metric || "").replace(/_/g, " ")}
-                          </div>
-                          <div style={{ fontSize: 14, color: t.text, lineHeight: 1.6 }}>
-                            {item.shift}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Block 3: Worsenings */}
-                {deltaData.worsenings && deltaData.worsenings.length > 0 && (
-                  <div style={{
-                    background: "rgba(239,68,68,0.04)",
-                    border: "1px solid rgba(239,68,68,0.2)",
-                    borderRadius: 16,
-                    padding: 24,
-                    marginBottom: 16,
-                  }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "#f87171", marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                      What weakened
-                    </div>
-                    {deltaData.worsenings.map((item, idx) => (
-                      <div key={idx} style={{
-                        display: "flex",
-                        gap: 12,
-                        marginBottom: idx < deltaData.worsenings.length - 1 ? 16 : 0,
-                        alignItems: "flex-start",
-                      }}>
-                        <div style={{
-                          flexShrink: 0,
-                          width: 36,
-                          height: 36,
-                          borderRadius: 8,
-                          background: "rgba(239,68,68,0.12)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 14,
-                          fontWeight: 700,
-                          color: "#f87171",
-                        }}>
-                          {item.delta != null ? `-${Math.abs(item.delta).toFixed(1)}` : "↓"}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 12, color: "#f87171", fontWeight: 600, marginBottom: 4, textTransform: "uppercase" }}>
-                            {(item.metric || "").replace(/_/g, " ")}
-                          </div>
-                          <div style={{ fontSize: 14, color: t.text, lineHeight: 1.6 }}>
-                            {item.shift}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Block 4: Net Interpretation */}
-                <div style={{
-                  background: t.surface,
-                  border: `1px solid ${t.border}`,
-                  borderRadius: 16,
-                  padding: 24,
-                  marginBottom: 24,
-                }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: t.text, marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                    Net assessment
-                  </div>
-                  <div style={{ fontSize: 14, color: t.sec, lineHeight: 1.7 }}>
-                    {deltaData.net_interpretation}
-                  </div>
-                </div>
-
-                {/* Score movement summary bar */}
-                {deltaData.score_deltas && (
-                  <div style={{
-                    background: t.surface,
-                    border: `1px solid ${t.border}`,
-                    borderRadius: 16,
-                    padding: 20,
-                    marginBottom: 24,
-                    display: "flex",
-                    justifyContent: "space-around",
-                    flexWrap: "wrap",
-                    gap: 12,
-                  }}>
-                    {[
-                      { key: "overall", label: "Overall" },
-                      { key: "market_demand", label: "MD" },
-                      { key: "monetization", label: "MO" },
-                      { key: "originality", label: "OR" },
-                      { key: "technical_complexity", label: "TC" },
-                    ].map(({ key, label }) => {
-                      const d = deltaData.score_deltas[key];
-                      if (d == null) return null;
-                      return (
-                        <div key={key} style={{ textAlign: "center", minWidth: 50 }}>
-                          <div style={{ fontSize: 11, color: t.mut, marginBottom: 4, fontWeight: 600 }}>{label}</div>
-                          <div style={{ fontSize: 16, fontWeight: 700, color: deltaColor(key === "technical_complexity" ? -d : d) }}>
-                            {deltaArrow(key === "technical_complexity" ? -d : d)} {d > 0 ? "+" : ""}{d.toFixed(1)}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Action buttons — same as what was on results2 for non-branch ideas */}
-            <button
-              onClick={startReEvaluation}
-              disabled={evalsRemaining <= 0}
-              style={{
-                width: "100%",
-                padding: "14px 0",
-                borderRadius: 12,
-                fontSize: 14,
-                fontWeight: 600,
-                border: "none",
-                cursor: evalsRemaining <= 0 ? "not-allowed" : "pointer",
-                background: evalsRemaining <= 0 ? t.surfAlt : "rgba(108,99,255,0.12)",
-                color: evalsRemaining <= 0 ? t.mut : "#a78bfa",
-                marginBottom: 10,
-              }}
-            >
-              {evalsRemaining <= 0 ? "No evaluations remaining" : "Evolve this idea"}
-            </button>
-            <button
-              onClick={() => {
-                setViewingFromSaved(false);
-                setCurrentEvaluationId(null);
-                setCurrentIdeaId(null);
-                setDeltaData(null);
-                setDeltaError("");
-                resetExecutionBrief();
-                goToMyIdeas();
-              }}
-              style={{
-                width: "100%",
-                padding: "14px 0",
-                borderRadius: 12,
-                fontSize: 14,
-                fontWeight: 600,
-                border: `1px solid ${t.border}`,
-                background: "transparent",
-                color: t.sec,
-                cursor: "pointer",
-              }}
-            >
-              ← Back to My Ideas
-            </button>
-          </PageContainer>
-        </main>
       </DashboardShell>
     );
   }

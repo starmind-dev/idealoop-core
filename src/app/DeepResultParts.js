@@ -1,4 +1,5 @@
 // DeepResultParts.js — Deep evaluation-view presentation layer (V6 redesign).
+import { ChangeMarker } from "./ChangeWalkthrough";
 //
 // The three genuinely-new pieces of the redesigned Deep result, plus the
 // "Pressure Read" verdict-first card that assembles them. Built to the geometry
@@ -249,7 +250,7 @@ export function TcLadder({ score, t }) {
 // the read.
 const WEIGHTS = { market_demand: 0.375, monetization: 0.3125, originality: 0.3125 };
 
-export function PressureRead({ analysis, t, onScoreGuide }) {
+export function PressureRead({ analysis, t, onScoreGuide, wt, onWt }) {
   const ev = analysis.evaluation;
   const es = ev.evidence_strength;
   const accent = pick(VERDICT_ACCENT, t);
@@ -296,7 +297,7 @@ export function PressureRead({ analysis, t, onScoreGuide }) {
 
       {!degraded && headline ? (
         <>
-          <h2 style={{ fontSize: 23, fontWeight: 700, letterSpacing: "-0.015em", margin: "0 0 16px", color: t.text }}>{headline}</h2>
+          <h2 style={{ fontSize: 23, fontWeight: 700, letterSpacing: "-0.015em", margin: "0 0 16px", color: t.text, display: "inline-flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>{headline}<ChangeMarker bundle={wt && wt.verdict} onOpen={onWt} title="The verdict changed" /></h2>
           <p style={{ fontSize: 17.5, lineHeight: 1.82, color: t.text, fontWeight: 400, margin: 0, maxWidth: 900 }}>{cardLead}</p>
           {hasMore && (
             <button onClick={() => setShowFull(true)} style={{ display: "inline-flex", alignItems: "center", gap: 7, marginTop: 16, fontSize: 13.5, fontWeight: 600, color: accent, background: "none", border: "none", cursor: "pointer", padding: "6px 0", fontFamily: "inherit" }}>
@@ -307,8 +308,9 @@ export function PressureRead({ analysis, t, onScoreGuide }) {
         </>
       ) : (
         <>
-          <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase", color: accent, opacity: 0.85, marginBottom: 12 }}>
-            The bottom line
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+            <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase", color: accent, opacity: 0.85 }}>The bottom line</div>
+            <ChangeMarker bundle={wt && wt.verdict} onOpen={onWt} title="The verdict changed" />
           </div>
           {degraded ? (
             <p style={{ fontSize: 16, lineHeight: 1.7, color: t.sec, margin: 0, maxWidth: 900 }}>
@@ -352,6 +354,11 @@ export function PressureRead({ analysis, t, onScoreGuide }) {
       <div style={{ display: "flex", alignItems: "center", gap: 36, flexWrap: "wrap" }}>
         <div style={{ position: "relative", flexShrink: 0 }}>
           <OverallGauge score={ev.overall_score} t={t} />
+          {wt && wt.overall && (
+            <div style={{ position: "absolute", top: -2, left: -14, zIndex: 2 }}>
+              <ChangeMarker bundle={wt.overall} onOpen={onWt} title="Overall score changed" />
+            </div>
+          )}
           {onScoreGuide && (
             <button onClick={onScoreGuide} aria-label="What does this score mean?" title="What does this score mean?"
               style={{ position: "absolute", top: -2, right: -10, background: "none", border: "none", cursor: "pointer", color: t.mut, fontSize: 13, padding: 2 }}>ⓘ</button>
@@ -565,7 +572,7 @@ function MoreToggle({ open, onClick, closed, opened, color, t, mt = 10 }) {
   );
 }
 
-export function DeepMetricCard({ metricKey, metric, name, weightLabel, notes = [], competitors = null, t }) {
+export function DeepMetricCard({ metricKey, metric, name, weightLabel, notes = [], competitors = null, t, wt, onWt }) {
   const c = metricColor(metricKey, t);
   const coarse = metric.score;
   const shown = metricKey === "monetization" && typeof metric.display_score === "number" ? metric.display_score : coarse;
@@ -585,7 +592,7 @@ export function DeepMetricCard({ metricKey, metric, name, weightLabel, notes = [
         <div style={{ width: 40, height: 40, borderRadius: 11, display: "grid", placeItems: "center", background: icoBg, border: `1px solid ${icoBorder}`, color: c }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><DmIcon metricKey={metricKey} /></svg>
         </div>
-        <div style={{ fontSize: 14.5, fontWeight: 600, color: t.text }}>{name}</div>
+        <div style={{ fontSize: 14.5, fontWeight: 600, color: t.text, display: "flex", alignItems: "center", gap: 8 }}>{name}<ChangeMarker bundle={wt && wt[metricKey]} onOpen={onWt} title={(name || "This metric") + " changed"} /></div>
         <div style={{ fontSize: 30, fontWeight: 700, lineHeight: 1, letterSpacing: "-0.02em", color: t.mode === "light" ? t.text : "#d6d8e1", display: "flex", alignItems: "baseline", gap: 4 }}>
           {shown.toFixed(1)}<span style={{ fontSize: 13, fontWeight: 600, color: t.mut }}>/10</span>
         </div>
@@ -660,7 +667,7 @@ export function DeepMetricCard({ metricKey, metric, name, weightLabel, notes = [
 // in from components.js so this file stays free of that dependency.
 const COMMITMENT_WORD = { "Very Hard": "Very intensive", "Hard": "Intensive", "Moderate": "Moderate", "Easy": "Light" };
 
-export function ExecutionReality({ estimates, mbColorFn, MbIcon, t }) {
+export function ExecutionReality({ estimates, mbColorFn, MbIcon, t, wt, onWt }) {
   if (!estimates) return null;
   const mb = estimates.main_bottleneck;
   const mbColor = mb && mbColorFn ? mbColorFn(mb, t.mode) : null;
@@ -700,6 +707,7 @@ export function ExecutionReality({ estimates, mbColorFn, MbIcon, t }) {
               </span>
             )}
             <h3 style={{ fontSize: 21, fontWeight: 700, color: t.text, margin: 0, letterSpacing: "-0.01em" }}>{mb || "—"}</h3>
+            <ChangeMarker bundle={wt && wt.mb} onOpen={onWt} title="The binding constraint re-read" />
           </div>
           {dmHas(estimates.constraint_diagnosis) && (
             <p style={{ fontSize: 14, lineHeight: 1.66, color: t.sec, margin: "0 0 16px" }}>{estimates.constraint_diagnosis}</p>
@@ -763,7 +771,7 @@ export function ExecutionReality({ estimates, mbColorFn, MbIcon, t }) {
 // changes it / simpler first version). Number stays hidden — the word carries it.
 const TC_WORD_CAP = ["Very easy", "Easy", "Moderate", "Hard", "Very hard"];
 
-export function DeepTcCard({ tc, t }) {
+export function DeepTcCard({ tc, t, wt, onWt }) {
   if (!tc) return null;
   const c = metricColor("technical_complexity", t);
   const bucket = (s) => (typeof s !== "number" || isNaN(s) ? 4 : s < 2 ? 0 : s < 4 ? 1 : s < 6 ? 2 : s < 8 ? 3 : 4);
@@ -786,7 +794,7 @@ export function DeepTcCard({ tc, t }) {
         <div style={{ width: 40, height: 40, borderRadius: 11, display: "grid", placeItems: "center", background: t.surfAlt, border: `1px solid ${t.border}`, color: pick(OVERALL_RING, t) }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.1 2.1-2.5-.5-.5-2.5z" /></svg>
         </div>
-        <div style={{ fontSize: 14.5, fontWeight: 600, color: t.text }}>Technical Complexity</div>
+        <div style={{ fontSize: 14.5, fontWeight: 600, color: t.text, display: "flex", alignItems: "center", gap: 8 }}>Technical Complexity<ChangeMarker bundle={wt && wt.technical_complexity} onOpen={onWt} title="Technical Complexity re-read" /></div>
         <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: t.sec, background: t.surfAlt, border: `1px solid ${t.border}`, borderRadius: 7, padding: "3px 9px", alignSelf: "flex-start" }}>Execution context</div>
         <div style={{ fontSize: 11, color: t.mut, marginTop: -4 }}>not in overall score</div>
         <div style={{ marginTop: "auto", paddingTop: 12 }}>
@@ -838,7 +846,7 @@ const RISK_META = {
 };
 const RISK_ORDER = ["market_category", "trust_adoption", "founder_fit"];
 
-function RiskRow({ r, isLast, t }) {
+function RiskRow({ r, isLast, t, marker }) {
   const red = "#ef6f6c";
   const meta = RISK_META[r.slot];
   const [open, setOpen] = React.useState(false);
@@ -853,7 +861,7 @@ function RiskRow({ r, isLast, t }) {
         {!isLast && <div style={{ width: 2, background: `${red}40`, flex: 1, minHeight: 14, margin: "7px 0", borderRadius: 2 }} />}
       </div>
       <div style={{ flex: 1, paddingBottom: isLast ? 0 : 18 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: red }}>{meta ? meta.title : "Risk"}</div>
+        <div style={{ fontSize: 14, fontWeight: 600, color: red, display: "flex", alignItems: "center", gap: 8 }}>{meta ? meta.title : "Risk"}{marker || null}</div>
         {meta && <div style={{ fontSize: 12, color: t.mut, marginBottom: 7 }}>{meta.sub}</div>}
         <p style={{ fontSize: 14, lineHeight: 1.62, color: t.sec, margin: meta ? "0" : "5px 0 0", ...clamp }}>{r.text}</p>
         {longText && <MoreToggle open={open} onClick={() => setOpen(!open)} closed="Show more" opened="Show less" color={`${red}C8`} t={t} mt={6} />}
@@ -862,7 +870,7 @@ function RiskRow({ r, isLast, t }) {
   );
 }
 
-export function KeyRisks({ risks, t }) {
+export function KeyRisks({ risks, t, wt, onWt }) {
   if (!Array.isArray(risks) || risks.length === 0) return null;
   const red = "#ef6f6c";
   const norm = risks.map((r) => (typeof r === "string" ? { slot: null, text: r } : { slot: r && r.slot, text: r && r.text })).filter((r) => dmHas(r.text));
@@ -874,7 +882,19 @@ export function KeyRisks({ risks, t }) {
 
   return (
     <div style={{ border: `1px solid ${t.border}`, borderRadius: 18, padding: "30px 34px", background: t.mode === "light" ? t.surface : "rgba(255,255,255,0.018)" }}>
-      {items.map((r, i) => <RiskRow key={i} r={r} isLast={i === items.length - 1} t={t} />)}
+      {(() => {
+        const rbundle = wt && wt.risks;
+        let markIdx = -1;
+        if (rbundle) {
+          const ms = rbundle.changedSlot || (Array.isArray(rbundle.changedSlots) && rbundle.changedSlots[0]) || rbundle.slot || null;
+          markIdx = ms != null ? items.findIndex((r) => r.slot === ms) : 0;
+          if (markIdx < 0) markIdx = 0;
+        }
+        return items.map((r, i) => (
+          <RiskRow key={i} r={r} isLast={i === items.length - 1} t={t}
+            marker={rbundle && i === markIdx ? <ChangeMarker bundle={rbundle} onOpen={onWt} title="A risk re-weighed" /> : null} />
+        ));
+      })()}
     </div>
   );
 }
