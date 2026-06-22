@@ -261,7 +261,7 @@ function SaveAffordance({ state, onClick }) {
   const color = saved ? EX.bright : err ? "#fca5a5" : (h ? "#d7deea" : "#aab4c3");
   return (
     <span onClick={saving ? undefined : onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
-      style={{ fontSize: 12.5, fontWeight: 500, color, display: "inline-flex", gap: 8, alignItems: "center", cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1, whiteSpace: "nowrap" }}>
+      style={{ fontSize: 13.5, fontWeight: 500, color, display: "inline-flex", gap: 8, alignItems: "center", cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1, whiteSpace: "nowrap" }}>
       {saved ? <Svg w={15} sw={2}><path d="M5 13l4 4L19 7" /></Svg> : <Svg w={15} sw={1.8}><path d="M12 5v14M5 12h14" /></Svg>} {label}
     </span>
   );
@@ -274,7 +274,7 @@ function ExploreAffordance({ onClick }) {
   const [h, setH] = useState(false);
   return (
     <span onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
-      style={{ fontSize: 12.5, fontWeight: 500, color: EX.base, display: "inline-flex", gap: 8, alignItems: "center", cursor: "pointer", whiteSpace: "nowrap", filter: h ? "brightness(1.12)" : "none", transition: "filter .16s" }}>
+      style={{ fontSize: 13.5, fontWeight: 500, color: EX.base, display: "inline-flex", gap: 8, alignItems: "center", cursor: "pointer", whiteSpace: "nowrap", filter: h ? "brightness(1.12)" : "none", transition: "filter .16s" }}>
       <Svg w={15} sw={1.7}><path d="M12 4 20 12 12 20 4 12Z" /></Svg> take it to explore
       <span style={{ display: "inline-flex", transform: h ? "translateX(3px)" : "none", transition: "transform .18s" }}><Svg w={14} sw={1.9}><path d="M5 12h14M13 6l6 6-6 6" /></Svg></span>
     </span>
@@ -288,7 +288,7 @@ function DeepAffordance({ onClick }) {
   const [h, setH] = useState(false);
   return (
     <span onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
-      style={{ fontSize: 12.5, fontWeight: 500, color: "#9a8fd8", display: "inline-flex", gap: 8, alignItems: "center", cursor: "pointer", whiteSpace: "nowrap", filter: h ? "brightness(1.12)" : "none", transition: "filter .16s" }}>
+      style={{ fontSize: 13.5, fontWeight: 500, color: "#9a8fd8", display: "inline-flex", gap: 8, alignItems: "center", cursor: "pointer", whiteSpace: "nowrap", filter: h ? "brightness(1.12)" : "none", transition: "filter .16s" }}>
       <Svg w={15} sw={1.6}><path d="M9.5 3h5M11 3v5.2L6.2 16.9A1.4 1.4 0 0 0 7.5 19h9a1.4 1.4 0 0 0 1.3-2.1L13 8.2V3" /><path d="M8.7 14h6.6" /></Svg> take it to deep
       <span style={{ display: "inline-flex", transform: h ? "translateX(3px)" : "none", transition: "transform .18s" }}><Svg w={14} sw={1.9}><path d="M5 12h14M13 6l6 6-6 6" /></Svg></span>
     </span>
@@ -489,7 +489,7 @@ function FanSurface({ idea, angles, fanState, t, onSave, saveState, onExploreAng
                     <span style={{ ...lead, color: "var(--exmut)" }}>the limit</span>
                     <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, lineHeight: 1.58, color: "var(--exsec)" }}>{pa.justification?.disconfirmer}</span>
                   </div>
-                  <div style={{ display: "flex", gap: 23, alignItems: "center", borderTop: "1px solid var(--exdivider)", paddingTop: 14, marginTop: 2, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", gap: 26, alignItems: "center", borderTop: "1px solid var(--exdivider)", paddingTop: 14, marginTop: 2, flexWrap: "wrap" }}>
                     <SaveAffordance state={(saveState || {})[pa.id]} onClick={() => onSave && onSave(pa)} />
                     <ExploreAffordance onClick={() => onExploreAngle && onExploreAngle(pa)} />
                     <DeepAffordance onClick={() => onTakeToDeep && onTakeToDeep(pa.id, { useOriginalIdea: false })} />
@@ -640,21 +640,21 @@ const TILE_THEME = {
     bg: "rgba(255,255,255,0.045)", bgHi: "rgba(255,255,255,0.06)",
     medBg: "rgba(255,255,255,0.05)", medBgHi: "rgba(255,255,255,0.08)",
     ic: "#aab4c3", icHi: "#d7deea", title: M4.ink, cue: "#646d79", cueHi: "#8b94a1",
-    shadow: "0 11px 26px rgba(0,0,0,0.34)", medGlow: "none", grad: false,
+    shadow: "0 14px 34px rgba(0,0,0,0.34)", medGlow: "none", grad: false,
   },
   explore: {
     line: "rgba(122,162,255,0.55)", lineHi: "#7aa2ff",
     bg: "rgba(122,162,255,0.11)", bgHi: "rgba(122,162,255,0.17)",
     medBg: "rgba(122,162,255,0.11)", medBgHi: "rgba(122,162,255,0.11)",
     ic: "#7aa2ff", icHi: "#d2e0ff", title: "#d2e0ff", cue: "#7aa2ff", cueHi: "#7aa2ff",
-    shadow: "0 11px 27px rgba(122,162,255,0.30)", medGlow: "0 0 14px rgba(122,162,255,0.30)", grad: true, fade: "transparent",
+    shadow: "0 14px 36px rgba(122,162,255,0.30)", medGlow: "0 0 18px rgba(122,162,255,0.30)", grad: true, fade: "transparent",
   },
   deep: {
     line: "rgba(138,130,194,0.6)", lineHi: "#8a82c2",
     bg: "rgba(138,130,194,0.13)", bgHi: "rgba(138,130,194,0.2)",
     medBg: "rgba(138,130,194,0.13)", medBgHi: "rgba(138,130,194,0.13)",
     ic: "#8a82c2", icHi: "#cbc3ee", title: "#cbc3ee", cue: "#8a82c2", cueHi: "#8a82c2",
-    shadow: "0 11px 28px rgba(138,130,194,0.34)", medGlow: "0 0 15px rgba(138,130,194,0.34)", grad: true, fade: "rgba(138,130,194,0.02)",
+    shadow: "0 14px 38px rgba(138,130,194,0.34)", medGlow: "0 0 20px rgba(138,130,194,0.34)", grad: true, fade: "rgba(138,130,194,0.02)",
   },
 };
 
@@ -662,9 +662,9 @@ const TILE_THEME = {
 // before the label: Save = a little family tree (parent + two children held
 // together); Explore = fans up/out (diverge); Deep = mirror, converges to a
 // filled point (pressure → verdict).
-function GlyphSave() { return (<Svg w={13} sw={1.7}><circle cx="12" cy="5" r="1.9" /><circle cx="6" cy="19" r="1.9" /><circle cx="18" cy="19" r="1.9" /><path d="M12 6.9v4.6M6 17.1v-3a1.5 1.5 0 0 1 1.5-1.5h9A1.5 1.5 0 0 1 18 14.1v3" /></Svg>); }
-function GlyphExplore() { return (<Svg w={13} sw={1.7}><circle cx="12" cy="20" r="1.4" fill="currentColor" stroke="none" /><path d="M12 19 5 7M12 19 12 5M12 19 19 7" /></Svg>); }
-function GlyphDeep() { return (<Svg w={13} sw={1.7}><path d="M5 5 12 17M12 4 12 17M19 5 12 17" /><circle cx="12" cy="18.4" r="1.7" fill="currentColor" stroke="none" /></Svg>); }
+function GlyphSave() { return (<Svg w={17} sw={1.7}><circle cx="12" cy="5" r="1.9" /><circle cx="6" cy="19" r="1.9" /><circle cx="18" cy="19" r="1.9" /><path d="M12 6.9v4.6M6 17.1v-3a1.5 1.5 0 0 1 1.5-1.5h9A1.5 1.5 0 0 1 18 14.1v3" /></Svg>); }
+function GlyphExplore() { return (<Svg w={17} sw={1.7}><circle cx="12" cy="20" r="1.4" fill="currentColor" stroke="none" /><path d="M12 19 5 7M12 19 12 5M12 19 19 7" /></Svg>); }
+function GlyphDeep() { return (<Svg w={17} sw={1.7}><path d="M5 5 12 17M12 4 12 17M19 5 12 17" /><circle cx="12" cy="18.4" r="1.7" fill="currentColor" stroke="none" /></Svg>); }
 
 function Tile({ variant, glyph, title, desc, cue, arrow, onClick, busy }) {
   const [h, setH] = useState(false);
@@ -677,29 +677,29 @@ function Tile({ variant, glyph, title, desc, cue, arrow, onClick, busy }) {
       style={{
         position: "relative", textAlign: "left", fontFamily: "inherit",
         cursor: busy ? "default" : "pointer",
-        borderRadius: 10, padding: "11px 12px 10px", minHeight: 90,
+        borderRadius: 14, padding: "18px 20px 16px", minHeight: 120,
         display: "flex", flexDirection: "column",
         border: `1px solid ${on ? c.lineHi : c.line}`,
         background: c.grad
           ? `linear-gradient(180deg, ${on ? c.bgHi : c.bg}, ${c.fade} 88%)`
           : (on ? c.bgHi : c.bg),
         boxShadow: on ? c.shadow : "none",
-        transform: on ? "translateY(-2px)" : "none",
+        transform: on ? "translateY(-3px)" : "none",
         transition: "transform .16s, border-color .16s, background .16s, box-shadow .16s",
         opacity: busy ? 0.85 : 1,
       }}>
       <span style={{
-        width: 24, height: 24, borderRadius: 7, display: "grid", placeItems: "center", marginBottom: 8,
+        width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", marginBottom: 13,
         background: on ? c.medBgHi : c.medBg, border: `1px solid ${c.line}`, color: on ? c.icHi : c.ic,
         boxShadow: on ? c.medGlow : "none", transition: ".16s",
       }}>{glyph}</span>
-      <h3 style={{ fontSize: 11, fontWeight: 600, margin: "0 0 3px", color: c.title }}>{title}</h3>
-      <p style={{ fontSize: 9, lineHeight: 1.45, color: M4.mut, margin: "0 0 auto" }}>{desc}</p>
-      <span style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 9, fontFamily: "monospace", fontSize: 7.5, letterSpacing: "0.1em", color: on ? c.cueHi : c.cue }}>
+      <h3 style={{ fontSize: 15.5, fontWeight: 600, margin: "0 0 7px", color: c.title }}>{title}</h3>
+      <p style={{ fontSize: 12.5, lineHeight: 1.55, color: M4.mut, margin: "0 0 auto" }}>{desc}</p>
+      <span style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 14, fontFamily: "monospace", fontSize: 10.5, letterSpacing: "0.1em", color: on ? c.cueHi : c.cue }}>
         {cue}
         {arrow && (
           <span style={{ display: "inline-flex", transform: on ? "translateX(3px)" : "none", transition: "transform .18s" }}>
-            <Svg w={10} sw={2}><path d="M5 12h14M13 6l6 6-6 6" /></Svg>
+            <Svg w={13} sw={2}><path d="M5 12h14M13 6l6 6-6 6" /></Svg>
           </span>
         )}
       </span>
@@ -746,29 +746,29 @@ function NextMoveSurface({ nextMove, angleCount, t, user, viewingFromSaved, onSa
   return (
     <section style={{ marginTop: 48 }}>
       <Eyebrow num="4" icon={<SectionIcon.next />} title="From here" sub="What now — for the whole idea" t={t} />
-      <div style={{ border: `1px solid ${M4.line}`, borderRadius: 12, padding: "20px 23px 17px", background: `linear-gradient(180deg, ${M4.panelA}, ${M4.panelB})` }}>
+      <div style={{ border: `1px solid ${M4.line}`, borderRadius: 14, padding: "26px 30px 22px", background: `linear-gradient(180deg, ${M4.panelA}, ${M4.panelB})` }}>
 
         {du.text && (
           <>
-            <div style={{ fontFamily: "monospace", fontSize: 9, letterSpacing: "0.2em", color: M4.mut2, display: "flex", alignItems: "center", gap: 7, marginBottom: 12 }}>
-              <span style={{ color: EX.base, fontSize: 9.5 }}>?</span>THE OPEN QUESTION
+            <div style={{ fontFamily: "monospace", fontSize: 11, letterSpacing: "0.2em", color: M4.mut2, display: "flex", alignItems: "center", gap: 9, marginBottom: 16 }}>
+              <span style={{ color: EX.base, fontSize: 12 }}>?</span>THE OPEN QUESTION
             </div>
-            <div style={{ borderLeft: `2px solid ${EX.line}`, paddingLeft: 16, marginBottom: 0 }}>
-              <h2 style={{ fontWeight: 400, fontSize: 16.5, lineHeight: 1.4, letterSpacing: "-0.01em", color: M4.ink, margin: 0 }}>{du.text}</h2>
+            <div style={{ borderLeft: `2px solid ${EX.line}`, paddingLeft: 20, marginBottom: 24 }}>
+              <h2 style={{ fontWeight: 400, fontSize: 20, lineHeight: 1.5, letterSpacing: "-0.01em", color: M4.ink, margin: 0 }}>{du.text}</h2>
             </div>
-            <div style={{ height: 1, background: M4.line2, margin: "20px 0 15px" }} />
+            <div style={{ height: 1, background: M4.line2, margin: "24px 0 20px" }} />
           </>
         )}
 
-        <div style={{ fontFamily: "monospace", fontSize: 9, letterSpacing: "0.2em", color: M4.mut2, display: "flex", alignItems: "baseline", gap: 9, marginBottom: 12, flexWrap: "wrap" }}>
+        <div style={{ fontFamily: "monospace", fontSize: 11, letterSpacing: "0.2em", color: M4.mut2, display: "flex", alignItems: "baseline", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
           DO SOMETHING WITH IT
-          <span style={{ fontFamily: "inherit", fontStyle: "normal", fontSize: 10, letterSpacing: "0.01em", color: M4.mut }}>
+          <span style={{ fontFamily: "inherit", fontStyle: "normal", fontSize: 13, letterSpacing: "0.01em", color: M4.mut }}>
             your idea — the seed you explored
             {angleCount > 0 ? <>, with all <b style={{ color: M4.ink2, fontWeight: 500 }}>{angleCount} direction{angleCount === 1 ? "" : "s"}</b> attached</> : null}
           </span>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>
           <SaveTile user={user} viewingFromSaved={viewingFromSaved} onSave={onSave} onAuth={onAuth} goToMyIdeas={goToMyIdeas} angleCount={angleCount} />
           <Tile variant="explore" glyph={<GlyphExplore />} title="Explore again"
             desc="Re-widen the seed into a fresh fan of angles — new directions the first pass didn't surface."
@@ -778,18 +778,18 @@ function NextMoveSurface({ nextMove, angleCount, t, user, viewingFromSaved, onSa
             cue="TO VERDICT" arrow onClick={() => onDeep && onDeep()} />
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 16, paddingTop: 14, borderTop: `1px solid ${M4.line2}`, fontSize: 10, color: M4.mut }}>
-          <span style={{ color: M4.mut2, flexShrink: 0, display: "inline-flex" }}><Svg w={12} sw={1.7}><path d="M7 17 17 7M9 7h8v8" /></Svg></span>
+        <div style={{ display: "flex", alignItems: "center", gap: 11, marginTop: 22, paddingTop: 18, borderTop: `1px solid ${M4.line2}`, fontSize: 13, color: M4.mut }}>
+          <span style={{ color: M4.mut2, flexShrink: 0, display: "inline-flex" }}><Svg w={15} sw={1.7}><path d="M7 17 17 7M9 7h8v8" /></Svg></span>
           <span>
             Want to act on a single direction instead? Each angle above carries its own{" "}
-            <span style={{ fontFamily: "monospace", fontSize: 9, color: "#aab4c3" }}>save</span> ·{" "}
-            <span style={{ fontFamily: "monospace", fontSize: 9, color: EX.base }}>explore</span> ·{" "}
-            <span style={{ fontFamily: "monospace", fontSize: 9, color: "#9a8fd8" }}>take to Deep</span>.
+            <span style={{ fontFamily: "monospace", fontSize: 11, color: "#aab4c3" }}>save</span> ·{" "}
+            <span style={{ fontFamily: "monospace", fontSize: 11, color: EX.base }}>explore</span> ·{" "}
+            <span style={{ fontFamily: "monospace", fontSize: 11, color: "#9a8fd8" }}>take to Deep</span>.
           </span>
         </div>
       </div>
 
-      <div style={{ marginTop: 23, fontFamily: "monospace", fontSize: 9, letterSpacing: "0.05em", color: M4.mut2, textAlign: "center" }}>
+      <div style={{ marginTop: 30, fontFamily: "monospace", fontSize: 11, letterSpacing: "0.05em", color: M4.mut2, textAlign: "center" }}>
         While exploring:&nbsp;&nbsp;<b style={{ color: M4.mut, fontWeight: 400 }}>open more than one path in Deep</b>&nbsp;·&nbsp;<b style={{ color: M4.mut, fontWeight: 400 }}>look for patterns across directions</b>&nbsp;·&nbsp;<b style={{ color: M4.mut, fontWeight: 400 }}>follow curiosity, not commitment.</b>
       </div>
     </section>
