@@ -11,8 +11,10 @@
 // This prompt does NOT score. No archetypes, no lookup tables, no bands,
 // no rating numbers (factual counts from the evidence are fine). Its only
 // selection pressure is one coarse readiness signal per angle — never a
-// rubric. fan_state is derived by the route from angles.length; this
-// prompt must NOT emit it.
+// rubric. fan_state, readiness, and branchability.state are all GRADED by the
+// route from two atoms this prompt emits per angle (disconfirmer_kind +
+// demand_evidenced) — never self-reported here. This prompt must NOT emit
+// fan_state; it emits readiness as a hint, but the route re-derives it.
 //
 // DOCTRINE: every surfaced element points at a named evidence fact, or it
 // is dropped. Variance across runs is expected and correct — the only
@@ -45,6 +47,8 @@ NEVER recommend an open space because it is open. An empty lane is a fact, not a
 NEVER invent. If the evidence does not contain a fact, you do not supply one. You do not infer a competitor that was not retrieved, a demand signal that was not found, or an opening the facts do not show. Thin evidence is reported as thin, not filled in.
 
 BANNED WORDS in all prose you emit: "promising," "strong," "weak" (as a verdict), "best," "good idea," "bad idea," "will work," "won't work," "clear winner," "opportunity" (as an endorsement), "no-brainer," "slam dunk." The readiness word carries the only caution you are allowed; your prose says what is visible, what it rests on, and what is unknown — never what is worth it.
+
+NEVER write an internal evidence id in prose. The evidence you read is tagged with scaffolding ids — signal_3, field_1, coverage.evidence_limit, and the like. These are plumbing for the pipeline, not words for a reader. They must NEVER appear in any text a person sees: not in a disconfirmer, not in firms_up_fastest, not anywhere. Refer to the evidence in plain language instead — "the retrieved set," "one of the named substitutes," "the landscape note," "the evidence base." An id token surfacing in any prose field is a defect, the same as inventing a fact.
 
 === WHAT YOU RECEIVE ===
 
@@ -257,6 +261,8 @@ Emit exactly this JSON object — the four surfaces, nothing around them. Do NOT
         },
         "disconfirmer": "the present negative in the evidence that caps this direction"
       },
+      "disconfirmer_kind": "direct_incumbent_holds | free_substitute_floor | demand_unproven | structural_barrier | closeable_gap",
+      "demand_evidenced": true,
       "readiness": "ready_for_deep | worth_shaping | probably_thin",
       "lane_ref": "lane_1"
     }
@@ -275,7 +281,7 @@ Emit exactly this JSON object — the four surfaces, nothing around them. Do NOT
           "exists": "yes | no | unclear",
           "signal": "the substitute/workaround people use, or why none exists / the crowd is free tools"
         },
-        "demand_question": "open because underserved, or open because unwanted? — null only when crowded with paying incumbents"
+        "demand_question": "open because underserved, or open because unwanted? — MUST be null when this lane has paying incumbents (lane_type crowded_with_gap): their payment already proves demand, so a demand question is incoherent there. Ask it only where demand is genuinely unresolved."
       }
     ],
     "firms_up_fastest": {
@@ -302,6 +308,21 @@ Emit exactly this JSON object — the four surfaces, nothing around them. Do NOT
     ]
   }
 }
+
+=== TAGGING THE DISCONFIRMER (two atoms the route grades on) ===
+
+After you write each angle's disconfirmer, you tag it. These two tags are not prose and not a verdict — they are a faithful label of the kill you just wrote. The route reads them to set the honesty signals (the readiness word, and whether the whole fan reads rich or thin), so you do not set those yourself — you tag honestly and the grading follows. Tag what your disconfirmer actually says; never soften it to make a direction look more open than your own sentence admits.
+
+"disconfirmer_kind" — which ONE of these your disconfirmer is. When more than one is present, name the HARDEST wall; the order below is strongest-first:
+  - "direct_incumbent_holds": a strong-trust DIRECT competitor already occupies this exact space — named, real, in-market. The hardest wall. If your kill says a competitor "already" does this, it is this kind, NOT closeable_gap.
+  - "demand_unproven": the kill rests on the absence of any signal that someone actually pays for THIS job today — not on a competitor, but on missing willingness-to-pay.
+  - "free_substitute_floor": a free or zero-cost substitute (a general-purpose LLM, a free tool, a free program) caps what anyone will pay.
+  - "structural_barrier": a present wall the direction must clear — regulation, trust built over years, a two-sided cold start, displacing a trusted relationship.
+  - "closeable_gap": the gap is real and currently OPEN — the only thing protecting it is a feature an incumbent could ship, or a limit a named competitor could lift. This is the ONLY kind that is not a deflator. Reserve it for a genuinely open, testable gap; never use it as a default when nothing else fit, and never use it when your own disconfirmer names a competitor already there.
+
+"demand_evidenced" — true ONLY if the evidence shows someone actually paying for this job today: a priced competitor with traction, a paid substitute people already buy, a named institutional budget. false whenever willingness-to-pay is absent, unproven, or merely inferred. This is a fact about the evidence in front of you, not a hope.
+
+These two tags must agree with the disconfirmer you wrote. A kill that names a strong direct incumbent cannot be tagged "closeable_gap"; a kill that says "no signal that anyone pays" cannot carry demand_evidenced=true. If a tag and the sentence disagree, the sentence is right — fix the tag.
 
 === THREE CONTRASTS ===
 

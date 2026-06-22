@@ -96,6 +96,36 @@ function StatusShape({ status }) {
 // ---- label maps ------------------------------------------------------------
 const READY_LABEL = { ready_for_deep: "Ready for Deep", worth_shaping: "Worth shaping", probably_thin: "Lightly grounded" };
 
+// the disconfirmer (kill) named on the card face — the wall, not just the way in
+const KIND_LABEL = {
+  direct_incumbent_holds: "Incumbent holds", free_substitute_floor: "Free substitute",
+  demand_unproven: "Demand unproven", structural_barrier: "Structural wall", closeable_gap: "Closeable gap",
+};
+const KIND_DOT = {
+  direct_incumbent_holds: "#d98a8a", free_substitute_floor: "#c89e6b",
+  demand_unproven: "#d4b86a", structural_barrier: "#8b94a1", closeable_gap: "#7aa2ff",
+};
+// readiness as a glanceable triage chip (the dial that actually discriminates now)
+const READY_CHIP = {
+  ready_for_deep: { bg: "rgba(122,162,255,0.22)", bd: "#7aa2ff",                fg: "#d2e0ff", dot: "#d2e0ff" },
+  worth_shaping:  { bg: "rgba(122,162,255,0.13)", bd: "rgba(122,162,255,0.34)", fg: "#bcd0f4", dot: "#7aa2ff" },
+  probably_thin:  { bg: "rgba(204,158,107,0.13)", bd: "rgba(204,158,107,0.34)", fg: "#dab488", dot: "#c89e6b" },
+};
+const WALL_CLAY = "#c89e6b";
+const WallIc = () => <Svg w={13} sw={1.8}><circle cx="12" cy="12" r="8.5" /><path d="M6.5 6.5l11 11" /></Svg>;
+
+function ReadinessChip({ readiness }) {
+  const c = READY_CHIP[readiness] || READY_CHIP.worth_shaping;
+  return (
+    <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6, fontFamily: "monospace",
+      fontSize: 9, letterSpacing: "0.04em", textTransform: "uppercase", fontWeight: 600, whiteSpace: "nowrap",
+      borderRadius: 20, padding: "3px 8px 3px 7px", background: c.bg, border: `1px solid ${c.bd}`, color: c.fg }}>
+      <span style={{ width: 5, height: 5, borderRadius: "50%", background: c.dot }} />
+      {READY_LABEL[readiness] || "Worth shaping"}
+    </span>
+  );
+}
+
 const SHIFT_LABEL = {
   target_shift: "Target shift", buyer_shift: "Buyer shift", mechanism_shift: "Mechanism shift",
   use_case_shift: "Use-case shift", positioning_shift: "Positioning shift", distribution_shift: "Distribution shift",
@@ -115,6 +145,12 @@ const ZONES = [
   ["lightly_served", "Lightly served"],
   ["open", "Open"],
 ];
+
+const ZONE_VIS = {
+  crowded:        { dot: "#c89e6b", badge: "rgba(200,158,107,0.16)", badgeFg: "#d6ac78", fill: "linear-gradient(90deg,#c89e6b,#d6ac78)" },
+  lightly_served: { dot: "#8b94a1", badge: "rgba(139,148,161,0.16)", badgeFg: "#aab2bd", fill: "#8b94a1" },
+  open:           { dot: "#7aa2ff", badge: "rgba(122,162,255,0.14)", badgeFg: "#9db8f2", fill: "#7aa2ff" },
+};
 
 const BRANCH_LABEL = (state, reasonType) => {
   if (state === "branchable") return "Branchable";
@@ -149,29 +185,89 @@ function Eyebrow({ num, icon, title, sub, t, right }) {
 // ============================================================================
 // 1 · Our read
 // ============================================================================
+// first N sentences of the idea, so the seed card stays a glance not a wall of text
+function firstSentences(text, n) {
+  const t = String(text || "").trim();
+  const parts = t.match(/[^.!?]+[.!?]+/g);
+  if (!parts || parts.length <= n) return { preview: t, truncated: false };
+  return { preview: parts.slice(0, n).join("").trim(), truncated: true };
+}
+
+function SeedSurface({ idea, t }) {
+  const [showFull, setShowFull] = useState(false);
+  if (!idea) return null;
+  const { preview, truncated } = firstSentences(idea, 2);
+  return (
+    <>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 4 }}>
+        <div style={{ width: "100%", maxWidth: 560, border: "1px solid rgba(122,162,255,0.22)", borderRadius: 13,
+          background: `linear-gradient(180deg, ${EX.dim}, ${t.surface})`, padding: "16px 20px" }}>
+          <div style={{ fontFamily: "monospace", fontSize: 9.5, letterSpacing: "0.14em", textTransform: "uppercase", color: EX.base, marginBottom: 9, display: "flex", alignItems: "center", gap: 7 }}>
+            <span style={{ display: "flex", color: EX.base }}><PlusIc /></span> Your idea
+          </div>
+          <div style={{ fontSize: 13.5, lineHeight: 1.58, color: "#cdd0d6" }}>{preview}</div>
+          {truncated && (
+            <button onClick={() => setShowFull(true)} style={{ marginTop: 11, background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 12.5, color: EX.base, fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 6 }}>
+              View full idea <span style={{ display: "flex" }}><Svg w={13} sw={2}><path d="M5 12h14M13 6l6 6-6 6" /></Svg></span>
+            </button>
+          )}
+        </div>
+        <div style={{ width: 1, height: 32, background: `linear-gradient(${EX.base}, transparent)` }} />
+      </div>
+
+      {showFull && (
+        <div onClick={() => setShowFull(false)} style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(4,6,10,0.72)", backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "64px 24px", overflowY: "auto" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 720, background: t.surface, border: `1px solid ${t.border}`, borderRadius: 16, padding: "26px 34px 34px", position: "relative", boxShadow: "0 30px 80px -20px rgba(0,0,0,0.82)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+              <div style={{ fontFamily: "monospace", fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: EX.base, display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ display: "flex", color: EX.base }}><PlusIc /></span> Your idea
+              </div>
+              <button onClick={() => setShowFull(false)} aria-label="Close" style={{ background: "none", border: "none", cursor: "pointer", color: t.mut, padding: 4, display: "flex", lineHeight: 0 }}>
+                <Svg w={18} sw={1.8}><path d="M6 6l12 12M18 6 6 18" /></Svg>
+              </button>
+            </div>
+            <div style={{ fontSize: 15.5, lineHeight: 1.72, color: "#dfe2e8" }}>{idea}</div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 function ReadSurface({ read, t }) {
   if (!read) return null;
   const b = read.branchability || {};
-  const clear = Array.isArray(read.clear) ? read.clear : [];
   const open = Array.isArray(read.open) ? read.open : [];
   return (
     <section style={{ marginTop: 48 }}>
-      <Eyebrow num="1" icon={<SectionIcon.read />} title="Our read" sub="How we understood your idea" t={t} />
+      <Eyebrow num="1" icon={<SectionIcon.read />} title="Our read" sub="What's still open is the point" t={t} />
       <div style={{
         background: `linear-gradient(90deg, ${EX.dim}, transparent 22%), ${t.surface}`,
         border: `1px solid var(--exborder-soft)`, borderRadius: 14, padding: "26px 30px 22px",
       }}>
-        <p style={{ fontSize: 15.5, fontWeight: 300, lineHeight: 1.62, color: "#e9ebef", letterSpacing: "0.1px", margin: "0 0 22px", maxWidth: 760 }}>
-          {read.reflection}
-        </p>
-        {(clear.length > 0 || open.length > 0) && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 34, borderTop: `1px solid ${t.divider}`, paddingTop: 20 }}>
-            <ReadColumn label="Clear enough to build on" icon={<RoadIc />} iconColor={EX.base} items={clear} kind="clear" t={t} />
-            <ReadColumn label="Still open" icon={<QIc />} iconColor={EX.base} items={open} kind="open" t={t} />
-          </div>
+        {read.reflection && (
+          <p style={{ fontSize: 14.5, color: "#c9cdd5", lineHeight: 1.62, margin: "0 0 24px", paddingLeft: 18, borderLeft: "2px solid rgba(122,162,255,0.55)", maxWidth: 840 }}>
+            <span style={{ fontFamily: "monospace", fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: EX.base, display: "block", marginBottom: 9, fontWeight: 600 }}>We read this as</span>
+            {read.reflection}
+          </p>
+        )}
+        {open.length > 0 && (
+          <>
+            <div style={{ fontFamily: "monospace", fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: EX.base, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ display: "flex", color: EX.base }}><QIc /></span> Still open
+            </div>
+            <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px 38px" }}>
+              {open.map((it, i) => (
+                <li key={i} style={{ display: "flex", gap: 11, fontSize: 15, lineHeight: 1.52, color: "#e9ebef" }}>
+                  <span style={{ flexShrink: 0, color: EX.base, fontWeight: 700, fontSize: 15, lineHeight: 1.3 }}>?</span>
+                  <span>{it}</span>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
         {(b.state || b.reason) && (
-          <div style={{ display: "flex", alignItems: "baseline", gap: 10, borderTop: `1px solid ${t.divider}`, marginTop: 22, paddingTop: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, borderTop: `1px solid ${t.divider}`, marginTop: 22, paddingTop: 16 }}>
             <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7, fontFamily: "monospace", fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", color: EX.bright, border: `1px solid ${EX.line}`, borderRadius: 20, padding: "4px 11px" }}>
               <span style={{ width: 7, height: 7, border: `1.5px solid ${EX.base}`, transform: "rotate(45deg)", display: "inline-block" }} /> {BRANCH_LABEL(b.state, b.reason_type)}
             </span>
@@ -183,33 +279,14 @@ function ReadSurface({ read, t }) {
   );
 }
 
-function ReadColumn({ label, icon, iconColor, items, kind, t }) {
-  if (!items.length) return <div />;
-  return (
-    <div>
-      <div style={{ fontFamily: "monospace", fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: t.mut, marginBottom: 13, display: "flex", alignItems: "center", gap: 7 }}>
-        <span style={{ color: iconColor, display: "flex" }}>{icon}</span> {label}
-      </div>
-      <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 9 }}>
-        {items.map((it, i) => (
-          <li key={i} style={{ display: "flex", gap: 9, fontSize: 12.5, color: t.sec, lineHeight: 1.45 }}>
-            {kind === "open"
-              ? <span style={{ flexShrink: 0, color: EX.base, fontSize: 12.5, fontWeight: 600, lineHeight: 1.3 }}>?</span>
-              : <span style={{ flexShrink: 0, marginTop: 6, width: 4, height: 4, borderRadius: "50%", background: EX.base, opacity: 0.7 }} />}
-            <span>{it}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
 
 // ============================================================================
 // 2 · Where it could go — the fan
 // ============================================================================
 function EssenceCard({ angle, active, dimmed, onEnter, onLeave, onClick }) {
   const opening = angle.justification?.opening || {};
-  const ReadyG = ReadyGlyph[angle.readiness];
+  const kill = angle.justification?.disconfirmer || "";
+  const kind = angle.disconfirmer_kind;
   return (
     <div data-aid={angle.id} onMouseEnter={onEnter} onMouseLeave={onLeave} onClick={onClick} style={{
       flex: 1, minWidth: 0, cursor: "default", display: "flex", flexDirection: "column",
@@ -223,20 +300,40 @@ function EssenceCard({ angle, active, dimmed, onEnter, onLeave, onClick }) {
       opacity: dimmed ? 0.55 : 1,
       transition: "border-color .18s, box-shadow .25s, transform .25s, opacity .2s",
     }}>
-      <span style={{ fontFamily: "monospace", fontSize: 9.5, letterSpacing: "0.13em", textTransform: "uppercase", color: "var(--exmut)", border: "1px solid var(--exborder-soft)", borderRadius: 5, padding: "3px 7px", display: "inline-block", alignSelf: "flex-start", marginBottom: 13 }}>
-        {SHIFT_LABEL[angle.basis?.primary] || "New angle"}
-      </span>
-      <h3 style={{ fontSize: 15.5, fontWeight: 600, margin: "0 0 8px", color: "var(--extext)", letterSpacing: "0.1px", lineHeight: 1.3 }}>{angle.title}</h3>
-      <p style={{ fontSize: 12.5, color: "var(--exsec)", lineHeight: 1.6, margin: "0 0 16px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{angle.concept}</p>
-      <div style={{ display: "flex", gap: 9, marginBottom: 18, minWidth: 0 }}>
-        <span style={{ flexShrink: 0, color: EX.base, opacity: 0.9, marginTop: 1, display: "flex" }}><RoadIc /></span>
-        <span style={{ flex: 1, minWidth: 0, fontSize: 13, lineHeight: 1.55, color: "#cdd0d6", overflowWrap: "anywhere", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{opening.text}</span>
-      </div>
-      <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, borderTop: "1px solid var(--exdivider)", paddingTop: 14 }}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 11.5, color: "var(--exsec)", fontWeight: 500, minWidth: 0 }}>
-          {ReadyG && <ReadyG />}{READY_LABEL[angle.readiness]}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8, marginBottom: 14 }}>
+        <span style={{ fontFamily: "monospace", fontSize: 9.5, letterSpacing: "0.13em", textTransform: "uppercase", color: "var(--exmut)", border: "1px solid var(--exborder-soft)", borderRadius: 5, padding: "3px 7px", whiteSpace: "nowrap" }}>
+          {SHIFT_LABEL[angle.basis?.primary] || "New angle"}
         </span>
-        <span style={{ flexShrink: 0, fontSize: 11.5, color: active ? EX.bright : "var(--exmut)", fontWeight: 500, whiteSpace: "nowrap" }}>look closer ›</span>
+        <ReadinessChip readiness={angle.readiness} />
+      </div>
+      <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 2px", color: "var(--extext)", letterSpacing: "0.1px", lineHeight: 1.3 }}>{angle.title}</h3>
+
+      <div style={{ marginTop: 14, minWidth: 0 }}>
+        <div style={{ fontFamily: "monospace", fontSize: 8.5, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--exmut)", marginBottom: 5 }}>The opening</div>
+        <div style={{ display: "flex", gap: 9, minWidth: 0 }}>
+          <span style={{ flexShrink: 0, color: EX.base, opacity: 0.9, marginTop: 1, display: "flex" }}><RoadIc /></span>
+          <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, lineHeight: 1.5, color: "#cdd0d6", overflowWrap: "anywhere", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{opening.text}</span>
+        </div>
+      </div>
+
+      {kill && (
+        <div style={{ marginTop: 14, minWidth: 0 }}>
+          <div style={{ fontFamily: "monospace", fontSize: 8.5, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--exmut)", marginBottom: 5 }}>The wall</div>
+          <div style={{ display: "flex", gap: 9, minWidth: 0 }}>
+            <span style={{ flexShrink: 0, color: WALL_CLAY, marginTop: 1, display: "flex" }}><WallIc /></span>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, lineHeight: 1.5, color: "#b7bcc6", overflowWrap: "anywhere", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{kill}</span>
+          </div>
+          {kind && KIND_LABEL[kind] && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 8, fontFamily: "monospace", fontSize: 8, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--exsec)", border: "1px solid var(--exborder-soft)", borderRadius: 4, padding: "2px 6px" }}>
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: KIND_DOT[kind] || EX.base }} />
+              {KIND_LABEL[kind]}
+            </span>
+          )}
+        </div>
+      )}
+
+      <div style={{ marginTop: "auto", display: "flex", justifyContent: "flex-end", borderTop: "1px solid var(--exdivider)", paddingTop: 13 }}>
+        <span style={{ flexShrink: 0, fontSize: 11.5, color: active ? EX.bright : EX.base, fontWeight: 500, whiteSpace: "nowrap" }}>look closer ›</span>
       </div>
     </div>
   );
@@ -527,22 +624,48 @@ function TerrainSurface({ terrain, angles, t }) {
 
   if (lanes.length === 0) return null;
 
+  // real competitor density per zone (distinct named players across its lanes)
+  const zoneCounts = {};
+  let maxCount = 1;
+  ZONES.forEach(([zkey]) => {
+    const names = new Set();
+    lanes.filter((l) => l.status === zkey).forEach((l) => (l.reference_items || []).forEach((r) => { if (r && r.name) names.add(String(r.name).toLowerCase()); }));
+    zoneCounts[zkey] = names.size;
+    if (names.size > maxCount) maxCount = names.size;
+  });
+
   return (
     <section style={{ marginTop: 48 }}>
+      <style>{`
+        @keyframes ilcPing { 0% { transform: scale(.6); opacity: .55 } 80%, 100% { transform: scale(1.85); opacity: 0 } }
+        .ilc-pulse { position: relative }
+        .ilc-pulse::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1.5px solid currentColor; opacity: 0; animation: ilcPing 2.4s ease-out infinite }
+        @media (prefers-reduced-motion: reduce) { .ilc-pulse::after { animation: none; opacity: 0 } }
+      `}</style>
       <Eyebrow num="3" icon={<SectionIcon.terr />} title="Where this could fit" sub="The market around these directions" t={t} />
       <div style={{ display: "grid", gridTemplateColumns: "296px 1fr", border: `1px solid ${t.border}`, borderRadius: 14, overflow: "hidden", minHeight: 300 }}>
         <div style={{ borderRight: `1px solid ${t.divider}`, background: t.surfAlt }}>
           {ZONES.map(([zkey, zlabel], i) => {
             const inZone = lanes.filter((l) => l.status === zkey);
+            const vis = ZONE_VIS[zkey] || ZONE_VIS.lightly_served;
+            const count = zoneCounts[zkey] || 0;
+            const fill = Math.round((count / maxCount) * 100);
             return (
-              <div key={zkey} style={{ padding: "15px 16px", borderTop: i === 0 ? "none" : `1px solid ${t.divider}` }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: "monospace", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: t.mut, marginBottom: 11 }}>
-                  <span style={{ color: t.mut, display: "flex" }}><StatusShape status={zkey} /></span>{zlabel}
+              <div key={zkey} style={{ padding: "14px 16px 12px", borderTop: i === 0 ? "none" : `1px solid ${t.divider}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9 }}>
+                  <span style={{ color: t.mut, display: "flex" }}><StatusShape status={zkey} /></span>
+                  <span style={{ fontFamily: "monospace", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: t.mut }}>{zlabel}</span>
+                  <span style={{ marginLeft: "auto", fontFamily: "monospace", fontSize: 9, fontWeight: 700, borderRadius: 20, padding: "1px 7px", background: vis.badge, color: vis.badgeFg }}>{count}</span>
+                </div>
+                <div style={{ height: 5, borderRadius: 3, marginBottom: inZone.length ? 6 : 2, overflow: "hidden",
+                  background: zkey === "open" ? "transparent" : "rgba(255,255,255,0.06)",
+                  border: zkey === "open" ? "1px dashed rgba(122,162,255,0.3)" : "none" }}>
+                  {zkey !== "open" && <div style={{ height: "100%", width: `${fill}%`, borderRadius: 3, background: vis.fill }} />}
                 </div>
                 {inZone.length ? inZone.map((l) => (
-                  <LaneNode key={l.id} lane={l} selected={l.id === selId} t={t} onSelect={() => setSelId(l.id)} />
+                  <LaneNode key={l.id} lane={l} selected={l.id === selId} t={t} onSelect={() => setSelId(l.id)} dotColor={vis.dot} />
                 )) : (
-                  <div style={{ fontSize: 12, color: t.faint, fontStyle: "italic", padding: "4px 2px" }}>— {zkey === "open" ? "open ground, nothing here" : "nothing here"}</div>
+                  <div style={{ fontSize: 12, color: t.faint, fontStyle: "italic", padding: "6px 2px 2px" }}>— {zkey === "open" ? "open ground, nothing here" : "nothing here"}</div>
                 )}
               </div>
             );
@@ -553,11 +676,14 @@ function TerrainSurface({ terrain, angles, t }) {
         </div>
       </div>
       {firms?.text && (
-        <div style={{ marginTop: 18, display: "flex", gap: 15, alignItems: "flex-start", borderLeft: `2px solid ${EX.line}`, padding: "4px 0 4px 18px" }}>
-          <span style={{ flexShrink: 0, color: EX.bright, marginTop: 1 }}><BoltIc /></span>
+        <div style={{ marginTop: 20, display: "flex", gap: 16, alignItems: "flex-start",
+          border: "1px solid rgba(122,162,255,0.28)", borderRadius: 13,
+          background: `linear-gradient(120deg, ${EX.dim}, transparent 64%), var(--exsurf2)`,
+          padding: "20px 24px" }}>
+          <span style={{ flexShrink: 0, color: EX.base, marginTop: 1 }}><BoltIc /></span>
           <div>
-            <div style={{ fontFamily: "monospace", fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: EX.bright, marginBottom: 6 }}>Firms up fastest</div>
-            <div style={{ fontSize: 13, color: t.sec, lineHeight: 1.6, maxWidth: 760 }}>{firms.text}</div>
+            <div style={{ fontFamily: "monospace", fontSize: 9.5, letterSpacing: "0.14em", textTransform: "uppercase", color: EX.base, marginBottom: 9 }}>Your next move · cheapest test on the board</div>
+            <div style={{ fontSize: 14, color: "var(--extext)", lineHeight: 1.55, maxWidth: 800 }}>{firms.text}</div>
           </div>
         </div>
       )}
@@ -565,18 +691,24 @@ function TerrainSurface({ terrain, angles, t }) {
   );
 }
 
-function LaneNode({ lane, selected, t, onSelect }) {
+function LaneNode({ lane, selected, t, onSelect, dotColor }) {
   const [h, setH] = useState(false);
   const on = selected || h;
   return (
     <button
       onClick={onSelect} onMouseEnter={() => { setH(true); onSelect(); }} onMouseLeave={() => setH(false)}
       style={{
-        display: "block", width: "100%", textAlign: "left", background: on ? t.surf3 : "transparent",
-        border: `1px solid ${selected ? EX.line : "transparent"}`, borderRadius: 9, padding: "9px 11px",
-        color: on ? t.text : t.sec, fontSize: 13.5, cursor: "pointer", transition: "0.13s", marginTop: 5, fontFamily: "inherit",
+        display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left",
+        background: on ? "rgba(122,162,255,0.08)" : "var(--exsurface)",
+        border: `1px solid ${on ? "rgba(122,162,255,0.5)" : "var(--exborder-soft)"}`,
+        borderRadius: 10, padding: "11px 13px", marginTop: 7, cursor: "pointer", fontFamily: "inherit",
+        boxShadow: h && !selected ? "0 8px 22px -14px rgba(122,162,255,0.5)" : "none",
+        transform: h && !selected ? "translateY(-1px)" : "none",
+        transition: "border-color .15s, box-shadow .2s, transform .15s, background .15s",
       }}>
-      {lane.label}
+      <span className="ilc-pulse" style={{ flexShrink: 0, width: 7, height: 7, borderRadius: "50%", background: dotColor || EX.base, color: dotColor || EX.base }} />
+      <span style={{ flex: 1, minWidth: 0, fontSize: 13, lineHeight: 1.4, color: on ? "var(--extext)" : "var(--exsec)" }}>{lane.label}</span>
+      <span style={{ flexShrink: 0, color: on ? EX.base : "var(--exmut)", display: "flex", transition: "color .15s, transform .15s", transform: h ? "translateX(2px)" : "none" }}><RoadIc /></span>
     </button>
   );
 }
@@ -871,6 +1003,7 @@ export default function ExploreView({
               {viewingFromSaved ? "← Back to My Ideas" : "← Back to idea"}
             </button>
           </div>
+          <SeedSurface idea={idea} t={xt} />
           <ReadSurface read={read} t={xt} />
           <FanSurface idea={idea} angles={angles} fanState={fanState} t={xt}
             onSave={(a) => saveBranch([a.id])} saveState={saveState}

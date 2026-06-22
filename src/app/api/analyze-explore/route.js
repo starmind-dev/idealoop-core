@@ -38,7 +38,95 @@ import { EXPLORE_SYSTEM_PROMPT } from "../../../lib/services/prompt-explore";
 // aggregated across ~20 ideas. Tighten to reject once the distribution is known.
 
 const EXPLORE_MODEL = "claude-sonnet-4-6";
+// Stage 2a is a temp-0 structured TRANSFORM, not a reasoning call: the route
+// owns every number and re-derives the density label deterministically, and the
+// firewall ("sorter, never analyst") keeps it from generating directions. So it
+// does not need Sonnet — Haiku does the clerical sort 3-4x faster at the same
+// fidelity. Stage 1 (shared spine) and synthesis (the creative fan) stay Sonnet.
+const STAGE2A_MODEL = "claude-haiku-4-5-20251001";
 const RETRY_BACKOFF_MS = 1200;
+
+// ============================================================================
+// LABEL DERIVATION (route-owned, deterministic)
+// ============================================================================
+// fan_state / readiness / branchability are GRADED here from atoms the synthesis
+// emits — never self-reported by the model (which only ever stamped the top
+// value). Each angle carries disconfirmer_kind + demand_evidenced (the honest
+// content of the kill); the route assigns the labels so the model can't inflate
+// them. Pre-atom payloads fall back to the model's self-reported readiness, so
+// this is safe to ship ahead of the prompt change. The frontend already renders
+// every value below (empty/thin/rich · ready_for_deep/worth_shaping/probably_thin
+// · branchable/partially_branchable/not_branchable) — no frontend change.
+const DISCONFIRMER_KINDS = new Set([
+  "direct_incumbent_holds", "free_substitute_floor", "demand_unproven",
+  "structural_barrier", "closeable_gap",
+]);
+
+function deriveReadiness(a) {
+  const trust = a?.justification?.opening?.trust || "moderate";
+  const kind = a?.disconfirmer_kind;
+  const demandEvidenced = a?.demand_evidenced === true;
+  if (!DISCONFIRMER_KINDS.has(kind)) return a?.readiness || "worth_shaping"; // pre-atom fallback
+  if (kind === "direct_incumbent_holds") return "probably_thin";             // a strong direct incumbent already holds it
+  if (kind === "demand_unproven" && trust !== "strong") return "probably_thin";
+  if (kind === "structural_barrier" && trust === "weak") return "probably_thin";
+  if (trust === "strong" && kind === "closeable_gap" && demandEvidenced) return "ready_for_deep";
+  return "worth_shaping";
+}
+
+function deriveFanState(angles) {
+  if (!angles.length) return "empty";
+  const viable = angles.filter((a) => a.readiness === "worth_shaping" || a.readiness === "ready_for_deep");
+  const distinctBasis = new Set(viable.map((a) => a?.basis?.primary)).size;
+  const distinctRests = new Set(viable.map((a) => a?.justification?.bet?.rests_on)).size;
+  // rich = at least three live directions that genuinely diverge; otherwise thin.
+  if (viable.length >= 3 && distinctBasis >= 2 && distinctRests >= 2) return "rich";
+  return "thin";
+}
+
+// Mutates explore in place: overwrites each angle.readiness, reconciles
+// read.branchability to the frontend's label set, stashes the model's originals
+// under _*_model for the probe's A/B, and returns the derived fan_state.
+function applyDerivedLabels(explore) {
+  const angles = Array.isArray(explore.angles) ? explore.angles : [];
+  for (const a of angles) {
+    a._readiness_model = a.readiness ?? null;
+    a.readiness = deriveReadiness(a);
+  }
+  const fan_state = deriveFanState(angles);
+  const read = explore.read || (explore.read = {});
+  const br = read.branchability || (read.branchability = {});
+  br._state_model = br.state ?? null;
+  br.state = fan_state === "empty" ? "not_branchable"
+    : fan_state === "thin" ? "partially_branchable" : "branchable";
+  br.reason_type = br.state === "branchable" ? null : (br.reason_type || "evidence_too_thin");
+  return fan_state;
+}
+
+// ============================================================================
+// LEAK SCRUB (deterministic backstop) — internal evidence ids (signal_N /
+// field_N / coverage.*) are plumbing and must NEVER reach a reader. The prompt
+// is told not to emit them; this guarantees it even if it slips. Targets tokens
+// that are never legitimate user-facing content, so a blanket recursive string
+// pass is safe. Best-effort: drops parentheticals, rewrites bare ids to plain
+// words. The prompt rule is the real fix; this just makes a leak impossible.
+function scrubString(t) {
+  if (typeof t !== "string") return t;
+  let x = t
+    .replace(/\s*\((?:signal|field)_\d+\)/gi, "")        // " (signal_3)" -> ""
+    .replace(/\s*\(coverage\.\w+\)/gi, "")              // " (coverage.evidence_limit)" -> ""
+    .replace(/\b(?:signal|field)_\d+\b/gi, "the evidence")// "signal_3 shows" -> "the evidence shows"
+    .replace(/\bcoverage\.\w+\b/gi, "the evidence base")
+    .replace(/\bevidence_limit\b/gi, "evidence limit")
+    .replace(/\s{2,}/g, " ").replace(/\s+([.,;:)])/g, "$1");
+  // re-capitalize if a rewrite left a lowercased sentence start
+  return x.replace(/(^|[.!?]\s+)the evidence/g, (m, p1) => p1 + "The evidence");
+}
+function scrubLeaks(o) {
+  if (Array.isArray(o)) return o.map(scrubLeaks);
+  if (o && typeof o === "object") { for (const k of Object.keys(o)) o[k] = scrubLeaks(o[k]); return o; }
+  return scrubString(o);
+}
 
 // Obvious "open => wanted" leak tokens for the branch_idea_text neutrality probe
 // (the #1 gate, which no lint can fully verify — this is a mechanical pre-filter
@@ -126,7 +214,7 @@ function classifyDensityLane(members) {
   const n = m.length;
   if (n < 2) return "sparse";
 
-  let direct = 0, strongReal = 0;
+  let direct = 0, strongAny = 0, strongVerified = 0;
   for (const it of m) {
     const type = typeof (it && it.type) === "string" ? it.type.trim().toLowerCase() : "";
     const trust = typeof (it && it.trust) === "string" ? it.trust.trim().toLowerCase() : "";
@@ -134,15 +222,21 @@ function classifyDensityLane(members) {
       (typeof (it && it.data_source) === "string" && it.data_source.trim().toLowerCase() === "llm_generated") ||
       (typeof (it && it.source) === "string" && it.source.trim().toLowerCase() === "llm");
     if (type === "direct") direct += 1;
-    if (trust === "strong" && !llm) strongReal += 1;
+    if (trust === "strong") {
+      strongAny += 1;                 // a famous URL-less incumbent (CodeRabbit, Otter) counts toward the crowd
+      if (!llm) strongVerified += 1;  // ...but a URL-anchored strong member must exist to call a field crowded
+    }
   }
 
-  // Precedence is fixed. A real verified-direct core (>=2 direct AND >=2 strong,
-  // retrieved) is the only thing that earns crowded/mixed — and it PROTECTS
-  // against the emerging label so a soft majority can't bury a genuine core
-  // (the over-correction risk). Without that core, the field reads unverified.
-  if (direct >= 2 && strongReal >= 2) {
-    return strongReal / n >= 0.5 ? "verified_crowded" : "mixed";
+  // Precedence is fixed. A real strong-direct core earns crowded/mixed: >=2 direct
+  // AND >=2 strong members, with at least ONE of those strong members URL-verified
+  // (the anchor). The anchor preserves the cure — a purely model-imagined crowd has
+  // zero verified anchors and stays unverified — while no longer discarding real,
+  // well-known incumbents that retrieval surfaced from model knowledge without a url.
+  // The crowd ratio counts ALL strong members, so a famous llm-sourced incumbent is
+  // not erased from the field it genuinely populates.
+  if (direct >= 2 && strongAny >= 2 && strongVerified >= 1) {
+    return strongAny / n >= 0.5 ? "verified_crowded" : "mixed";
   }
   return "emerging_unverified";
 }
@@ -214,12 +308,25 @@ export async function POST(request) {
         }
 
         try {
+          // ── STAGE TIMING (additive, non-blocking) ──
+          // Wall-clock per phase + per-call token usage, attached to the final
+          // payload as `_timing`. The probe runner aggregates this across ideas
+          // to find which stage owns the latency. usage.output_tokens is the
+          // real tell: these are generation-bound, not network-bound, calls.
+          const __t0 = Date.now();
+          const __timing = {
+            keywords_ms: 0, retrieval_ms: 0, stage1_ms: 0, stage2a_ms: 0, synthesis_ms: 0, total_ms: 0,
+            usage: { stage1: null, stage2a: null, synthesis: null },
+          };
+
           // ============================
           // PHASE 1: EVIDENCE GATHERING  (spine-identical to Deep)
           // ============================
           sendEvent({ step: "keywords_start", message: "Reading your idea..." });
 
+          const __kwStart = Date.now();
           const keywordsResult = await extractKeywords(idea);
+          __timing.keywords_ms = Date.now() - __kwStart;
 
           // Specificity gate — the upstream half of "not branchable yet".
           // Halts before search / Stage 1 / synthesis. No credit charged.
@@ -258,6 +365,7 @@ export async function POST(request) {
 
           sendEvent({ step: "search_start", message: "Scanning what already exists..." });
 
+          const __retrStart = Date.now();
           const [
             githubResults1, githubResults2,
             serperResults1, serperResults2,
@@ -273,6 +381,7 @@ export async function POST(request) {
             searchExa(serperQuery1),
             searchExa(serperQuery2),
           ]);
+          __timing.retrieval_ms = Date.now() - __retrStart;
 
           // Dedup by URL, cap each source at 7, sort by URL — same input
           // discipline as Deep so the shared Stage 1 reads an identical-shaped
@@ -332,6 +441,7 @@ export async function POST(request) {
           const stage1SystemPrompt = STAGE1_SYSTEM_PROMPT + competitorContext + competitorInstructions;
           const stage1UserMessage = `USER'S AI PRODUCT IDEA:\n${idea}`;
 
+          const __s1Start = Date.now();
           const stage1Response = await callWithRetry({
             model: EXPLORE_MODEL,
             max_tokens: 8000,
@@ -340,6 +450,8 @@ export async function POST(request) {
             system: stage1SystemPrompt,
             messages: [{ role: "user", content: stage1UserMessage }],
           }, "Landscape mapping");
+          __timing.stage1_ms = Date.now() - __s1Start;
+          __timing.usage.stage1 = stage1Response.usage || null;
 
           const stage1Text = stage1Response.content[0].text;
 
@@ -385,14 +497,17 @@ export async function POST(request) {
             `${JSON.stringify(sorterEvidence, null, 2)}\n\n` +
             `${renderExploreCountsBlock(evidenceCounts)}`;
 
+          const __s2aStart = Date.now();
           const sorterResponse = await callWithRetry({
-            model: EXPLORE_MODEL,
+            model: STAGE2A_MODEL,
             max_tokens: 6000,
             temperature: 0,
             top_k: 1,
             system: STAGE2A_EXPLORE_SYSTEM_PROMPT,
             messages: [{ role: "user", content: sorterUserMessage }],
           }, "Evidence sorting");
+          __timing.stage2a_ms = Date.now() - __s2aStart;
+          __timing.usage.stage2a = sorterResponse.usage || null;
 
           const sorterText = sorterResponse.content[0].text;
 
@@ -446,6 +561,7 @@ export async function POST(request) {
             `EXPLORE EVIDENCE (outward-sorted signals, density reads, and coverage to reason from):\n` +
             `${JSON.stringify(exploreEvidence, null, 2)}`;
 
+          const __synStart = Date.now();
           const exploreResponse = await callWithRetry({
             model: EXPLORE_MODEL,
             max_tokens: 8000,
@@ -454,6 +570,8 @@ export async function POST(request) {
             system: EXPLORE_SYSTEM_PROMPT,
             messages: [{ role: "user", content: exploreUserMessage }],
           }, "Exploration");
+          __timing.synthesis_ms = Date.now() - __synStart;
+          __timing.usage.synthesis = exploreResponse.usage || null;
 
           const exploreText = exploreResponse.content[0].text;
 
@@ -473,12 +591,23 @@ export async function POST(request) {
           // fan_state are set or derived here)
           // ============================
           const angles = Array.isArray(explore.angles) ? explore.angles : [];
-          const n = angles.length;
-          const fan_state = n === 0 ? "empty" : n <= 2 ? "thin" : "rich";
+          // GRADE the honesty labels from the synthesis's atoms (disconfirmer_kind
+          // + demand_evidenced), not the model's self-report or the raw angle
+          // count. Mutates angle.readiness + read.branchability in place (stashing
+          // the model's originals as _*_model); returns the derived fan_state.
+          const fan_state = applyDerivedLabels(explore);
+          scrubLeaks(explore); // strip any leaked internal evidence id before it reaches the reader
+          // demand_question is incoherent on a lane with paying incumbents
+          // (lane_type crowded_with_gap): their payment already proves demand. Null it.
+          for (const lane of explore?.terrain?.lanes || []) {
+            if (lane && lane.lane_type === "crowded_with_gap") lane.demand_question = null;
+          }
 
           // Validate synthesis refs against the ORIGINAL Stage 1 named items
           // (not the sorted object) — grounding must trace to real retrieval.
           const validation = buildValidation(explore, stage1Result, fan_state);
+
+          __timing.total_ms = Date.now() - __t0;
 
           const payload = {
             mode: "explore",
@@ -490,6 +619,7 @@ export async function POST(request) {
             terrain: explore.terrain || null,
             next_move: explore.next_move || null,
             evaluationId,
+            _timing: __timing,
             _validation: validation,
             _evidence: exploreEvidence,
           };
