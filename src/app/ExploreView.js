@@ -42,6 +42,18 @@ const EX = {
   gradB: "#60a5fa", // sky, at each new angle
 };
 
+// Deep's locked violet, used ONLY on the cross-mode handoff affordances (the
+// "take to Deep" verb at both scales, and the Deep tile in Section 4). Explore
+// stays Dawn-blue everywhere else; violet appears exactly where the action
+// leaves Explore and enters Deep, so the colour reads as "this hands you off".
+const VIO = {
+  base: "#8a82c2",
+  ink: "#cbc3ee",
+  line: "rgba(138,130,194,0.6)",
+  wash: "rgba(138,130,194,0.13)",
+  glow: "rgba(138,130,194,0.34)",
+};
+
 // ---- small SVG helpers -----------------------------------------------------
 const Svg = ({ d, w = 14, sw = 1.8, fill = "none", children, style }) => (
   <svg width={w} height={w} viewBox="0 0 24 24" fill={fill} stroke={fill === "none" ? "currentColor" : "none"}
@@ -111,15 +123,6 @@ const BRANCH_LABEL = (state, reasonType) => {
   if (reasonType === "evidence_too_thin") return "Too thin to branch";
   if (reasonType === "too_vague" || reasonType === "too_broad") return "Too broad to fan yet";
   return "Not branchable";
-};
-
-const ACTION_META = {
-  save_branch: { label: "Save branch", desc: "Keep this exploration to build on later.", ic: <PlusIc /> },
-  compare_selected: { label: "Compare directions", desc: "Hold the clearest contrasts side by side.", ic: <CmpIc /> },
-  take_to_deep: { label: "Take to Deep", desc: "Hand it to the verdict mode as it stands.", ic: "→", deep: true },
-  explore_variation: { label: "Explore a variation", desc: "New angle, same problem space.", ic: "◇" },
-  park: { label: "Park for later", desc: "Set it down without losing it.", ic: "◷" },
-  edit_read: { label: "Edit the read", desc: "Sharpen the idea, then the fan can widen.", ic: "✎" },
 };
 
 const TRUST_OPACITY = { strong: 1, moderate: 0.55, weak: 0.28 };
@@ -252,17 +255,47 @@ function Affordance({ children, onClick }) {
 function SaveAffordance({ state, onClick }) {
   const [h, setH] = useState(false);
   const saved = state === "saved", saving = state === "saving", err = state === "error";
-  const label = saved ? "saved" : saving ? "saving…" : err ? "retry" : "save";
-  const color = saved ? EX.bright : err ? "#fca5a5" : (h ? "var(--exsec)" : "var(--exmut)");
+  const label = saved ? "saved" : saving ? "saving…" : err ? "retry" : "save as rough idea";
+  // pewter — the quiet anchor, dimmer than the two coloured journeys (matches the
+  // Section 4 Save tile). "as rough idea" names what the save does: a rough branch.
+  const color = saved ? EX.bright : err ? "#fca5a5" : (h ? "#d7deea" : "#aab4c3");
   return (
     <span onClick={saving ? undefined : onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
-      style={{ fontSize: 11.5, color, display: "inline-flex", gap: 6, alignItems: "center", cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1 }}>
-      {saved ? <Svg w={12} sw={2}><path d="M5 13l4 4L19 7" /></Svg> : <PlusIc />} {label}
+      style={{ fontSize: 13.5, fontWeight: 500, color, display: "inline-flex", gap: 8, alignItems: "center", cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1, whiteSpace: "nowrap" }}>
+      {saved ? <Svg w={15} sw={2}><path d="M5 13l4 4L19 7" /></Svg> : <Svg w={15} sw={1.8}><path d="M12 5v14M5 12h14" /></Svg>} {label}
     </span>
   );
 }
 
-function FanSurface({ idea, angles, fanState, t, onSave, saveState, onCompare, onTakeToDeep, branchReason }) {
+// Per-angle "explore" — Dawn, diamond glyph (Explore's identity mark), arrow that
+// slides on hover. Replaces the old per-angle "compare" (two rough idea texts have
+// nothing to compare; explore is the move that widens a rough angle into its own fan).
+function ExploreAffordance({ onClick }) {
+  const [h, setH] = useState(false);
+  return (
+    <span onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+      style={{ fontSize: 13.5, fontWeight: 500, color: EX.base, display: "inline-flex", gap: 8, alignItems: "center", cursor: "pointer", whiteSpace: "nowrap", filter: h ? "brightness(1.12)" : "none", transition: "filter .16s" }}>
+      <Svg w={15} sw={1.7}><path d="M12 4 20 12 12 20 4 12Z" /></Svg> take it to explore
+      <span style={{ display: "inline-flex", transform: h ? "translateX(3px)" : "none", transition: "transform .18s" }}><Svg w={14} sw={1.9}><path d="M5 12h14M13 6l6 6-6 6" /></Svg></span>
+    </span>
+  );
+}
+
+// Per-angle "take it to deep" — violet (the cross-mode handoff colour), flask glyph
+// (distil to a verdict), arrow that slides on hover. #9a8fd8 is a legible lift of
+// the locked Deep accent (#8a82c2) — the pale tint washed out at text size.
+function DeepAffordance({ onClick }) {
+  const [h, setH] = useState(false);
+  return (
+    <span onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+      style={{ fontSize: 13.5, fontWeight: 500, color: "#9a8fd8", display: "inline-flex", gap: 8, alignItems: "center", cursor: "pointer", whiteSpace: "nowrap", filter: h ? "brightness(1.12)" : "none", transition: "filter .16s" }}>
+      <Svg w={15} sw={1.6}><path d="M9.5 3h5M11 3v5.2L6.2 16.9A1.4 1.4 0 0 0 7.5 19h9a1.4 1.4 0 0 0 1.3-2.1L13 8.2V3" /><path d="M8.7 14h6.6" /></Svg> take it to deep
+      <span style={{ display: "inline-flex", transform: h ? "translateX(3px)" : "none", transition: "transform .18s" }}><Svg w={14} sw={1.9}><path d="M5 12h14M13 6l6 6-6 6" /></Svg></span>
+    </span>
+  );
+}
+
+function FanSurface({ idea, angles, fanState, t, onSave, saveState, onExploreAngle, onTakeToDeep, branchReason }) {
   const fanRef = useRef(null);
   const nodeRef = useRef(null);
   const rowRef = useRef(null);
@@ -456,10 +489,10 @@ function FanSurface({ idea, angles, fanState, t, onSave, saveState, onCompare, o
                     <span style={{ ...lead, color: "var(--exmut)" }}>the limit</span>
                     <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, lineHeight: 1.58, color: "var(--exsec)" }}>{pa.justification?.disconfirmer}</span>
                   </div>
-                  <div style={{ display: "flex", gap: 18, alignItems: "center", borderTop: "1px solid var(--exdivider)", paddingTop: 12, marginTop: 2, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", gap: 26, alignItems: "center", borderTop: "1px solid var(--exdivider)", paddingTop: 14, marginTop: 2, flexWrap: "wrap" }}>
                     <SaveAffordance state={(saveState || {})[pa.id]} onClick={() => onSave && onSave(pa)} />
-                    <Affordance onClick={() => onCompare && onCompare(pa)}><CmpIc /> compare</Affordance>
-                    <span onClick={() => onTakeToDeep && onTakeToDeep(pa.id, { useOriginalIdea: false })} style={{ fontSize: 12, color: EX.bright, fontWeight: 500, display: "inline-flex", gap: 7, alignItems: "center", cursor: "pointer", whiteSpace: "nowrap" }}>take to Deep →</span>
+                    <ExploreAffordance onClick={() => onExploreAngle && onExploreAngle(pa)} />
+                    <DeepAffordance onClick={() => onTakeToDeep && onTakeToDeep(pa.id, { useOriginalIdea: false })} />
                   </div>
                 </div>
               )}
@@ -579,131 +612,193 @@ function LaneReader({ lane, fast, t }) {
 }
 
 // ============================================================================
-// 4 · From here — next move
+// 4 · From here — the ONE surface that acts on the whole idea (idea-x).
+//
+// Per-angle save / explore / take-to-Deep already live on each angle's expanded
+// card (Section 2). So Section 4 does NOT re-list per-angle actions — it owns the
+// only thing the angle rows can't: the PARENT's three fates. Same save/explore/
+// deep vocabulary as the angles, at parent scale.
+//
+// No recommendation, no "which angle to pick", no consequence surface. Explore is
+// no score / no rank / no verdict; the narrowing is the founder's move, not ours.
+// We hand back the open question (the unresolved thing, not advice) and list the
+// three options. The pointer line tells them the angle-level actions exist.
+//
+// Palette is pinned to the approved mockup (explore-fromhere-v2): Save = grounded
+// pewter (persistence, NOT a third mode), Explore = Dawn, Take-to-Deep = violet
+// (the cross-mode handoff colour).
 // ============================================================================
-function NextMoveSurface({ nextMove, t, handlers }) {
-  if (!nextMove) return null;
-  const du = nextMove.dominant_uncertainty || {};
-  const actions = Array.isArray(nextMove.actions) ? nextMove.actions.filter((a) => a.enabled !== false) : [];
-  const primary = nextMove.primary_action;
+const M4 = {
+  ink: "#e9eef5", ink2: "#c3ccd7", mut: "#8b94a1", mut2: "#646d79",
+  line: "rgba(255,255,255,0.07)", line2: "rgba(255,255,255,0.05)",
+  panelA: "rgba(255,255,255,0.028)", panelB: "rgba(255,255,255,0.018)",
+};
 
-  // primary first, then the rest in contract order
-  const ordered = [...actions].sort((a, b) => (a.type === primary ? -1 : b.type === primary ? 1 : 0));
+const TILE_THEME = {
+  save: {
+    line: "rgba(255,255,255,0.16)", lineHi: "rgba(255,255,255,0.26)",
+    bg: "rgba(255,255,255,0.045)", bgHi: "rgba(255,255,255,0.06)",
+    medBg: "rgba(255,255,255,0.05)", medBgHi: "rgba(255,255,255,0.08)",
+    ic: "#aab4c3", icHi: "#d7deea", title: M4.ink, cue: "#646d79", cueHi: "#8b94a1",
+    shadow: "0 14px 34px rgba(0,0,0,0.34)", medGlow: "none", grad: false,
+  },
+  explore: {
+    line: "rgba(122,162,255,0.55)", lineHi: "#7aa2ff",
+    bg: "rgba(122,162,255,0.11)", bgHi: "rgba(122,162,255,0.17)",
+    medBg: "rgba(122,162,255,0.11)", medBgHi: "rgba(122,162,255,0.11)",
+    ic: "#7aa2ff", icHi: "#d2e0ff", title: "#d2e0ff", cue: "#7aa2ff", cueHi: "#7aa2ff",
+    shadow: "0 14px 36px rgba(122,162,255,0.30)", medGlow: "0 0 18px rgba(122,162,255,0.30)", grad: true, fade: "transparent",
+  },
+  deep: {
+    line: "rgba(138,130,194,0.6)", lineHi: "#8a82c2",
+    bg: "rgba(138,130,194,0.13)", bgHi: "rgba(138,130,194,0.2)",
+    medBg: "rgba(138,130,194,0.13)", medBgHi: "rgba(138,130,194,0.13)",
+    ic: "#8a82c2", icHi: "#cbc3ee", title: "#cbc3ee", cue: "#8a82c2", cueHi: "#8a82c2",
+    shadow: "0 14px 38px rgba(138,130,194,0.34)", medGlow: "0 0 20px rgba(138,130,194,0.34)", grad: true, fade: "rgba(138,130,194,0.02)",
+  },
+};
 
+// glyphs encode the action (motion), so the founder reads what each tile does
+// before the label: Save = a little family tree (parent + two children held
+// together); Explore = fans up/out (diverge); Deep = mirror, converges to a
+// filled point (pressure → verdict).
+function GlyphSave() { return (<Svg w={21} sw={1.7}><circle cx="12" cy="5" r="1.9" /><circle cx="6" cy="19" r="1.9" /><circle cx="18" cy="19" r="1.9" /><path d="M12 6.9v4.6M6 17.1v-3a1.5 1.5 0 0 1 1.5-1.5h9A1.5 1.5 0 0 1 18 14.1v3" /></Svg>); }
+function GlyphExplore() { return (<Svg w={21} sw={1.7}><circle cx="12" cy="20" r="1.4" fill="currentColor" stroke="none" /><path d="M12 19 5 7M12 19 12 5M12 19 19 7" /></Svg>); }
+function GlyphDeep() { return (<Svg w={21} sw={1.7}><path d="M5 5 12 17M12 4 12 17M19 5 12 17" /><circle cx="12" cy="18.4" r="1.7" fill="currentColor" stroke="none" /></Svg>); }
+
+function Tile({ variant, glyph, title, desc, cue, arrow, onClick, busy }) {
+  const [h, setH] = useState(false);
+  const c = TILE_THEME[variant];
+  const on = h && !busy;
   return (
-    <section style={{ marginTop: 48 }}>
-      <Eyebrow num="4" icon={<SectionIcon.next />} title="From here" sub="Your options from here" t={t} />
-      <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, padding: "34px 36px" }}>
-        <div style={{ borderLeft: `2px solid ${EX.line}`, paddingLeft: 18, marginBottom: 26 }}>
-          <div style={{ fontFamily: "monospace", fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: t.mut, marginBottom: 7 }}>The open question</div>
-          <div style={{ fontSize: 15, color: t.text, lineHeight: 1.55, fontWeight: 300 }}>{du.text}</div>
-        </div>
-        {nextMove.recommendation && (
-          <div style={{ fontSize: 13.5, color: t.sec, lineHeight: 1.6, marginBottom: 28, maxWidth: 760 }}>{nextMove.recommendation}</div>
+    <button
+      onClick={busy ? undefined : onClick}
+      onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+      style={{
+        position: "relative", textAlign: "left", fontFamily: "inherit",
+        cursor: busy ? "default" : "pointer",
+        borderRadius: 15, padding: "20px 20px 17px", minHeight: 172,
+        display: "flex", flexDirection: "column",
+        border: `1px solid ${on ? c.lineHi : c.line}`,
+        background: c.grad
+          ? `linear-gradient(180deg, ${on ? c.bgHi : c.bg}, ${c.fade} 88%)`
+          : (on ? c.bgHi : c.bg),
+        boxShadow: on ? c.shadow : "none",
+        transform: on ? "translateY(-3px)" : "none",
+        transition: "transform .16s, border-color .16s, background .16s, box-shadow .16s",
+        opacity: busy ? 0.85 : 1,
+      }}>
+      <span style={{
+        width: 42, height: 42, borderRadius: 11, display: "grid", placeItems: "center", marginBottom: 15,
+        background: on ? c.medBgHi : c.medBg, border: `1px solid ${c.line}`, color: on ? c.icHi : c.ic,
+        boxShadow: on ? c.medGlow : "none", transition: ".16s",
+      }}>{glyph}</span>
+      <h3 style={{ fontSize: 16.5, fontWeight: 600, margin: "0 0 6px", color: c.title }}>{title}</h3>
+      <p style={{ fontSize: 12.8, lineHeight: 1.5, color: M4.mut, margin: "0 0 auto" }}>{desc}</p>
+      <span style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 15, fontFamily: "monospace", fontSize: 10.5, letterSpacing: "0.1em", color: on ? c.cueHi : c.cue }}>
+        {cue}
+        {arrow && (
+          <span style={{ display: "inline-flex", transform: on ? "translateX(3px)" : "none", transition: "transform .18s" }}>
+            <Svg w={13} sw={2}><path d="M5 12h14M13 6l6 6-6 6" /></Svg>
+          </span>
         )}
-        <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-          {ordered.map((a, i) => (
-            <MoveButton key={a.type + i} action={a} isPrimary={a.type === primary} t={t} handlers={handlers} />
-          ))}
-        </div>
-        <div style={{ marginTop: 26, fontSize: 11.5, color: t.mut, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <b style={{ color: t.mut, fontWeight: 500 }}>While exploring:</b> open more than one path in Deep · look for patterns across directions · follow curiosity, not commitment.
-        </div>
-      </div>
-    </section>
+      </span>
+    </button>
   );
 }
 
-function MoveButton({ action, isPrimary, t, handlers }) {
-  const [h, setH] = useState(false);
-  const meta = ACTION_META[action.type] || { label: action.label || action.type, desc: "", ic: "→" };
-  const m = handlers || {};
-  const targets = action.target_angle_ids || [];
-  const sState = m.saveState || {};
-  const allSaved = action.type === "save_branch" && targets.length > 0 && targets.every((id) => sState[id] === "saved");
-  const anySaving = action.type === "save_branch" && targets.some((id) => sState[id] === "saving");
-  const label = allSaved ? "Saved ✓" : anySaving ? "Saving…" : (action.label || meta.label);
-  const fire = () => {
-    if (action.type === "take_to_deep") m.onTakeToDeep && m.onTakeToDeep(targets[0] || null, { useOriginalIdea: !!action.use_original_idea, angleIds: targets });
-    else if (action.type === "compare_selected") m.onCompare && m.onCompare(targets);
-    else if (action.type === "save_branch") (m.saveBranch ? m.saveBranch(targets) : (m.onSaveBranch && m.onSaveBranch(targets)));
-    else if (action.type === "explore_variation") m.onExploreVariation && m.onExploreVariation();
-    else if (action.type === "park") m.onPark && m.onPark();
-    else if (action.type === "edit_read") m.onEditRead && m.onEditRead();
+// Save is the one parent fate with state. It folds in the old SaveExploredBar's
+// logic: auth-gates (logged-out → auth modal), tracks idle/saving/saved/error,
+// and when the idea was reopened from the hub it already shows saved. onSave is
+// idempotent on the page side — angles saved individually from their rows are NOT
+// double-saved when the family is saved here.
+function SaveTile({ user, viewingFromSaved, onSave, onAuth, goToMyIdeas, angleCount }) {
+  const [state, setState] = useState(viewingFromSaved ? "saved" : "idle"); // idle | saving | saved | error
+  const fam = angleCount > 0
+    ? `and all ${angleCount} direction${angleCount === 1 ? "" : "s"}`
+    : "and its directions";
+  const doSave = async () => {
+    if (!user) { onAuth && onAuth(); return; }
+    if (state === "saving" || state === "saved" || !onSave) return;
+    setState("saving");
+    try { await onSave(); setState("saved"); }
+    catch (e) { setState("error"); }
   };
+  if (state === "saved") {
+    return (
+      <Tile variant="save" glyph={<GlyphSave />} title="Saved"
+        desc={`Kept in My Ideas — your idea ${fam} together as one family.`}
+        cue="IN MY IDEAS ✓" onClick={() => goToMyIdeas && goToMyIdeas()} />
+    );
+  }
+  const title = state === "saving" ? "Saving…" : state === "error" ? "Try again" : "Save";
+  const desc = !user
+    ? `Log in to keep your idea ${fam} together as one family — nothing dies.`
+    : `Keeps your idea ${fam} together as one family in My Ideas — nothing dies.`;
   return (
-    <button onClick={fire} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} style={{
-      flex: 1, minWidth: 150, borderRadius: 11, padding: "18px 18px", cursor: "pointer", transition: "0.15s", textAlign: "left",
-      border: `1px solid ${isPrimary || h || allSaved ? EX.line : t.border}`,
-      background: isPrimary || allSaved ? EX.dim : t.surface,
-    }}>
-      <div style={{ fontSize: 13, color: isPrimary || allSaved ? EX.bright : t.text, fontWeight: 500, display: "flex", gap: 9, alignItems: "center", marginBottom: 5 }}>
-        <span style={{ display: "inline-flex" }}>{meta.ic}</span>{label}
+    <Tile variant="save" glyph={<GlyphSave />} title={title} desc={desc}
+      cue={state === "error" ? "RETRY" : "KEEPS THE FAMILY"} busy={state === "saving"} onClick={doSave} />
+  );
+}
+
+function NextMoveSurface({ nextMove, angleCount, t, user, viewingFromSaved, onSave, onExplore, onDeep, onAuth, goToMyIdeas }) {
+  const du = (nextMove && nextMove.dominant_uncertainty) || {};
+  return (
+    <section style={{ marginTop: 48 }}>
+      <Eyebrow num="4" icon={<SectionIcon.next />} title="From here" sub="What now — for the whole idea" t={t} />
+      <div style={{ border: `1px solid ${M4.line}`, borderRadius: 18, padding: "34px 38px 30px", background: `linear-gradient(180deg, ${M4.panelA}, ${M4.panelB})` }}>
+
+        {du.text && (
+          <>
+            <div style={{ fontFamily: "monospace", fontSize: 11, letterSpacing: "0.2em", color: M4.mut2, display: "flex", alignItems: "center", gap: 9, marginBottom: 16 }}>
+              <span style={{ color: EX.base, fontSize: 12 }}>?</span>THE OPEN QUESTION
+            </div>
+            <div style={{ borderLeft: `2px solid ${EX.line}`, paddingLeft: 20, marginBottom: 24 }}>
+              <h2 style={{ fontWeight: 400, fontSize: 26, lineHeight: 1.42, letterSpacing: "-0.01em", color: M4.ink, margin: 0 }}>{du.text}</h2>
+            </div>
+            <div style={{ height: 1, background: M4.line2, margin: "26px 0 20px" }} />
+          </>
+        )}
+
+        <div style={{ fontFamily: "monospace", fontSize: 11, letterSpacing: "0.2em", color: M4.mut2, display: "flex", alignItems: "baseline", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+          DO SOMETHING WITH IT
+          <span style={{ fontFamily: "inherit", fontStyle: "normal", fontSize: 13, letterSpacing: "0.01em", color: M4.mut }}>
+            your idea — the seed you explored
+            {angleCount > 0 ? <>, with all <b style={{ color: M4.ink2, fontWeight: 500 }}>{angleCount} direction{angleCount === 1 ? "" : "s"}</b> attached</> : null}
+          </span>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>
+          <SaveTile user={user} viewingFromSaved={viewingFromSaved} onSave={onSave} onAuth={onAuth} goToMyIdeas={goToMyIdeas} angleCount={angleCount} />
+          <Tile variant="explore" glyph={<GlyphExplore />} title="Explore again"
+            desc="Re-widen the seed into a fresh fan of angles — new directions the first pass didn't surface."
+            cue="WIDEN" arrow onClick={() => onExplore && onExplore()} />
+          <Tile variant="deep" glyph={<GlyphDeep />} title="Take to Deep"
+            desc="Send the whole idea to the verdict pipeline — a scored read of where it binds. Edit the seed first if you like."
+            cue="TO VERDICT" arrow onClick={() => onDeep && onDeep()} />
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 11, marginTop: 22, paddingTop: 18, borderTop: `1px solid ${M4.line2}`, fontSize: 13, color: M4.mut }}>
+          <span style={{ color: M4.mut2, flexShrink: 0, display: "inline-flex" }}><Svg w={15} sw={1.7}><path d="M7 17 17 7M9 7h8v8" /></Svg></span>
+          <span>
+            Want to act on a single direction instead? Each angle above carries its own{" "}
+            <span style={{ fontFamily: "monospace", fontSize: 11, color: "#aab4c3" }}>save</span> ·{" "}
+            <span style={{ fontFamily: "monospace", fontSize: 11, color: EX.base }}>explore</span> ·{" "}
+            <span style={{ fontFamily: "monospace", fontSize: 11, color: "#9a8fd8" }}>take to Deep</span>.
+          </span>
+        </div>
       </div>
-      <div style={{ fontSize: 11.5, color: meta.deep ? t.sec : t.mut, lineHeight: 1.45 }}>{meta.desc}</div>
-    </button>
+
+      <div style={{ marginTop: 30, fontFamily: "monospace", fontSize: 11, letterSpacing: "0.05em", color: M4.mut2, textAlign: "center" }}>
+        While exploring:&nbsp;&nbsp;<b style={{ color: M4.mut, fontWeight: 400 }}>open more than one path in Deep</b>&nbsp;·&nbsp;<b style={{ color: M4.mut, fontWeight: 400 }}>look for patterns across directions</b>&nbsp;·&nbsp;<b style={{ color: M4.mut, fontWeight: 400 }}>follow curiosity, not commitment.</b>
+      </div>
+    </section>
   );
 }
 
 // ============================================================================
 // ExploreView — screen shell + the four surfaces
 // ============================================================================
-// ============================================================================
-// Save this explored idea — the "keep it or leave it" verb, symmetric with a
-// Deep save. One click saves the explored idea into My Ideas (no score);
-// leaving the page without saving is the discard. Auth-gated.
-// ============================================================================
-function SaveExploredBar({ user, onSaveExplore, goToMyIdeas, setShowAuthModal, xt, viewingFromSaved }) {
-  const [state, setState] = useState("idle"); // idle | saving | saved | error
-  const [hover, setHover] = useState(false);
-  // Already saved (reopened from the hub) — nothing to keep. Matches Deep, which
-  // shows no re-save control on a saved evaluation; the header "Back to My Ideas"
-  // link is the only action needed.
-  if (viewingFromSaved) return null;
-  const doSave = async () => {
-    if (state === "saving" || state === "saved" || !onSaveExplore) return;
-    setState("saving");
-    try { await onSaveExplore(); setState("saved"); }
-    catch (e) { setState("error"); }
-  };
-  return (
-    <section style={{ marginTop: 40 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24, flexWrap: "wrap", background: xt.surface, border: `1px solid ${xt.border}`, borderRadius: 14, padding: "22px 26px" }}>
-        <div style={{ minWidth: 240, flex: 1 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: xt.text, marginBottom: 5 }}>Keep this explored idea</div>
-          <div style={{ fontSize: 12.5, color: xt.sec, lineHeight: 1.55, maxWidth: 540 }}>
-            Saves it to your Ideas as an explored idea — the read and its angles, no score. Leave without saving to discard.
-          </div>
-        </div>
-        {!user ? (
-          <button onClick={() => setShowAuthModal && setShowAuthModal(true)}
-            style={{ fontSize: 13, fontWeight: 600, color: EX.bright, background: "transparent", border: `1px solid ${EX.line}`, borderRadius: 10, padding: "11px 22px", cursor: "pointer", whiteSpace: "nowrap" }}>
-            Log in to save
-          </button>
-        ) : state === "saved" ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 16, whiteSpace: "nowrap" }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 600, color: EX.bright }}>
-              <Svg w={13} sw={2}><path d="M5 13l4 4L19 7" /></Svg> Saved
-            </span>
-            <button onClick={() => goToMyIdeas && goToMyIdeas()}
-              style={{ fontSize: 12.5, fontWeight: 500, color: "var(--exsec)", background: "none", border: "none", cursor: "pointer" }}>
-              View in My Ideas →
-            </button>
-          </div>
-        ) : (
-          <button onClick={doSave} disabled={state === "saving"}
-            onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
-            style={{ fontSize: 13, fontWeight: 600, color: "#0a0d13", background: state === "saving" ? "rgba(122,162,255,0.55)" : (hover ? EX.bright : EX.base), border: "none", borderRadius: 10, padding: "12px 26px", cursor: state === "saving" ? "default" : "pointer", whiteSpace: "nowrap", transition: "background 0.14s" }}>
-            {state === "saving" ? "Saving…" : state === "error" ? "Retry" : "Save this idea"}
-          </button>
-        )}
-      </div>
-      {state === "error" && (
-        <div style={{ fontSize: 12, color: "#fca5a5", marginTop: 10 }}>Couldn't save. Please try again.</div>
-      )}
-    </section>
-  );
-}
 
 export default function ExploreView({
   screen,
@@ -719,13 +814,10 @@ export default function ExploreView({
   goToMyIdeas,
   // explore action handlers (all optional)
   onTakeToDeep,
-  onSaveBranch,
-  onCompare,
-  onExploreVariation,
-  onPark,
-  onEditRead,
-  onExpandIdea,
-  onSaveExplore,
+  onSaveBranch,      // per-angle save (rough branch)
+  onExploreAngle,    // per-angle "explore" — widen one angle into its own fan
+  onExploreVariation, // parent "Explore again" — re-widen idea-x
+  onSaveExplore,     // parent "Save" — keep idea-x + all angles as one family
 }) {
   if (!analysis || analysis.schema_version !== "ll2_explore_v1") return null;
 
@@ -743,8 +835,6 @@ export default function ExploreView({
       setSaveState((s) => { const n = { ...s }; list.forEach((id) => { if (n[id] !== "saved") n[id] = "error"; }); return n; });
     }
   }, [onSaveBranch]);
-
-  const handlers = { onTakeToDeep, onSaveBranch, onCompare, onExploreVariation, onPark, onEditRead, saveBranch, saveState };
 
   // Explore neutral surface palette — pinned to the locked mockup
   // (explore-mode-final.html), which uses faintly blue-tinted darks for cohesion
@@ -781,11 +871,22 @@ export default function ExploreView({
           </div>
           <ReadSurface read={read} t={xt} />
           <FanSurface idea={idea} angles={angles} fanState={fanState} t={xt}
-            onSave={(a) => saveBranch([a.id])} saveState={saveState} onCompare={(a) => onCompare && onCompare([a.id])}
+            onSave={(a) => saveBranch([a.id])} saveState={saveState}
+            onExploreAngle={(a) => onExploreAngle && onExploreAngle(a)}
             onTakeToDeep={onTakeToDeep} branchReason={read?.branchability?.reason} />
           <TerrainSurface terrain={terrain} angles={angles} t={xt} />
-          <NextMoveSurface nextMove={nextMove} t={xt} handlers={handlers} />
-          <SaveExploredBar user={user} onSaveExplore={onSaveExplore} goToMyIdeas={goToMyIdeas} setShowAuthModal={setShowAuthModal} xt={xt} viewingFromSaved={viewingFromSaved} />
+          <NextMoveSurface
+            nextMove={nextMove}
+            angleCount={angles.length}
+            t={xt}
+            user={user}
+            viewingFromSaved={viewingFromSaved}
+            onSave={onSaveExplore}
+            onExplore={onExploreVariation}
+            onDeep={() => onTakeToDeep && onTakeToDeep(null, { useOriginalIdea: true })}
+            onAuth={() => setShowAuthModal && setShowAuthModal(true)}
+            goToMyIdeas={goToMyIdeas}
+          />
           <div style={{ marginTop: 30, paddingTop: 18, borderTop: `1px solid ${t.border}`, fontSize: 11, color: "#474b54", textAlign: "center", fontFamily: "monospace", letterSpacing: "0.04em" }}>
             EXPLORE — WIDENS A ROUGH IDEA · NO SCORE, NO RANK, NO VERDICT
           </div>

@@ -2766,7 +2766,15 @@ export default function Home() {
           return data;
         }}
         onExploreVariation={() => handleAnalyze("explore", exploreAnalysis.idea)}
-        onEditRead={() => setCurrentScreen("input")}
+        onExploreAngle={(a) => {
+          // "take it to explore" on a single angle — widen that angle's rough text
+          // into its own fresh fan. Resolve the text and setIdea explicitly first
+          // (setIdea is async; handleAnalyze must not read stale state), mirroring
+          // the Deep handoff above. Branch/lineage linkage happens on save, not here.
+          const text = (a && a.branch_idea_text) || exploreAnalysis.idea;
+          setIdea(text);
+          handleAnalyze("explore", text);
+        }}
       />
       </DashboardShell>
     );
