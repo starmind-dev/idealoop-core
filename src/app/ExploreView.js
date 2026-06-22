@@ -662,9 +662,9 @@ const TILE_THEME = {
 // before the label: Save = a little family tree (parent + two children held
 // together); Explore = fans up/out (diverge); Deep = mirror, converges to a
 // filled point (pressure → verdict).
-function GlyphSave() { return (<Svg w={17} sw={1.7}><circle cx="12" cy="5" r="1.9" /><circle cx="6" cy="19" r="1.9" /><circle cx="18" cy="19" r="1.9" /><path d="M12 6.9v4.6M6 17.1v-3a1.5 1.5 0 0 1 1.5-1.5h9A1.5 1.5 0 0 1 18 14.1v3" /></Svg>); }
-function GlyphExplore() { return (<Svg w={17} sw={1.7}><circle cx="12" cy="20" r="1.4" fill="currentColor" stroke="none" /><path d="M12 19 5 7M12 19 12 5M12 19 19 7" /></Svg>); }
-function GlyphDeep() { return (<Svg w={17} sw={1.7}><path d="M5 5 12 17M12 4 12 17M19 5 12 17" /><circle cx="12" cy="18.4" r="1.7" fill="currentColor" stroke="none" /></Svg>); }
+function GlyphSave() { return (<Svg w={15} sw={1.7}><circle cx="12" cy="5" r="1.9" /><circle cx="6" cy="19" r="1.9" /><circle cx="18" cy="19" r="1.9" /><path d="M12 6.9v4.6M6 17.1v-3a1.5 1.5 0 0 1 1.5-1.5h9A1.5 1.5 0 0 1 18 14.1v3" /></Svg>); }
+function GlyphExplore() { return (<Svg w={15} sw={1.7}><circle cx="12" cy="20" r="1.4" fill="currentColor" stroke="none" /><path d="M12 19 5 7M12 19 12 5M12 19 19 7" /></Svg>); }
+function GlyphDeep() { return (<Svg w={15} sw={1.7}><path d="M5 5 12 17M12 4 12 17M19 5 12 17" /><circle cx="12" cy="18.4" r="1.7" fill="currentColor" stroke="none" /></Svg>); }
 
 function Tile({ variant, glyph, title, desc, cue, arrow, onClick, busy }) {
   const [h, setH] = useState(false);
@@ -677,25 +677,27 @@ function Tile({ variant, glyph, title, desc, cue, arrow, onClick, busy }) {
       style={{
         position: "relative", textAlign: "left", fontFamily: "inherit",
         cursor: busy ? "default" : "pointer",
-        borderRadius: 14, padding: "18px 20px 16px", minHeight: 120,
+        borderRadius: 13, padding: "13px 15px 11px", minHeight: 96,
         display: "flex", flexDirection: "column",
         border: `1px solid ${on ? c.lineHi : c.line}`,
         background: c.grad
           ? `linear-gradient(180deg, ${on ? c.bgHi : c.bg}, ${c.fade} 88%)`
           : (on ? c.bgHi : c.bg),
         boxShadow: on ? c.shadow : "none",
-        transform: on ? "translateY(-3px)" : "none",
+        transform: on ? "translateY(-2px)" : "none",
         transition: "transform .16s, border-color .16s, background .16s, box-shadow .16s",
         opacity: busy ? 0.85 : 1,
       }}>
-      <span style={{
-        width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", marginBottom: 13,
-        background: on ? c.medBgHi : c.medBg, border: `1px solid ${c.line}`, color: on ? c.icHi : c.ic,
-        boxShadow: on ? c.medGlow : "none", transition: ".16s",
-      }}>{glyph}</span>
-      <h3 style={{ fontSize: 15.5, fontWeight: 600, margin: "0 0 7px", color: c.title }}>{title}</h3>
-      <p style={{ fontSize: 12.5, lineHeight: 1.55, color: M4.mut, margin: "0 0 auto" }}>{desc}</p>
-      <span style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 14, fontFamily: "monospace", fontSize: 10.5, letterSpacing: "0.1em", color: on ? c.cueHi : c.cue }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 9 }}>
+        <span style={{
+          width: 28, height: 28, flex: "0 0 28px", borderRadius: 8, display: "grid", placeItems: "center",
+          background: on ? c.medBgHi : c.medBg, border: `1px solid ${c.line}`, color: on ? c.icHi : c.ic,
+          boxShadow: on ? c.medGlow : "none", transition: ".16s",
+        }}>{glyph}</span>
+        <h3 style={{ fontSize: 15.5, fontWeight: 600, margin: 0, color: c.title }}>{title}</h3>
+      </div>
+      <p style={{ fontSize: 12.5, lineHeight: 1.5, color: M4.mut, margin: "0 0 auto" }}>{desc}</p>
+      <span style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 10, fontFamily: "monospace", fontSize: 10.5, letterSpacing: "0.1em", color: on ? c.cueHi : c.cue }}>
         {cue}
         {arrow && (
           <span style={{ display: "inline-flex", transform: on ? "translateX(3px)" : "none", transition: "transform .18s" }}>
@@ -727,14 +729,14 @@ function SaveTile({ user, viewingFromSaved, onSave, onAuth, goToMyIdeas, angleCo
   if (state === "saved") {
     return (
       <Tile variant="save" glyph={<GlyphSave />} title="Saved"
-        desc={`Kept in My Ideas — your idea ${fam} together as one family.`}
+        desc={`Your idea ${fam}, kept together.`}
         cue="IN MY IDEAS ✓" onClick={() => goToMyIdeas && goToMyIdeas()} />
     );
   }
   const title = state === "saving" ? "Saving…" : state === "error" ? "Try again" : "Save";
   const desc = !user
-    ? `Log in to keep your idea ${fam} together as one family — nothing dies.`
-    : `Keeps your idea ${fam} together as one family in My Ideas — nothing dies.`;
+    ? `Log in to keep your idea ${fam} together.`
+    : `Keeps your idea ${fam} together in My Ideas.`;
   return (
     <Tile variant="save" glyph={<GlyphSave />} title={title} desc={desc}
       cue={state === "error" ? "RETRY" : "KEEPS THE FAMILY"} busy={state === "saving"} onClick={doSave} />
@@ -754,7 +756,7 @@ function NextMoveSurface({ nextMove, angleCount, t, user, viewingFromSaved, onSa
               <span style={{ color: EX.base, fontSize: 12 }}>?</span>THE OPEN QUESTION
             </div>
             <div style={{ borderLeft: `2px solid ${EX.line}`, paddingLeft: 20, marginBottom: 24 }}>
-              <h2 style={{ fontWeight: 400, fontSize: 20, lineHeight: 1.5, letterSpacing: "-0.01em", color: M4.ink, margin: 0 }}>{du.text}</h2>
+              <h2 style={{ fontWeight: 400, fontSize: 17, lineHeight: 1.5, letterSpacing: "-0.01em", color: M4.ink, margin: 0 }}>{du.text}</h2>
             </div>
             <div style={{ height: 1, background: M4.line2, margin: "24px 0 20px" }} />
           </>
@@ -771,10 +773,10 @@ function NextMoveSurface({ nextMove, angleCount, t, user, viewingFromSaved, onSa
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>
           <SaveTile user={user} viewingFromSaved={viewingFromSaved} onSave={onSave} onAuth={onAuth} goToMyIdeas={goToMyIdeas} angleCount={angleCount} />
           <Tile variant="explore" glyph={<GlyphExplore />} title="Explore again"
-            desc="Re-widen the seed into a fresh fan of angles — new directions the first pass didn't surface."
+            desc="Re-widen into a fresh fan of directions."
             cue="WIDEN" arrow onClick={() => onExplore && onExplore()} />
           <Tile variant="deep" glyph={<GlyphDeep />} title="Take to Deep"
-            desc="Send the whole idea to the verdict pipeline — a scored read of where it binds. Edit the seed first if you like."
+            desc="Send the whole idea for a scored verdict."
             cue="TO VERDICT" arrow onClick={() => onDeep && onDeep()} />
         </div>
 
