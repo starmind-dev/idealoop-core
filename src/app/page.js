@@ -163,6 +163,48 @@ function StreamOverlay({ streamSteps, t, mode = "deep" }) {
   );
 }
 
+// ============================================================================
+// LeaveGuardModal — fires before a take-to action leaves an UNSAVED exploration.
+// An unsaved fan is at risk: navigating to Deep/Explore loses the read, the
+// terrain, and the directions not taken. Leads with "Save & continue" (the
+// on-brand "nothing is lost" move); "Leave anyway" stays available. Matches the
+// Explore Dawn identity; the violet destination word marks the Deep handoff.
+// ============================================================================
+function LeaveGuardModal({ target, dest, onCancel, onLeave, onSave }) {
+  const [saving, setSaving] = useState(false);
+  const destLabel = dest === "deep" ? "to Deep" : "to Explore";
+  const doSave = async () => {
+    if (saving) return;
+    setSaving(true);
+    try { await onSave(); } finally { setSaving(false); }
+  };
+  return (
+    <div role="alertdialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 1000, display: "grid", placeItems: "center", padding: 24 }}>
+      <div onClick={onCancel} style={{ position: "absolute", inset: 0, background: "rgba(6,8,12,0.72)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)" }} />
+      <div style={{ position: "relative", width: "100%", maxWidth: 472, background: "#0e1117", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 18, padding: "30px 32px 26px", boxShadow: "0 36px 90px rgba(0,0,0,0.62)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9, fontFamily: "monospace", fontSize: 10.5, letterSpacing: "0.22em", color: "#7aa2ff", margin: "0 0 16px" }}>
+          <span style={{ width: 8, height: 8, border: "1.5px solid #7aa2ff", transform: "rotate(45deg)", boxShadow: "0 0 9px -1px #7aa2ff", display: "inline-block" }} />UNSAVED EXPLORATION
+        </div>
+        <h2 style={{ fontSize: 20, fontWeight: 600, letterSpacing: "-0.01em", margin: "0 0 12px", color: "#e9eef5" }}>Leave without saving?</h2>
+        <p style={{ fontSize: 14, lineHeight: 1.62, color: "#8b94a1", margin: "0 0 8px" }}>
+          You haven&apos;t saved this exploration. Taking <b style={{ color: "#c3ccd7", fontWeight: 500 }}>{target}</b> <span style={{ color: "#9a8fd8", fontWeight: 500 }}>{destLabel}</span> leaves it behind — the read, the terrain, and the directions you didn&apos;t take go with it.
+        </p>
+        <p style={{ fontSize: 14, lineHeight: 1.62, color: "#8b94a1", margin: 0 }}>
+          <b style={{ color: "#c3ccd7", fontWeight: 500 }}>Save</b> keeps the whole family in My Ideas, then continues.
+        </p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, marginTop: 24, flexWrap: "wrap" }}>
+          <button onClick={onCancel} style={{ fontFamily: "inherit", fontSize: 13.5, fontWeight: 500, background: "none", border: "none", color: "#646d79", cursor: "pointer", padding: "11px 6px" }}>Cancel</button>
+          <span style={{ marginRight: "auto" }} />
+          <button onClick={onLeave} style={{ fontFamily: "inherit", fontSize: 13.5, fontWeight: 500, background: "transparent", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: "#8b94a1", cursor: "pointer", padding: "11px 18px" }}>Leave anyway</button>
+          <button onClick={doSave} disabled={saving} style={{ fontFamily: "inherit", fontSize: 13.5, fontWeight: 600, background: "#7aa2ff", border: "1px solid #7aa2ff", borderRadius: 10, color: "#0a0d13", cursor: saving ? "default" : "pointer", padding: "11px 18px", opacity: saving ? 0.8 : 1 }}>
+            {saving ? "Saving…" : "Save & continue →"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState("dashboard");
   // Which view the Dashboard shell shows; the rail stays put, only this swaps.
@@ -600,6 +642,64 @@ export default function Home() {
   // run via handleAnalyze, so a fresh (non-rough-room) run always clears it.
   const [graduatingIdeaId, setGraduatingIdeaId] = useState(null);
 
+  // Explore handoff plumbing. pendingGraduateParent flags the parent "take idea-x
+  // to Deep" path so the eventual Deep run graduates the node in place (the id is
+  // read LIVE at run time — see DeepInputView onRun — never captured here, so a
+  // "Save & continue" that sets savedExploreIdeaId is reflected correctly).
+  const [pendingGraduateParent, setPendingGraduateParent] = useState(false);
+  // The unsaved-exploration leave guard: { target, dest, proceed } | null.
+  const [leaveGuard, setLeaveGuard] = useState(null);
+
+  // Persist the whole exploration (idea-x + its angles) as one family. Extracted
+  // so BOTH the Section 4 Save tile (onSaveExplore) and the leave guard's
+  // "Save & continue" share one path. Returns the save payload; throws on auth /
+  // failure (the caller decides what to do).
+  const persistExploration = async (ideaName) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setShowAuthModal(true); throw new Error("Log in to save"); }
+    const res = await fetch("/api/ideas/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({
+        mode: "explore",
+        explore_result: exploreAnalysis,
+        idea_text: exploreAnalysis.idea,
+        idea_name: ideaName || undefined,
+        profile,
+        ...(graduatingIdeaId ? { graduate_idea_id: graduatingIdeaId } : {}),
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Save failed");
+    if (data.idea_id) setSavedExploreIdeaId(data.idea_id);
+    if (data.graduated) {
+      setGraduatingIdeaId(null);
+      delete evaluationCacheRef.current[data.idea_id];
+    }
+    fetchMyIdeas();
+    return data;
+  };
+
+  // Reroute a take-to action to the matching INPUT screen pre-filled, instead of
+  // auto-running. The founder reviews/edits the seed before spending a credit.
+  // graduateParent flags the parent → Deep graduation (see DeepInputView onRun).
+  const goToInput = (mode, text, graduateParent = false) => {
+    setIdea(text);
+    setPendingGraduateParent(!!graduateParent);
+    setSpecificityGate(null);
+    setInputMode(mode);
+    setCurrentScreen("input");
+  };
+
+  // An exploration is at risk only while unsaved (not persisted this session and
+  // not reopened from the hub). guardLeave warns before a take-to action leaves it;
+  // if it's already saved there's nothing to lose, so it proceeds straight through.
+  const exploreUnsaved = () => !savedExploreIdeaId && !viewingFromSaved;
+  const guardLeave = (target, dest, proceed) => {
+    if (exploreUnsaved()) setLeaveGuard({ target, dest, proceed });
+    else proceed();
+  };
+
   // ============================================
   // EXECUTION BRIEF STATE (Screen 3 / step-4 handoff)
   // ============================================
@@ -854,6 +954,9 @@ export default function Home() {
     // This analysis run declares its graduation intent (or lack of one). A
     // fresh run from input/explore passes null, clearing any stale intent.
     setGraduatingIdeaId(graduateId);
+    // The parent-graduate flag is consumed by the Deep run's onRun (which resolved
+    // graduateId from it); clear it so it never leaks into a later cold-open run.
+    setPendingGraduateParent(false);
     // A new run starts a clean Explore session — no saved explored idea yet.
     setSavedExploreIdeaId(null);
     setIsReEvalResult(false);
@@ -1660,7 +1763,7 @@ export default function Home() {
     if (key === "overview") { setCurrentScreen("dashboard"); setDashView("overview"); }
     else if (key === "hub") goToMyIdeas();
     else if (key === "explore") { setInputMode("explore"); setSpecificityGate(null); setCurrentScreen("input"); }
-    else if (key === "deep") { setInputMode("deep"); setSpecificityGate(null); setCurrentScreen("input"); }
+    else if (key === "deep") { setPendingGraduateParent(false); setInputMode("deep"); setSpecificityGate(null); setCurrentScreen("input"); }
     // settings / plan / help: not wired yet
   };
 
@@ -1825,7 +1928,7 @@ export default function Home() {
           <OverviewView
             t={t}
             onStartExplore={() => { setSpecificityGate(null); setInputMode("explore"); setCurrentScreen("input"); }}
-            onStartDeep={() => { setSpecificityGate(null); setInputMode("deep"); setCurrentScreen("input"); }}
+            onStartDeep={() => { setPendingGraduateParent(false); setSpecificityGate(null); setInputMode("deep"); setCurrentScreen("input"); }}
             onContinue={(id) => loadSavedIdea(id)}
             onOpenIdea={(id) => loadSavedIdea(id)}
             onViewAll={goToMyIdeas}
@@ -2121,7 +2224,7 @@ export default function Home() {
           t={t}
           idea={idea}
           setIdea={setIdea}
-          onRun={() => handleAnalyze("deep")}
+          onRun={() => handleAnalyze("deep", null, pendingGraduateParent ? (savedExploreIdeaId || graduatingIdeaId || null) : null)}
           onBack={goToMyIdeas}
           isAnalyzing={isAnalyzing}
           evalsRemaining={evalsRemaining}
@@ -2710,76 +2813,58 @@ export default function Home() {
           }
         }}
         onTakeToDeep={(angleId, opts) => {
-          // Hand a branch (or the original idea) to Deep. Resolve the text first
-          // and pass it explicitly — setIdea is async, handleAnalyze must not read
-          // stale state. Deep handoff runs the pro pipeline.
+          // Reroute to Deep's INPUT screen (don't auto-run): the founder reviews /
+          // edits the seed before spending a Deep credit, matching the tile's
+          // "edit the seed first" promise. A specific angle is its own fresh Deep
+          // root (no graduation); the original idea graduates the node in place
+          // (flagged via graduateParent, resolved live at the Deep run). Guarded so
+          // an unsaved exploration isn't lost on an accidental click.
           const o = opts || {};
           let text = exploreAnalysis.idea;
-          let graduateId = null;
+          let target = "this idea";
+          let graduateParent = true;
           if (!o.useOriginalIdea && angleId) {
             const a = (exploreAnalysis.angles || []).find((x) => x.id === angleId);
             if (a && a.branch_idea_text) text = a.branch_idea_text;
-            // A specific angle is its OWN idea — a fresh deep root, no graduation.
-          } else {
-            // Taking the original idea to Deep AS IT STANDS: graduate the node it
-            // already is — the explored idea if it was saved this session, else
-            // the rough idea this Explore came from — forward in place. No copy.
-            graduateId = savedExploreIdeaId || graduatingIdeaId || null;
+            if (a && a.title) target = a.title;
+            graduateParent = false;
           }
-          setIdea(text);
-          handleAnalyze("deep", text, graduateId);
+          guardLeave(target, "deep", () => goToInput("deep", text, graduateParent));
         }}
-        onSaveExplore={async (ideaName) => {
-          // Save the explored idea itself. With a graduating id (this came from
-          // a rough idea), flip that idea forward IN PLACE (rough -> explored,
-          // no copy). Without one (fresh from the input screen), create a new
-          // explored idea. Symmetric with a Deep save. Returns a promise so
-          // ExploreView's save state can reflect saving -> saved / error.
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session) { setShowAuthModal(true); throw new Error("Log in to save"); }
-          const res = await fetch("/api/ideas/save", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-            body: JSON.stringify({
-              mode: "explore",
-              explore_result: exploreAnalysis,
-              idea_text: exploreAnalysis.idea,
-              idea_name: ideaName || undefined,
-              profile,
-              ...(graduatingIdeaId ? { graduate_idea_id: graduatingIdeaId } : {}),
-            }),
-          });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || "Save failed");
-          // The explored idea now exists (graduated in place OR freshly created).
-          // Remember it so angles saved next branch under it, and so "take to
-          // Deep as it stands" graduates it instead of making a duplicate.
-          if (data.idea_id) setSavedExploreIdeaId(data.idea_id);
-          if (data.graduated) {
-            // The rough card became an explore card in place; intent is spent.
-            // Drop the stale cached rough read so reopening shows the explore
-            // room, and refresh the hub so the card moves shelves.
-            setGraduatingIdeaId(null);
-            delete evaluationCacheRef.current[data.idea_id];
-          }
-          fetchMyIdeas();
-          return data;
-        }}
-        onExploreVariation={() => handleAnalyze("explore", exploreAnalysis.idea)}
+        onSaveExplore={persistExploration}
+        onExploreVariation={() =>
+          guardLeave("this idea", "explore", () => goToInput("explore", exploreAnalysis.idea, false))
+        }
         onExploreAngle={(a) => {
-          // "take it to explore" on a single angle — widen that angle's rough text
-          // into its own fresh fan. Resolve the text and setIdea explicitly first
-          // (setIdea is async; handleAnalyze must not read stale state), mirroring
-          // the Deep handoff above. Branch/lineage linkage happens on save, not here.
+          // "take it to explore" on one angle — reroute to Explore's input pre-filled
+          // with the angle's rough text so the founder can refine before re-widening.
+          // Guarded like the others.
           const text = (a && a.branch_idea_text) || exploreAnalysis.idea;
-          setIdea(text);
-          handleAnalyze("explore", text);
+          const target = (a && a.title) || "this direction";
+          guardLeave(target, "explore", () => goToInput("explore", text, false));
         }}
       />
+      {leaveGuard && (
+        <LeaveGuardModal
+          target={leaveGuard.target}
+          dest={leaveGuard.dest}
+          onCancel={() => setLeaveGuard(null)}
+          onLeave={() => { const p = leaveGuard.proceed; setLeaveGuard(null); p(); }}
+          onSave={async () => {
+            // Save & continue: persist the family, then proceed. On auth/error the
+            // save path opens the auth modal (or surfaces the error) and throws —
+            // abort the leave so nothing navigates with the work unsaved.
+            try { await persistExploration(); }
+            catch (e) { setLeaveGuard(null); return; }
+            const p = leaveGuard.proceed;
+            setLeaveGuard(null);
+            p();
+          }}
+        />
+      )}
       </DashboardShell>
     );
   }
-
   // ==========================================
   // SCREENS: ANALYSIS + EXECUTION PLAN (delegated to EvaluationView)
   // ==========================================
