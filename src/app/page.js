@@ -1813,6 +1813,12 @@ export default function Home() {
       if (resA.error) throw new Error(resA.error);
       if (resB.error) throw new Error(resB.error);
 
+      // Compare is Deep×Deep only — refuse anything without a Deep evaluation so a
+      // stray selection can never white-screen the compare view.
+      if (!resA.analysis?.evaluation || !resB.analysis?.evaluation) {
+        throw new Error("Compare needs two Deep evaluations.");
+      }
+
       // Find the idea objects from myIdeas for titles
       // For alternatives, try to find an alternative name from evaluation data
       const getTitleForSelection = (sel, resData) => {
@@ -1923,6 +1929,7 @@ export default function Home() {
             t={t}
             onOpenIdea={(id) => loadSavedIdea(id)}
             onOpenLineage={(id) => { setLineageTargetId(id); setLineageMode(true); }}
+            onCompare={(idA, idB) => startComparison([{ ideaId: idA, evaluationId: null }, { ideaId: idB, evaluationId: null }])}
           />
         ) : (
           <OverviewView

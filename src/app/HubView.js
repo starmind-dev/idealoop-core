@@ -46,6 +46,8 @@ const COL = {
 const IExplore = ({ s = 19 }) => (<svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><polygon points="15.6 8.4 10.6 10.6 8.4 15.6 13.4 13.4" /></svg>);
 const IDeep = ({ s = 19 }) => (<svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4.3" /><circle cx="12" cy="12" r="0.8" fill="currentColor" stroke="none" /></svg>);
 const ILineage = ({ s = 12 }) => (<svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="4" x2="6" y2="20" /><circle cx="6" cy="5" r="1.6" /><circle cx="18" cy="9" r="1.6" /><path d="M18 10.5a6 6 0 0 1-6 6H6" /></svg>);
+const ICompare = ({ s = 14 }) => (<svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><path d="M13 6h3a2 2 0 0 1 2 2v7" /><path d="M11 18H8a2 2 0 0 1-2-2V9" /></svg>);
+const HUB_NOOP = () => {};
 const IDots = () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="12" cy="19" r="1.7" /></svg>);
 const IArrowR = ({ s = 17 }) => (<svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>);
 const IChevL = ({ s = 15 }) => (<svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>);
@@ -487,7 +489,7 @@ const SerifH1 = ({ children, count }) => (
   </h1>
 );
 
-export default function HubView({ t, onOpenIdea, onOpenLineage, onBack }) {
+export default function HubView({ t, onOpenIdea, onOpenLineage, onBack, onCompare }) {
   const [data, setData] = useState({ folders: [], rough: [], ideas: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -495,6 +497,8 @@ export default function HubView({ t, onOpenIdea, onOpenLineage, onBack }) {
   const [view, setView] = useState("hub"); // hub | rough | evaluated
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all"); // all | explore | deep
+  const [comparePick, setComparePick] = useState(false); // hub-level Deep×Deep picker
+  const [comparePicks, setComparePicks] = useState([]); // up to 2 deep idea ids
   const [activeFolder, setActiveFolder] = useState(null);
 
   const [hover, setHover] = useState(null);            // { item, type, top, left }
@@ -677,6 +681,10 @@ export default function HubView({ t, onOpenIdea, onOpenLineage, onBack }) {
 
   const goView = (v) => { setView(v); setSearch(""); setFilter("all"); setActiveFolder(null); setHover(null); setMenu(null); setEditingId(null); };
 
+  const enterCompare = () => { setComparePick(true); setComparePicks([]); setFilter("deep"); setSearch(""); setHover(null); setMenu(null); setEditingId(null); };
+  const cancelCompare = () => { setComparePick(false); setComparePicks([]); setFilter("all"); };
+  const togglePick = (id) => setComparePicks((p) => p.includes(id) ? p.filter((x) => x !== id) : (p.length >= 2 ? p : [...p, id]));
+
   const cardHandlers = (card) => ({
     onOpen: () => { if (editingId === card.id) return; onOpenIdea && onOpenIdea(card.id); },
     onMenu: (e) => openMenu(e, card),
@@ -785,16 +793,54 @@ export default function HubView({ t, onOpenIdea, onOpenLineage, onBack }) {
         <SearchBox value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search evaluated ideas" />
       </div>
       <FolderRail {...railProps} />
-      <div style={{ display: "flex", gap: 9, marginBottom: 24, flexWrap: "wrap" }}>
-        {tab("All", "all", evalAll.length, () => setFilter("all"))}
-        {tab("Explored", "explore", exploreCount, () => setFilter("explore"))}
-        {tab("Deep", "deep", deepCount, () => setFilter("deep"))}
-      </div>
+      {comparePick ? (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, marginBottom: 24, padding: "12px 16px", borderRadius: 14, background: "rgba(150,135,250,0.10)", border: "1px solid rgba(150,135,250,0.34)", flexWrap: "wrap" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 9, fontSize: 13, color: "#C9BEFF", fontWeight: 500 }}>
+            <ICompare s={15} /> Pick 2 Deep evaluations to compare <span style={{ color: "#8A85B0" }}>· {comparePicks.length}/2 selected</span>
+          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button onClick={cancelCompare} style={{ fontSize: 12.5, color: "#9AA3B6", background: "none", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Cancel</button>
+            <button onClick={() => comparePicks.length === 2 && onCompare && onCompare(comparePicks[0], comparePicks[1])} disabled={comparePicks.length !== 2}
+              style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 12.5, fontWeight: 600, borderRadius: 999, padding: "8px 18px", cursor: comparePicks.length === 2 ? "pointer" : "not-allowed", border: "1px solid rgba(150,135,250,0.5)", background: comparePicks.length === 2 ? "rgba(150,135,250,0.22)" : "rgba(150,135,250,0.08)", color: comparePicks.length === 2 ? "#D7CEFF" : "#6A6786", opacity: comparePicks.length === 2 ? 1 : 0.7 }}>
+              Compare <IArrowR />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 9, flexWrap: "wrap" }}>
+            {tab("All", "all", evalAll.length, () => setFilter("all"))}
+            {tab("Explored", "explore", exploreCount, () => setFilter("explore"))}
+            {tab("Deep", "deep", deepCount, () => setFilter("deep"))}
+          </div>
+          <button onClick={enterCompare} disabled={deepCount < 2} title={deepCount < 2 ? "Need at least 2 Deep evaluations" : "Compare two Deep evaluations"}
+            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", borderRadius: 999, fontSize: 12.5, fontWeight: 600, cursor: deepCount < 2 ? "not-allowed" : "pointer", border: `1px solid ${deepCount < 2 ? "rgba(150,135,250,0.18)" : "rgba(150,135,250,0.5)"}`, background: deepCount < 2 ? "rgba(150,135,250,0.05)" : "rgba(150,135,250,0.14)", color: deepCount < 2 ? "#6A6786" : "#C9BEFF", opacity: deepCount < 2 ? 0.7 : 1 }}>
+            <ICompare s={14} />Compare
+          </button>
+        </div>
+      )}
       {evalVisible.length === 0 ? (
         <div style={{ padding: "70px 0", textAlign: "center", color: "#5B6478", fontSize: 14.5 }}>{q ? "No evaluated ideas match that search." : "No evaluated ideas yet."}</div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(232px,1fr))", gap: 13 }}>
-          {evalVisible.map((c) => { const h = cardHandlers(c); return <EvalCard key={c.id} card={c} edit={editFor(c)} {...h} />; })}
+          {evalVisible.map((c) => {
+            if (comparePick) {
+              const picked = comparePicks.includes(c.id);
+              const order = comparePicks.indexOf(c.id) + 1;
+              return (
+                <div key={c.id} onClick={() => togglePick(c.id)} style={{ position: "relative", cursor: "pointer", borderRadius: 18, outline: picked ? "2px solid #AEA0FF" : "2px solid transparent", outlineOffset: 3, transition: "outline-color .15s" }}>
+                  <div style={{ pointerEvents: "none", opacity: picked ? 1 : 0.94 }}>
+                    <EvalCard card={c} edit={editFor(c)} onOpen={HUB_NOOP} onMenu={HUB_NOOP} onEnter={HUB_NOOP} onLeave={HUB_NOOP} onLineage={HUB_NOOP} />
+                  </div>
+                  {picked && (
+                    <span style={{ position: "absolute", top: 10, right: 10, width: 24, height: 24, borderRadius: 999, background: "#AEA0FF", color: "#171526", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, boxShadow: "0 2px 10px rgba(0,0,0,0.4)", zIndex: 3 }}>{order}</span>
+                  )}
+                </div>
+              );
+            }
+            const h = cardHandlers(c);
+            return <EvalCard key={c.id} card={c} edit={editFor(c)} {...h} />;
+          })}
         </div>
       )}
     </div>

@@ -22,7 +22,7 @@
 //   { sections: { market_demand, monetization, originality, technical_complexity,
 //                 competition, risks, execution_reality }, closure }
 //   each section: { separation, leans, read } ; closure: { decision_shape,
-//   shared_wall, decisive_axes, text }
+//   shared_wall, decisive_axes, text, beats }
 //
 // CORE INVARIANTS (load-bearing):
 //   - MACHINERY IN, CONSEQUENCE OUT. The model is GIVEN archetype / sub-position /
@@ -202,6 +202,7 @@ CLOSURE FENCES: no recap (every sentence spans ≥2 sections) · introduce no fa
 ALSO EMIT:
 - shared_wall: the specific converged constraint in a short phrase, or null when there is no shared fate.
 - decisive_axes: the array of section keys that carry the decision (the ones NOT tied) — e.g. ["monetization","competition"].
+- beats: the SAME closure, segmented into the 3–4 natural moves it already makes. beats is \`text\` sliced and labeled — same content, same order, nothing new and nothing dropped; joined back together the beats must read as \`text\`. Each beat is { "marker": "<2–4 word plain label naming what THIS move is about, drawn from its own content — e.g. 'The tilt', 'Idea A's edge', 'The shared wall', 'What you're weighing'; never a shape-label, never machinery vocabulary>", "text": "<1–2 sentences, the move itself>" }. Order follows the closure's flow: the shape of the choice first, the shared wall only as a middle beat when one exists, where the decision lives last. Aim for 3–4 beats; never fewer than 2.
 
 === OUTPUT — strict JSON, nothing else (no markdown, no backticks, no text outside the JSON) ===
 
@@ -219,7 +220,10 @@ ALSO EMIT:
     "decision_shape": "convergent|tilted|tradeoff|shared_fate|tiebreaker",
     "shared_wall": "<short phrase or null>",
     "decisive_axes": ["<section key>", "..."],
-    "text": "<3-5 sentences>"
+    "text": "<3-5 sentences>",
+    "beats": [
+      { "marker": "<2-4 word plain label>", "text": "<1-2 sentences>" }
+    ]
   }
 }
 

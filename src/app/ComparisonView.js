@@ -1,814 +1,756 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { getScoreColor, getTcColor, getMainBottleneckColor } from "./components";
-import { MetricProseBody } from "./MetricProseDetail";
+import { useState, useEffect, useRef } from "react";
+import { getMainBottleneckColor, MainBottleneckIcon, getScoreColor } from "./components";
+import { DeepMetricCard, DeepTcCard, KeyRisks, ExecutionReality, CompetitorGrid } from "./DeepResultParts";
 
-// ============================================
-// DATA PREPARATION
-// ============================================
-const competitorTypeOrder = { direct: 0, adjacent: 1, substitute: 2, internal_build: 3 };
+/*
+  Deep × Deep Compare — full rewrite.
 
-function prepareComparisonData(ideaA, ideaB) {
-  const a = ideaA.analysis, b = ideaB.analysis;
-  const competitorsA = [...(a.competition?.competitors || [])].sort((x, y) => (competitorTypeOrder[x.competitor_type] ?? 9) - (competitorTypeOrder[y.competitor_type] ?? 9));
-  const competitorsB = [...(b.competition?.competitors || [])].sort((x, y) => (competitorTypeOrder[x.competitor_type] ?? 9) - (competitorTypeOrder[y.competitor_type] ?? 9));
-  const namesA = new Set(competitorsA.map(c => c.name.toLowerCase().trim()));
-  const namesB = new Set(competitorsB.map(c => c.name.toLowerCase().trim()));
-  const sharedNames = new Set([...namesA].filter(n => namesB.has(n)));
+  Replaces the old 6-tab tradeoffs view. Compare is Deep×Deep ONLY; both ideas
+  are guaranteed to carry analysis.evaluation (the page.js selection guard makes
+  that true), so there is no explore branch anywhere in here.
 
-  const metrics = [
-    { key: "md", label: "Market demand", proseKey: "market_demand", metricA: a.evaluation.market_demand, metricB: b.evaluation.market_demand, scoreA: a.evaluation.market_demand.score, scoreB: b.evaluation.market_demand.score, explA: a.evaluation.market_demand.explanation, explB: b.evaluation.market_demand.explanation },
-    { key: "mo", label: "Monetization", proseKey: "monetization", metricA: a.evaluation.monetization, metricB: b.evaluation.monetization, scoreA: a.evaluation.monetization.score, scoreB: b.evaluation.monetization.score, explA: a.evaluation.monetization.explanation, explB: b.evaluation.monetization.explanation },
-    { key: "or", label: "Originality", proseKey: "originality", metricA: a.evaluation.originality, metricB: b.evaluation.originality, scoreA: a.evaluation.originality.score, scoreB: b.evaluation.originality.score, explA: a.evaluation.originality.explanation, explB: b.evaluation.originality.explanation },
-    { key: "tc", label: "Technical complexity", proseKey: "technical_complexity", metricA: a.evaluation.technical_complexity, metricB: b.evaluation.technical_complexity, scoreA: a.evaluation.technical_complexity.score, scoreB: b.evaluation.technical_complexity.score, explA: a.evaluation.technical_complexity.explanation, explB: b.evaluation.technical_complexity.explanation, isTC: true },
-  ];
+  Structure: an 8-screen pager —
+    market_demand · monetization · originality · technical_complexity ·
+    competition ("How your idea compares") · risks · execution_reality · closure
 
-  const fs = t => { if (!t) return ""; const m = t.match(/^[^.!?]+[.!?]/); return m ? m[0].trim() : t.substring(0, 120).trim(); };
+  Each of the 7 section screens shows BOTH ideas' full redesigned Deep surface
+  side by side (the real DeepMetricCard / DeepTcCard / CompetitorGrid / KeyRisks /
+  ExecutionReality components), bridged by a CompareConnector: a node that sits ON
+  the seam between the two columns, carrying the separation glyph + lean, with the
+  cross-section "read" surfacing as a floating pop-up tethered down to the node.
 
-  const tradeoffs = metrics.map(m => {
-    const delta = Math.abs(m.scoreA - m.scoreB);
-    let winner, loser, deltaBadge;
-    if (m.isTC) {
-      if (m.scoreA < m.scoreB) { winner = "a"; loser = "b"; deltaBadge = `Lower TC by ${delta.toFixed(1)}`; }
-      else if (m.scoreB < m.scoreA) { winner = "b"; loser = "a"; deltaBadge = `Lower TC by ${delta.toFixed(1)}`; }
-      else { winner = null; loser = null; deltaBadge = "Tied"; }
-    } else {
-      if (m.scoreA > m.scoreB) { winner = "a"; loser = "b"; deltaBadge = `+${delta.toFixed(1)}`; }
-      else if (m.scoreB > m.scoreA) { winner = "b"; loser = "a"; deltaBadge = `+${delta.toFixed(1)}`; }
-      else { winner = null; loser = null; deltaBadge = "Tied"; }
-    }
-    return { ...m, delta, winner, loser, deltaBadge, winnerExpl: fs(winner === "a" ? m.explA : winner === "b" ? m.explB : m.explA), loserExpl: fs(loser === "b" ? m.explB : loser === "a" ? m.explA : m.explB) };
-  });
+  The two columns render immediately from the analyses. The connector reads stream
+  in when /api/compare/comparison resolves — the node shows a loading state until
+  then, never blank. If comparison comes back null, the sections still show side by
+  side and the connectors quietly say the read is unavailable.
+*/
 
-  const nameA = ideaA.title.length > 30 ? ideaA.title.substring(0, 28) + "…" : ideaA.title;
-  const nameB = ideaB.title.length > 30 ? ideaB.title.substring(0, 28) + "…" : ideaB.title;
-  const overallA = a.evaluation.overall_score, overallB = b.evaluation.overall_score;
-  const aWins = tradeoffs.filter(t => t.winner === "a").map(t => t.label.toLowerCase());
-  const bWins = tradeoffs.filter(t => t.winner === "b").map(t => t.label.toLowerCase());
-  let overallSummary = "";
-  if (overallA > overallB) { overallSummary = `${nameA} is stronger if you prioritize ${aWins.join(" and ") || "overall balance"}.`; if (bWins.length > 0) overallSummary += ` ${nameB} is stronger if ${bWins.join(" and ")} matter${bWins.length === 1 ? "s" : ""} more to you.`; }
-  else if (overallB > overallA) { overallSummary = `${nameB} is stronger if you prioritize ${bWins.join(" and ") || "overall balance"}.`; if (aWins.length > 0) overallSummary += ` ${nameA} is stronger if ${aWins.join(" and ")} matter${aWins.length === 1 ? "s" : ""} more to you.`; }
-  else { overallSummary = `Both score identically. ${nameA} leads on ${aWins.join(", ") || "nothing specific"}, ${nameB} leads on ${bWins.join(", ") || "nothing specific"}.`; }
+const NOOP = () => {};
 
-  const extractRisks = (an) => { const r = an.evaluation?.failure_risks || an.failure_risks || an.risks || []; if (!Array.isArray(r)) return []; return r.map(x => typeof x === "string" ? x : (x.text || x.description || x.risk || x.title || "")); };
+const SECTION_KEYS = [
+  "market_demand",
+  "monetization",
+  "originality",
+  "technical_complexity",
+  "competition",
+  "risks",
+  "execution_reality",
+];
 
-  const risksA = extractRisks(a), risksB = extractRisks(b);
-  const phasesA = a.phases || [], phasesB = b.phases || [];
-  const toolsA = a.tools || [], toolsB = b.tools || [];
-  const estimatesA = a.estimates || {}, estimatesB = b.estimates || {};
+const ACCENT = {
+  market_demand: "#3fc09a",
+  monetization: "#6f8ff5",
+  originality: "#b57ce0",
+  technical_complexity: "#d9a85e",
+  competition: "#6b9cf0",
+  risks: "#ef6f6c",
+  execution_reality: "#7e8aa8",
+  closure: "#8b8fe0",
+};
 
-  // Conditional per-screen summaries — only shown when meaningful asymmetry exists
-  const summaries = {};
+const A_DOT = "#6b9cf0";
+const B_DOT = "#b57ce0";
 
-  // Competitors: show if different direct counts or shared competitors exist
-  const directA = competitorsA.filter(c => c.competitor_type === "direct").length;
-  const directB = competitorsB.filter(c => c.competitor_type === "direct").length;
-  if (directA !== directB || sharedNames.size > 0) {
-    const parts = [];
-    if (directA !== directB) parts.push(`${nameA} faces ${directA} direct competitor${directA !== 1 ? "s" : ""} vs ${nameB}'s ${directB}`);
-    if (sharedNames.size > 0) parts.push(`${sharedNames.size} shared competitor${sharedNames.size !== 1 ? "s" : ""}`);
-    summaries.competitors = parts.join(". ") + ".";
+const ICONS = {
+  market_demand: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></svg>
+  ),
+  monetization: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+  ),
+  originality: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
+  ),
+  technical_complexity: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /></svg>
+  ),
+  competition: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
+  ),
+  risks: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+  ),
+  execution_reality: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+  ),
+  closure: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
+  ),
+  compare: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><path d="M13 6h3a2 2 0 0 1 2 2v7" /><path d="M11 18H8a2 2 0 0 1-2-2V9" /></svg>
+  ),
+};
+
+const SCREENS = [
+  { key: "market_demand", label: "Market demand", subtitle: "What demand case each is, and what stands between it and adoption" },
+  { key: "monetization", label: "Monetization", subtitle: "What each payment case rests on, and the wall to durable capture" },
+  { key: "originality", label: "Originality", subtitle: "What protects each one — and what it is exposed to" },
+  { key: "technical_complexity", label: "Technical complexity", subtitle: "The build effort each one asks of this founder" },
+  { key: "competition", label: "How your idea compares", subtitle: "Where each one overlaps the field, wins, and is exposed" },
+  { key: "risks", label: "Key risks", subtitle: "How each one dies, by where the threat comes from" },
+  { key: "execution_reality", label: "Execution reality", subtitle: "The first wall each must clear, and what it implies" },
+  { key: "closure", label: "Closure", subtitle: "What the seven reads add up to" },
+];
+
+/* ---------- separation glyph + lean phrasing ---------- */
+
+function SeparationGlyph({ separation, leans, accent }) {
+  if (separation === "winner") {
+    const d = leans === "b" ? "M3 3 L9 8 L3 13" : "M11 3 L5 8 L11 13";
+    return (
+      <svg width="15" height="17" viewBox="0 0 14 16" fill="none" stroke={accent} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
+    );
   }
-
-  // Risks: show only if counts differ
-  if (risksA.length !== risksB.length) {
-    summaries.risks = `${nameA} has ${risksA.length} failure risk${risksA.length !== 1 ? "s" : ""} vs ${nameB}'s ${risksB.length}.`;
+  if (separation === "tradeoff") {
+    return (
+      <svg width="19" height="17" viewBox="0 0 18 16" fill="none" stroke={accent} strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><path d="M7 4 L3 8 L7 12" /><path d="M11 4 L15 8 L11 12" /></svg>
+    );
   }
-
-  // Roadmap: show if phase counts differ or one has a survival gate and the other doesn't
-  const gateA = phasesA.length > 0 && (phasesA[0].phase_type === "validate" || phasesA[0].phase_type === "survival");
-  const gateB = phasesB.length > 0 && (phasesB[0].phase_type === "validate" || phasesB[0].phase_type === "survival");
-  if (phasesA.length !== phasesB.length) {
-    summaries.roadmap = `${nameA} has ${phasesA.length} phases vs ${nameB}'s ${phasesB.length}.`;
-  } else if (gateA !== gateB) {
-    summaries.roadmap = gateA ? `${nameA} starts with a survival gate, ${nameB} does not.` : `${nameB} starts with a survival gate, ${nameA} does not.`;
-  }
-
-  // Tools: show if duration or difficulty differ
-  if (estimatesA.duration !== estimatesB.duration || estimatesA.difficulty !== estimatesB.difficulty) {
-    const parts = [];
-    if (estimatesA.duration !== estimatesB.duration) parts.push(`${nameA}: ${estimatesA.duration || "N/A"} vs ${nameB}: ${estimatesB.duration || "N/A"}`);
-    if (estimatesA.difficulty !== estimatesB.difficulty) parts.push(`${nameA}: ${estimatesA.difficulty || "N/A"} vs ${nameB}: ${estimatesB.difficulty || "N/A"}`);
-    summaries.tools = parts.join(". ") + ".";
-  }
-
-  return { competitorsA, competitorsB, sharedNames, metrics, tradeoffs, overallA, overallB, overallSummary, nameA, nameB, risksA, risksB, phasesA, phasesB, toolsA, toolsB, estimatesA, estimatesB, evidenceStrengthA: a.evaluation.evidence_strength, evidenceStrengthB: b.evaluation.evidence_strength, summaries };
-}
-
-// ============================================
-// HELPERS
-// ============================================
-// V4S28 B8 (April 30, 2026): local getBarColor removed. Previously used a
-// hardcoded TC threshold formula (s>=8 red, s>=6 amber, else blue) that did
-// not match the canonical getTcColor in components.js. Now imports getTcColor
-// directly so any future boundary update propagates to the comparison view.
-const getBarColor = (s, tc) => tc ? getTcColor(s) : getScoreColor(s);
-const typeColors = { direct: { label: "Direct", color: "#f87171", bg: "rgba(239,68,68,0.10)", border: "rgba(239,68,68,0.25)" }, adjacent: { label: "Adjacent", color: "#fbbf24", bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.25)" }, substitute: { label: "Substitute", color: "#60a5fa", bg: "rgba(59,130,246,0.10)", border: "rgba(59,130,246,0.25)" }, internal_build: { label: "Internal Build", color: "#a78bfa", bg: "rgba(139,92,246,0.10)", border: "rgba(139,92,246,0.25)" } };
-const sourceColors = { github: { bg: "rgba(110,84,148,0.15)", color: "#a78bfa", border: "rgba(110,84,148,0.3)", label: "GitHub" }, google: { bg: "rgba(59,130,246,0.15)", color: "#60a5fa", border: "rgba(59,130,246,0.3)", label: "Google" }, llm: { bg: "rgba(115,115,115,0.15)", color: "#a3a3a3", border: "rgba(115,115,115,0.3)", label: "AI" } };
-const SCREENS = [{ key: "competitors", label: "Competitors" }, { key: "scores", label: "Scores" }, { key: "risks", label: "Key risks" }, { key: "roadmap", label: "Roadmap" }, { key: "tools", label: "Tools & estimates" }, { key: "tradeoffs", label: "Key tradeoffs" }];
-const shortTitle = (t, max = 24) => t.length > max ? t.substring(0, max - 1) + "…" : t;
-
-// Badge pill
-function Badge({ label, color, bg, border }) {
-  return <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 9999, border: `1px solid ${border}`, background: bg, color, whiteSpace: "nowrap" }}>{label}</span>;
-}
-
-// Per-screen difference summary — shown only when data.summaries has an entry for this screen
-function SummaryLine({ text, t }) {
-  if (!text) return null;
   return (
-    <div style={{ padding: "8px 20px", background: t.surfAlt, borderBottom: `1px solid ${t.border}` }}>
-      <p style={{ fontSize: 12, color: t.mut, margin: 0, fontStyle: "italic" }}>{text}</p>
-    </div>
+    <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke={accent} strokeWidth="2.1" strokeLinecap="round"><path d="M3 8 H13" /></svg>
   );
 }
 
-// ============================================
-// COMPETITORS
-// ============================================
-function CompetitorsScreen({ data, ideaA, ideaB, isMobile, activeTab, t }) {
-  const renderCard = (comp, otherTitle) => {
-    const tc = typeColors[comp.competitor_type]; const src = sourceColors[comp.source] || sourceColors.llm;
-    const isShared = data.sharedNames.has(comp.name.toLowerCase().trim());
-    return (
-      <div style={{ background: t.surface, border: isShared ? "1.5px solid rgba(59,130,246,0.4)" : "1px solid rgba(38,38,38,0.8)", borderRadius: 14, padding: "16px 18px", height: "100%", boxSizing: "border-box" }}>
-        <h4 style={{ fontSize: 14, fontWeight: 700, color: t.text, margin: "0 0 8px 0" }}>{comp.name}</h4>
-        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
-          {isShared && <Badge label="Shared" color="#60a5fa" bg="rgba(59,130,246,0.15)" border="rgba(59,130,246,0.3)" />}
-          {tc && <Badge label={tc.label} color={tc.color} bg={tc.bg} border={tc.border} />}
-          <Badge label={src.label} color={src.color} bg={src.bg} border={src.border} />
-        </div>
-        <p style={{ fontSize: 12, color: t.sec, lineHeight: 1.6, margin: 0 }}>{comp.description}</p>
-        {comp.outcome && <p style={{ fontSize: 11, color: "#34d399", fontWeight: 600, margin: "8px 0 0 0" }}>{comp.outcome}</p>}
-        {comp.url && <a href={comp.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "#60a5fa", textDecoration: "none", display: "inline-block", marginTop: 4 }}>Visit →</a>}
-        {isMobile && isShared && otherTitle && <p style={{ fontSize: 11, color: "#60a5fa", margin: "6px 0 0 0" }}>Also appears in: {otherTitle}</p>}
-      </div>
-    );
-  };
-
-  if (isMobile) {
-    const comps = activeTab === "a" ? data.competitorsA : data.competitorsB;
-    const other = activeTab === "a" ? ideaB.title : ideaA.title;
-    return (<>{data.summaries?.competitors && <SummaryLine text={data.summaries.competitors} t={t} />}<div style={{ padding: 16 }}>{comps.map((c, i) => <div key={i} style={{ marginBottom: 10 }}>{renderCard(c, other)}</div>)}</div></>);
-  }
-
-  const maxComps = Math.max(data.competitorsA.length, data.competitorsB.length);
-  return (
-    <>
-    {data.summaries?.competitors && <SummaryLine text={data.summaries.competitors} t={t} />}
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)" }}>
-      {Array.from({ length: maxComps }, (_, i) => (
-        <div key={i} style={{ display: "contents" }}>
-          <div style={{ borderRight: `1px solid ${t.border}`, padding: "10px 20px 0 20px", overflow: "hidden" }}>
-            {data.competitorsA[i] ? renderCard(data.competitorsA[i], ideaB.title) : <div />}
-          </div>
-          <div style={{ padding: "10px 20px 0 20px", overflow: "hidden" }}>
-            {data.competitorsB[i] ? renderCard(data.competitorsB[i], ideaA.title) : <div />}
-          </div>
-        </div>
-      ))}
-      <div style={{ borderRight: `1px solid ${t.border}`, padding: "0 20px 20px 20px" }} />
-      <div style={{ padding: "0 20px 20px 20px" }} />
-    </div>
-    </>
-  );
+function leanShort(section) {
+  if (!section) return "";
+  if (section.separation === "winner") return "leans";
+  if (section.separation === "tradeoff") return "tradeoff";
+  return "even";
 }
 
-// ============================================
-// SCORES (grid-row aligned — this one NEEDS row alignment)
-// ============================================
-function ScoresScreen({ data, isMobile, activeTab, t }) {
-  const renderMetric = (m, side) => {
-    const score = side === "a" ? m.scoreA : m.scoreB; const other = side === "a" ? m.scoreB : m.scoreA;
-    const expl = side === "a" ? m.explA : m.explB;
-    let arrow = null;
-    if (!m.isTC) {
-      if (score > other) arrow = <svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 2L10 7H2Z" fill="#10b981" /></svg>;
-      else if (score < other) arrow = <svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 10L2 5H10Z" fill="#ef4444" /></svg>;
-    }
-    return (
-      <div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: t.text }}>{m.label}</span>
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span style={{ fontSize: 15, fontWeight: 600, fontFamily: "monospace", color: getBarColor(score, m.isTC) }}>{score.toFixed(1)}</span>
-            {arrow}
-          </div>
-        </div>
-        <div style={{ width: "100%", height: 6, background: t.barBg, borderRadius: 3, overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${(score / 10) * 100}%`, background: getBarColor(score, m.isTC), borderRadius: 3 }} />
-        </div>
-        <div style={{ marginTop: 12 }}>
-          <MetricProseBody
-            metricKey={m.proseKey}
-            metric={side === "a" ? m.metricA : m.metricB}
-            t={t}
-          />
-        </div>
-      </div>
-    );
-  };
-  const renderOverall = (side) => {
-    const score = side === "a" ? data.overallA : data.overallB; const evStrength = side === "a" ? data.evidenceStrengthA : data.evidenceStrengthB;
-    return (
-      <div style={{ background: t.surfAlt, borderRadius: 12, padding: 12 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 13, color: t.mut }}>Overall score</span>
-          <span style={{ fontSize: 18, fontWeight: 700, fontFamily: "monospace", color: t.text }}>{score.toFixed(1)}</span>
-        </div>
-        {evStrength && evStrength.level !== "HIGH" && <p style={{ fontSize: 11, color: t.mut, margin: "4px 0 0 0" }}>Evidence Strength: {evStrength.level}</p>}
-      </div>
-    );
-  };
-  if (isMobile) return <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 20 }}>{data.metrics.map((m, i) => <div key={i}>{renderMetric(m, activeTab)}</div>)}{renderOverall(activeTab)}</div>;
-  return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)" }}>
-      {data.metrics.map((m, i) => (
-        <div key={i} style={{ display: "contents" }}>
-          <div style={{ borderRight: `1px solid ${t.border}`, padding: "20px 20px 0 20px", overflow: "hidden" }}>{renderMetric(m, "a")}</div>
-          <div style={{ padding: "20px 20px 0 20px", overflow: "hidden" }}>{renderMetric(m, "b")}</div>
-        </div>
-      ))}
-      <div style={{ borderRight: `1px solid ${t.border}`, padding: 20 }}>{renderOverall("a")}</div>
-      <div style={{ padding: 20 }}>{renderOverall("b")}</div>
-    </div>
-  );
+function leanLabel(section, nameA, nameB) {
+  if (!section) return "";
+  if (section.separation === "winner") return `Leans ${section.leans === "a" ? nameA : nameB}`;
+  if (section.separation === "tradeoff") return "Two bets — a tradeoff";
+  return "Even — recedes";
 }
 
-// ============================================
-// KEY RISKS
-// ============================================
-function RisksScreen({ data, isMobile, activeTab, t }) {
-  const renderRisk = (risk, i) => {
-    if (risk === null) return <div />;
+/* ---------- the connector: floating tethered pop-up + sticky seam node ---------- */
+
+function PopHolder({ open, onClose, onReopen, section, accent, nameA, nameB, loading, t }) {
+  const tint = (pct) => `color-mix(in srgb, ${accent} ${pct}%, transparent)`;
+  const lean = leanLabel(section, nameA, nameB);
+  const isWinner = section && section.separation === "winner";
+
+  if (!open) {
     return (
-      <div style={{ background: t.surface, borderLeft: `3px solid ${i < 2 ? "#ef4444" : "#f59e0b"}`, padding: "14px 16px", borderRadius: "0 12px 12px 0", height: "100%", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: i < 2 ? "#f87171" : "#fbbf24", flexShrink: 0, marginTop: 1 }}>{i + 1}.</span>
-          <p style={{ fontSize: 13, color: t.sec, lineHeight: 1.6, margin: 0 }}>{risk}</p>
-        </div>
-      </div>
-    );
-  };
-
-  const renderEmpty = () => (
-    <div style={{ padding: "32px 0", textAlign: "center" }}>
-      <p style={{ fontSize: 13, color: t.mut }}>No failure risks in this evaluation</p>
-      <p style={{ fontSize: 11, color: t.mut }}>Re-evaluate this idea to generate risk analysis.</p>
-    </div>
-  );
-
-  if (isMobile) {
-    const risks = activeTab === "a" ? data.risksA : data.risksB;
-    if (!risks || risks.length === 0) return <div style={{ padding: 20 }}>{renderEmpty()}</div>;
-    return (<>{data.summaries?.risks && <SummaryLine text={data.summaries.risks} t={t} />}<div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 10 }}>{risks.map((r, i) => <div key={i}>{renderRisk(r, i)}</div>)}</div></>);
-  }
-
-  const emptyA = !data.risksA || data.risksA.length === 0;
-  const emptyB = !data.risksB || data.risksB.length === 0;
-
-  if (emptyA && emptyB) {
-    return (
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)" }}>
-        <div style={{ borderRight: `1px solid ${t.border}`, padding: 20 }}>{renderEmpty()}</div>
-        <div style={{ padding: 20 }}>{renderEmpty()}</div>
+      <div style={{ display: "flex", justifyContent: "center" }}>
+        <button
+          onClick={onReopen}
+          style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 12, fontWeight: 600, color: accent, background: tint(9), border: `1px solid color-mix(in srgb, ${accent} 28%, ${t.border})`, borderRadius: 100, padding: "7px 15px", cursor: "pointer" }}
+        >
+          {ICONS.compare}
+          <span>Reading across{lean ? ` — ${lean}` : ""}</span>
+        </button>
       </div>
     );
   }
 
-  const maxRisks = Math.max(data.risksA.length, data.risksB.length);
   return (
-    <>
-    {data.summaries?.risks && <SummaryLine text={data.summaries.risks} t={t} />}
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)" }}>
-      {Array.from({ length: maxRisks }, (_, i) => (
-        <div key={i} style={{ display: "contents" }}>
-          <div style={{ borderRight: `1px solid ${t.border}`, padding: "10px 20px 0 20px", overflow: "hidden" }}>
-            {data.risksA[i] ? renderRisk(data.risksA[i], i) : <div />}
-          </div>
-          <div style={{ padding: "10px 20px 0 20px", overflow: "hidden" }}>
-            {data.risksB[i] ? renderRisk(data.risksB[i], i) : <div />}
-          </div>
-        </div>
-      ))}
-      <div style={{ borderRight: `1px solid ${t.border}`, padding: "0 20px 20px 20px" }} />
-      <div style={{ padding: "0 20px 20px 20px" }} />
-    </div>
-    </>
-  );
-}
-
-// ============================================
-// ROADMAP
-// ============================================
-function RoadmapScreen({ data, isMobile, activeTab, t }) {
-  const [expanded, setExpanded] = useState({});
-  const toggle = k => setExpanded(p => ({ ...p, [k]: !p[k] }));
-
-  const renderPhase = (phase, side, i) => {
-    if (!phase) return <div style={{ minHeight: 120 }} />;
-    const isGate = (phase.phase_type === "validate" || phase.phase_type === "survival") && i === 0;
-    const k = `${side}-${i}`;
-    return (
-      <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 12, overflow: "hidden", minHeight: 120, boxSizing: "border-box" }}>
-        <div onClick={() => toggle(k)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", cursor: "pointer" }}>
-          <div style={{ width: 24, height: 24, borderRadius: "50%", background: isGate ? "rgba(239,68,68,0.15)" : "rgba(59,130,246,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, color: isGate ? "#f87171" : "#60a5fa", flexShrink: 0 }}>{i + 1}</div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: t.text }}>{phase.title}</span>
-            {isGate && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 6, background: "rgba(239,68,68,0.15)", color: "#f87171", marginLeft: 6 }}>survival gate</span>}
-            <p style={{ fontSize: 11, color: t.mut, margin: "3px 0 0 0", lineHeight: 1.4 }}>{phase.summary}</p>
-          </div>
-          <span style={{ color: t.mut, fontSize: 14, flexShrink: 0, transform: expanded[k] ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▾</span>
-        </div>
-        {expanded[k] && phase.details && (
-          <div style={{ padding: "0 14px 12px 48px", borderTop: `1px solid ${t.border}` }}>
-            <p style={{ fontSize: 12, color: t.sec, lineHeight: 1.7, margin: "10px 0 0 0", whiteSpace: "pre-line" }}>{phase.details}</p>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  if (isMobile) {
-    const phases = activeTab === "a" ? data.phasesA : data.phasesB;
-    const side = activeTab;
-    return (<>{data.summaries?.roadmap && <SummaryLine text={data.summaries.roadmap} t={t} />}<div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 8 }}>{phases.map((phase, i) => <div key={i}>{renderPhase(phase, side, i)}</div>)}</div></>);
-  }
-
-  const maxPhases = Math.max(data.phasesA.length, data.phasesB.length);
-  return (
-    <>
-    {data.summaries?.roadmap && <SummaryLine text={data.summaries.roadmap} t={t} />}
-    <div style={{ display: "flex", width: "100%" }}>
-      <div style={{ flex: 1, minWidth: 0, borderRight: `1px solid ${t.border}`, padding: "10px 20px 20px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
-        {Array.from({ length: maxPhases }, (_, i) => <div key={i}>{renderPhase(data.phasesA[i] || null, "a", i)}</div>)}
-      </div>
-      <div style={{ flex: 1, minWidth: 0, padding: "10px 20px 20px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
-        {Array.from({ length: maxPhases }, (_, i) => <div key={i}>{renderPhase(data.phasesB[i] || null, "b", i)}</div>)}
-      </div>
-    </div>
-    </>
-  );
-}
-
-// ============================================
-// TOOLS & ESTIMATES
-// ============================================
-function ToolsScreen({ data, isMobile, activeTab, t }) {
-  const cats = ["Validate & Prototype", "Core Tech Stack", "Launch & Grow"];
-  const icons = { "Validate & Prototype": "🔍", "Core Tech Stack": "🛠", "Launch & Grow": "🚀" };
-
-  const renderToolCard = (tool) => {
-    if (!tool) return <div />;
-    return (
-      <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 12, padding: "12px 14px", height: "100%", boxSizing: "border-box" }}>
-        <h4 style={{ fontSize: 13, fontWeight: 700, color: t.text, margin: "0 0 4px 0" }}>{tool.name}</h4>
-        <p style={{ fontSize: 11, color: t.toolDesc, lineHeight: 1.5, margin: 0 }}>{tool.description}</p>
-      </div>
-    );
-  };
-
-  const renderCatHeader = (cat, count) => (
-    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-      <span style={{ fontSize: 13 }}>{icons[cat]}</span>
-      <span style={{ fontSize: 12, fontWeight: 600, color: t.sec }}>{cat}</span>
-      <span style={{ fontSize: 11, color: t.mut }}>{count}</span>
-    </div>
-  );
-
-  const renderEstimates = (estimates) => {
-    const mb = estimates.main_bottleneck;
-    const mbColor = mb ? getMainBottleneckColor(mb, t.mode) : null;
-    const isSparse = mb === "Specification";
-    return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
-        <div style={{ background: t.surfAlt, borderRadius: 10, padding: "10px 12px" }}>
-          <p style={{ fontSize: 10, color: t.mut, margin: 0, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Duration</p>
-          <p style={{ fontSize: isSparse ? 12 : 15, fontWeight: 700, color: t.text, margin: "4px 0 0 0", lineHeight: 1.35 }}>{estimates.duration || "N/A"}</p>
-        </div>
-        <div style={{ background: t.surfAlt, borderRadius: 10, padding: "10px 12px" }}>
-          <p style={{ fontSize: 10, color: t.mut, margin: 0, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Difficulty</p>
-          <p style={{ fontSize: 15, fontWeight: 700, margin: "4px 0 0 0", color: estimates.difficulty === "Very Hard" ? "#f87171" : estimates.difficulty === "Hard" ? "#fbbf24" : estimates.difficulty === "Moderate" ? "#60a5fa" : estimates.difficulty === "Easy" ? "#34d399" : t.sec }}>{estimates.difficulty || "N/A"}</p>
-        </div>
-        <div style={{ background: t.surfAlt, borderRadius: 10, padding: "10px 12px" }}>
-          <p style={{ fontSize: 10, color: t.mut, margin: 0, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Main Bottleneck</p>
-          {mb && mbColor ? (
-            <span style={{
-              display: "inline-block",
-              marginTop: 6,
-              fontSize: 12,
-              fontWeight: 700,
-              padding: "4px 10px",
-              borderRadius: 9999,
-              background: mbColor.bg,
-              color: mbColor.color,
-              border: `1px solid ${mbColor.border}`,
-              whiteSpace: "nowrap",
-            }}>
-              {mb}
-            </span>
-          ) : (
-            <p style={{ fontSize: 13, fontWeight: 700, color: t.sec, margin: "4px 0 0 0" }}>—</p>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <div
+        className="cmpPop"
+        style={{
+          position: "relative",
+          width: "100%",
+          maxWidth: 860,
+          borderRadius: 16,
+          padding: "15px 22px 17px",
+          background: `color-mix(in srgb, ${t.surface} 86%, transparent)`,
+          backdropFilter: "blur(14px)",
+          WebkitBackdropFilter: "blur(14px)",
+          border: `1px solid color-mix(in srgb, ${accent} 32%, ${t.border})`,
+          boxShadow: `0 18px 50px rgba(0,0,0,0.5), 0 0 40px ${tint(13)}`,
+          zIndex: 7,
+        }}
+      >
+        <div style={{ position: "absolute", left: 0, top: 14, bottom: 14, width: 3, borderRadius: 3, background: `linear-gradient(180deg, ${accent}, transparent)` }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 8 }}>
+          <span style={{ width: 30, height: 30, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", flex: "none", color: accent, background: tint(12) }}>{ICONS.compare}</span>
+          <span style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+            <span style={{ fontSize: 9.5, letterSpacing: "0.13em", textTransform: "uppercase", color: t.mut }}>Reading across</span>
+            <span style={{ fontSize: 13.5, fontWeight: 700, color: isWinner ? accent : t.text }}>{loading ? "Weighing the two sides…" : lean || "—"}</span>
+          </span>
+          <span style={{ marginLeft: "auto", fontSize: 9.5, letterSpacing: "0.14em", textTransform: "uppercase", color: t.mut }}>the walkthrough</span>
+          {!loading && (
+            <button onClick={onClose} aria-label="Collapse" style={{ marginLeft: 10, cursor: "pointer", color: t.mut, background: "none", border: "none", fontSize: 16, lineHeight: 1, padding: "2px 4px" }}>×</button>
           )}
         </div>
-      </div>
-    );
-  };
-
-  if (isMobile) {
-    const tools = activeTab === "a" ? data.toolsA : data.toolsB;
-    const estimates = activeTab === "a" ? data.estimatesA : data.estimatesB;
-    const hasCats = tools.some(t => cats.includes(t.category));
-    return (
-      <>
-      {data.summaries?.tools && <SummaryLine text={data.summaries.tools} t={t} />}
-      <div style={{ padding: 20 }}>
-        {hasCats ? cats.map(cat => {
-          const ct = tools.filter(t => t.category === cat);
-          if (ct.length === 0) return null;
-          return (
-            <div key={cat} style={{ marginBottom: 20 }}>
-              {renderCatHeader(cat, ct.length)}
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
-                {ct.map((t, i) => <div key={i}>{renderToolCard(t)}</div>)}
-              </div>
-            </div>
-          );
-        }) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-            {tools.map((t, i) => <div key={i}>{renderToolCard(t)}</div>)}
+        {loading ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 7, paddingTop: 2 }}>
+            <span style={{ height: 9, borderRadius: 5, width: "92%", background: t.barBg || t.border, opacity: 0.6 }} />
+            <span style={{ height: 9, borderRadius: 5, width: "78%", background: t.barBg || t.border, opacity: 0.45 }} />
           </div>
+        ) : section ? (
+          <p style={{ fontSize: 13.5, color: t.sec, lineHeight: 1.72, margin: 0 }}>{section.read}</p>
+        ) : (
+          <p style={{ fontSize: 12.5, color: t.mut, lineHeight: 1.6, margin: 0 }}>The cross-read for this section is unavailable — the two sides are shown below for direct comparison.</p>
         )}
-        {renderEstimates(estimates)}
       </div>
-      </>
-    );
-  }
 
-  const hasCatsA = data.toolsA.some(t => cats.includes(t.category));
-  const hasCatsB = data.toolsB.some(t => cats.includes(t.category));
-  const useCatGrid = hasCatsA || hasCatsB;
-
-  if (useCatGrid) {
-    const rows = [];
-    cats.forEach(cat => {
-      const ctA = data.toolsA.filter(t => t.category === cat);
-      const ctB = data.toolsB.filter(t => t.category === cat);
-      if (ctA.length === 0 && ctB.length === 0) return;
-      rows.push({ type: "header", cat, countA: ctA.length, countB: ctB.length });
-      const maxTools = Math.max(ctA.length, ctB.length);
-      for (let i = 0; i < maxTools; i++) {
-        rows.push({ type: "tool", toolA: ctA[i] || null, toolB: ctB[i] || null });
-      }
-    });
-
-    return (
-      <>
-      {data.summaries?.tools && <SummaryLine text={data.summaries.tools} t={t} />}
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)" }}>
-        {rows.map((row, idx) => {
-          if (row.type === "header") {
-            return (
-              <div key={idx} style={{ display: "contents" }}>
-                <div style={{ borderRight: `1px solid ${t.border}`, padding: "16px 20px 6px 20px" }}>{renderCatHeader(row.cat, row.countA)}</div>
-                <div style={{ padding: "16px 20px 6px 20px" }}>{renderCatHeader(row.cat, row.countB)}</div>
-              </div>
-            );
-          }
-          return (
-            <div key={idx} style={{ display: "contents" }}>
-              <div style={{ borderRight: `1px solid ${t.border}`, padding: "4px 20px 0 20px", overflow: "hidden", display: "flex" }}>{renderToolCard(row.toolA)}</div>
-              <div style={{ padding: "4px 20px 0 20px", overflow: "hidden", display: "flex" }}>{renderToolCard(row.toolB)}</div>
-            </div>
-          );
-        })}
-        <div style={{ display: "contents" }}>
-          <div style={{ borderRight: `1px solid ${t.border}`, padding: "16px 20px 20px 20px", display: "flex" }}>{renderEstimates(data.estimatesA)}</div>
-          <div style={{ padding: "16px 20px 20px 20px", display: "flex" }}>{renderEstimates(data.estimatesB)}</div>
-        </div>
-      </div>
-      </>
-    );
-  }
-
-  const maxTools = Math.max(data.toolsA.length, data.toolsB.length);
-  return (
-    <>
-    {data.summaries?.tools && <SummaryLine text={data.summaries.tools} t={t} />}
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)" }}>
-      {Array.from({ length: maxTools }, (_, i) => (
-        <div key={i} style={{ display: "contents" }}>
-          <div style={{ borderRight: `1px solid ${t.border}`, padding: "4px 20px 0 20px", overflow: "hidden", display: "flex" }}>{renderToolCard(data.toolsA[i] || null)}</div>
-          <div style={{ padding: "4px 20px 0 20px", overflow: "hidden", display: "flex" }}>{renderToolCard(data.toolsB[i] || null)}</div>
-        </div>
-      ))}
-      <div style={{ display: "contents" }}>
-        <div style={{ borderRight: `1px solid ${t.border}`, padding: "16px 20px 20px 20px", display: "flex" }}>{renderEstimates(data.estimatesA)}</div>
-        <div style={{ padding: "16px 20px 20px 20px", display: "flex" }}>{renderEstimates(data.estimatesB)}</div>
-      </div>
+      <svg width="40" height="26" viewBox="0 0 40 26" style={{ display: "block", margin: "-1px auto 0", zIndex: 5 }}>
+        <path d="M20 0 C20 12, 20 14, 20 26" stroke={accent} strokeWidth="1.4" fill="none" strokeDasharray="2 3" opacity="0.8" />
+        <circle cx="20" cy="25" r="2.4" fill={accent} />
+      </svg>
     </div>
-    </>
   );
 }
 
-// ============================================
-// KEY TRADEOFFS (Sonnet-powered synthesis)
-// ============================================
-function TradeoffsScreen({ data, ideaA, ideaB, tradeoffsResult, tradeoffsLoading, tradeoffsError, t }) {
-  const nA = shortTitle(ideaA.title, 28), nB = shortTitle(ideaB.title, 28);
+function SeamNode({ open, onToggle, section, accent, nameA, nameB, loading, t }) {
+  const tint = (pct) => `color-mix(in srgb, ${accent} ${pct}%, transparent)`;
+  const lean = leanLabel(section, nameA, nameB);
+  const isWinner = section && section.separation === "winner";
 
-  // Loading state
-  if (tradeoffsLoading) {
+  const face = loading ? (
+    <span style={{ display: "inline-block", width: 16, height: 16, border: `2px solid ${tint(28)}`, borderTopColor: accent, borderRadius: "50%", animation: "cmpSpin 0.8s linear infinite" }} />
+  ) : section ? (
+    <SeparationGlyph separation={section.separation} leans={section.leans} accent={accent} />
+  ) : (
+    <span style={{ color: t.mut, fontSize: 15, fontWeight: 700 }}>·</span>
+  );
+
+  return (
+    <div
+      className="cmpNode"
+      onClick={onToggle}
+      title="Reading across"
+      style={{
+        position: "relative",
+        width: 54,
+        height: 54,
+        margin: "0 auto",
+        borderRadius: 16,
+        cursor: "pointer",
+        background: t.surfAlt || t.surface,
+        border: `1px solid color-mix(in srgb, ${accent} 40%, ${t.border})`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        boxShadow: `0 0 0 6px ${t.bg || "#0a0d13"}, 0 8px 30px rgba(0,0,0,0.5), 0 0 22px ${tint(30)}`,
+        zIndex: 8,
+      }}
+    >
+      {!loading && section && (
+        <span style={{ position: "absolute", inset: -1, borderRadius: 16, border: `1px solid ${tint(50)}`, animation: "cmpPulse 2.4s ease-out infinite", pointerEvents: "none" }} />
+      )}
+      {face}
+      <span style={{ position: "absolute", top: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", whiteSpace: "nowrap", fontSize: 9.5, letterSpacing: "0.06em", textTransform: "uppercase", color: isWinner ? accent : t.mut, fontWeight: isWinner ? 700 : 400 }}>
+        {loading ? "reading…" : leanShort(section)}
+      </span>
+    </div>
+  );
+}
+
+/* ---------- closure: the synthesis no single section can give ---------- */
+
+const SHAPE_LABEL = {
+  convergent: "Both point the same way",
+  tilted: "Tilts toward one",
+  tradeoff: "A genuine tradeoff",
+  shared_fate: "A shared wall",
+  tiebreaker: "Down to a single axis",
+};
+
+const AXIS_SHORT = {
+  market_demand: "Market demand",
+  monetization: "Monetization",
+  originality: "Originality",
+  technical_complexity: "Technical complexity",
+  competition: "How they compare",
+  risks: "Key risks",
+  execution_reality: "Execution reality",
+};
+
+// Break the closure's single text blob into breathing paragraphs: split on sentence
+// boundaries (lookahead only, so decimals like 6.5 stay intact), then group sentences
+// into ~170-char paragraphs so each stanza is a readable chunk rather than one slab.
+function splitParagraphs(text) {
+  if (!text) return [];
+  const sents = text
+    .replace(/([.!?])\s+(?=[A-Z"'(])/g, "$1\u0001")
+    .split("\u0001")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const out = [];
+  let buf = "";
+  for (const s of sents) {
+    buf = buf ? buf + " " + s : s;
+    if (buf.length >= 170) {
+      out.push(buf);
+      buf = "";
+    }
+  }
+  if (buf) out.push(buf);
+  return out.length ? out : [text];
+}
+
+// Derive the closure's lean for the meter: net direction across the decisive axes
+// (falls back to all sections), scaled to a needle position. Reflects the real
+// comparison, not the raw score gap — A can outscore B yet the closure still tilt B.
+function deriveLean(closure, sections) {
+  if (!sections) return { dir: null, pos: 50 };
+  const keys = closure.decisive_axes && closure.decisive_axes.length ? closure.decisive_axes : SECTION_KEYS;
+  let net = 0;
+  let denom = 0;
+  keys.forEach((k) => {
+    const s = sections[k];
+    if (!s) return;
+    denom += 1;
+    if (s.separation === "winner") net += s.leans === "b" ? 1 : s.leans === "a" ? -1 : 0;
+  });
+  const frac = denom ? Math.max(-1, Math.min(1, net / denom)) : 0;
+  const pos = Math.max(12, Math.min(88, 50 + frac * 34));
+  return { dir: net > 0 ? "b" : net < 0 ? "a" : null, pos };
+}
+
+const SHAPE_QUALIFIER = {
+  convergent: "a clear call",
+  tilted: "not conclusive",
+  tradeoff: "a real tradeoff",
+  shared_fate: "the wall comes first",
+  tiebreaker: "a narrow tiebreak",
+};
+
+function CompareClosure({ closure, nameA, nameB, scoreA, scoreB, sections, loading, t }) {
+  const accent = ACCENT.closure;
+  const tint = (pct) => `color-mix(in srgb, ${accent} ${pct}%, transparent)`;
+
+  if (loading) {
     return (
-      <div style={{ padding: "48px 24px", textAlign: "center" }}>
-        <div style={{ display: "inline-block", width: 28, height: 28, border: "2.5px solid rgba(96,165,250,0.2)", borderTop: "2.5px solid #60a5fa", borderRadius: "50%", animation: "tradeoffsSpin 0.8s linear infinite", marginBottom: 16 }} />
-        <p style={{ fontSize: 14, color: t.mut, margin: 0 }}>Analyzing tradeoffs...</p>
-        <p style={{ fontSize: 12, color: t.mut, margin: "8px 0 0 0" }}>Identifying decision-relevant tensions between these ideas</p>
-        <style>{`@keyframes tradeoffsSpin { to { transform: rotate(360deg); } }`}</style>
+      <div style={{ textAlign: "center", padding: "70px 20px" }}>
+        <span style={{ display: "inline-block", width: 30, height: 30, border: `2.5px solid ${tint(22)}`, borderTopColor: accent, borderRadius: "50%", animation: "cmpSpin 0.8s linear infinite", marginBottom: 16 }} />
+        <p style={{ fontSize: 14, color: t.mut, margin: 0 }}>Weighing the seven reads together…</p>
       </div>
     );
   }
 
-  // Error state — fall back to basic score comparison
-  if (tradeoffsError || !tradeoffsResult) {
+  if (!closure) {
     return (
-      <div style={{ padding: "20px 24px" }}>
-        {tradeoffsError && (
-          <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, padding: "12px 16px", marginBottom: 20 }}>
-            <p style={{ fontSize: 12, color: "#f87171", margin: 0 }}>Could not generate tradeoff analysis: {tradeoffsError}</p>
+      <div style={{ textAlign: "center", padding: "60px 24px", maxWidth: 620, margin: "0 auto" }}>
+        <div style={{ width: 46, height: 46, borderRadius: 13, margin: "0 auto 16px", display: "flex", alignItems: "center", justifyContent: "center", color: t.mut, background: t.surfAlt || t.surface, border: `1px solid ${t.border}` }}>{ICONS.closure}</div>
+        <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.6, margin: 0 }}>The closing synthesis is unavailable for this pair. Each section above stands on its own — read the connectors to see where the two separate.</p>
+      </div>
+    );
+  }
+
+  const axes = (closure.decisive_axes || []).map((k) => AXIS_SHORT[k] || k);
+  const beats =
+    Array.isArray(closure.beats) && closure.beats.length
+      ? closure.beats.filter((b) => b && b.text)
+      : splitParagraphs(closure.text).map((text) => ({ text }));
+
+  const { dir, pos } = deriveLean(closure, sections);
+  const leanName = dir === "a" ? nameA : dir === "b" ? nameB : null;
+  const qual = SHAPE_QUALIFIER[closure.decision_shape] || "close";
+  const sA = Number(scoreA || 0).toFixed(1);
+  const sB = Number(scoreB || 0).toFixed(1);
+  const wall = closure.shared_wall
+    ? (() => {
+        let s = closure.shared_wall.charAt(0).toUpperCase() + closure.shared_wall.slice(1);
+        return /[.!?]$/.test(s) ? s : s + ".";
+      })()
+    : null;
+
+  const COLS = "minmax(0, 340px) minmax(0, 1fr)";
+  const GAP = 72;
+  const hair = `1px solid ${t.border}`;
+  const eyebrow = { fontSize: 12.5, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: accent, lineHeight: 1.4 };
+  const nameCap = { fontSize: 12.5, color: t.sec, whiteSpace: "nowrap", display: "inline-flex", alignItems: "baseline", gap: 5, maxWidth: 170, overflow: "hidden" };
+  const warnIcon = (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
+
+  return (
+    <div style={{ maxWidth: 1080, margin: "0 auto" }}>
+      {/* header: icon + Closure + lean meter */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 28, flexWrap: "wrap", marginBottom: 28 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <span style={{ width: 44, height: 44, borderRadius: 12, flex: "none", display: "flex", alignItems: "center", justifyContent: "center", color: accent, background: tint(11), border: `1px solid ${tint(22)}` }}>
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
+          </span>
+          <div>
+            <h2 style={{ fontWeight: 700, fontSize: 28, lineHeight: 1.1, margin: 0, color: t.text, letterSpacing: "-0.015em" }}>Closure</h2>
+            <p style={{ fontSize: 14, color: t.mut, margin: "3px 0 0" }}>What the seven reads add up to</p>
           </div>
-        )}
-        <p style={{ fontSize: 14, fontWeight: 600, color: t.sec, margin: "0 0 16px 0" }}>Score comparison</p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {data.tradeoffs.map((t, i) => {
-            const wn = t.winner === "a" ? nA : t.winner === "b" ? nB : null;
-            return (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 12, color: t.mut, minWidth: 130 }}>{t.label}</span>
-                {wn ? (<><span style={{ fontSize: 13, fontWeight: 600, color: t.text }}>{wn}</span><span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 8, background: "rgba(16,185,129,0.15)", color: "#34d399" }}>{t.deltaBadge}</span></>) : (<span style={{ fontSize: 12, color: t.mut }}>Tied at {t.scoreA.toFixed(1)}</span>)}
-              </div>
-            );
-          })}
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flex: "0 1 440px", minWidth: 300 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 13, width: "100%" }}>
+            <span style={nameCap}><span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{nameA}</span><span style={{ color: t.text, fontWeight: 600 }}>{sA}</span></span>
+            <div style={{ position: "relative", flex: 1, height: 16 }}>
+              <div style={{ position: "absolute", left: 0, right: 0, top: 7, height: 2.5, borderRadius: 2, background: `linear-gradient(90deg, ${A_DOT}, ${B_DOT})`, opacity: 0.7 }} />
+              <div style={{ position: "absolute", left: "50%", top: 3.5, width: 1, height: 9, background: t.mut, opacity: 0.55, transform: "translateX(-50%)" }} />
+              <div style={{ position: "absolute", left: `${pos}%`, top: 1, width: 14, height: 14, borderRadius: "50%", border: `2px solid ${accent}`, background: t.surface, transform: "translateX(-50%)", boxShadow: `0 0 9px ${tint(45)}` }} />
+            </div>
+            <span style={{ ...nameCap, justifyContent: "flex-end" }}><span style={{ color: t.text, fontWeight: 600 }}>{sB}</span><span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{nameB}</span></span>
+          </div>
+          <span style={{ fontSize: 13, color: t.mut }}>{leanName ? `Leans ${leanName} · ${qual}` : "Evenly matched"}</span>
         </div>
       </div>
+
+      {/* the shared wall — both ideas meet it */}
+      {wall && (
+        <div style={{ display: "grid", gridTemplateColumns: COLS, columnGap: GAP, padding: "22px 0", borderBottom: hair }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 9 }}>
+            <span style={{ color: accent, flex: "none", marginTop: 1, display: "inline-flex" }}>{warnIcon}</span>
+            <span style={eyebrow}>Both meet the same wall</span>
+          </div>
+          <div style={{ fontSize: 17, color: t.text, lineHeight: 1.5 }}>{wall}</div>
+        </div>
+      )}
+
+      {/* the numbered reads */}
+      {beats.map((beat, i) => (
+        <div key={i} style={{ display: "grid", gridTemplateColumns: COLS, columnGap: GAP, padding: "22px 0", borderBottom: hair }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.14em", color: t.mut, marginBottom: 8, fontVariantNumeric: "tabular-nums" }}>{String(i + 1).padStart(2, "0")}</div>
+            {beat.marker && <div style={eyebrow}>{beat.marker}</div>}
+          </div>
+          <p style={{ fontSize: 16, color: t.sec, lineHeight: 1.6, margin: 0 }}>{beat.text}</p>
+        </div>
+      ))}
+
+      {/* what separated them */}
+      {axes.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: COLS, columnGap: GAP, padding: "22px 0 0" }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: t.mut }}>What actually separated them</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 9 }}>
+            {axes.map((a, i) => (
+              <span key={i} style={{ fontSize: 13, color: t.sec, background: t.surfAlt || t.surface, border: `1px solid ${t.border}`, borderRadius: 100, padding: "5px 13px" }}>{a}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <p style={{ fontSize: 13, color: t.mut, textAlign: "center", lineHeight: 1.6, margin: "30px auto 0", maxWidth: 580 }}>
+        This weighs the two on the evidence above. The call is yours — pick the wall you'd rather spend the next year clearing.
+      </p>
+    </div>
+  );
+}
+
+/* ---------- competition column: cp tri-split + competitor grid ---------- */
+
+function CompetitionColumn({ analysis, t }) {
+  const accent = ACCENT.competition;
+  const ev = analysis.evaluation;
+  const comps = (analysis.competition && analysis.competition.competitors) || [];
+  const cp = ev && ev.competitive_position;
+  const hasCp = cp && typeof cp === "object" && (cp.headline || cp.you_win || cp.overlap || cp.exposed);
+
+  const cells = hasCp
+    ? [
+        { key: "overlap", label: "Overlap", color: t.mut, text: cp.overlap },
+        { key: "you_win", label: "You win", color: "#34d399", text: cp.you_win },
+        { key: "exposed", label: "Exposed", color: "#fbbf24", text: cp.exposed },
+      ].filter((c) => c.text)
+    : [];
+
+  const cellIcon = (k) =>
+    k === "you_win" ? (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+    ) : k === "exposed" ? (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+    ) : (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="13" height="13" rx="2" /><rect x="8" y="8" width="13" height="13" rx="2" /></svg>
     );
+
+  return (
+    <div>
+      {hasCp && (
+        <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", marginBottom: 16, padding: "20px 22px 18px 24px", background: `linear-gradient(180deg, ${accent}14, ${accent}05)`, border: `1px solid ${accent}33` }}>
+          <div style={{ position: "absolute", left: 0, top: 20, bottom: 20, width: 3, borderRadius: "0 3px 3px 0", background: accent, opacity: 0.6 }} />
+          <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, marginBottom: 12 }}>How your idea compares</div>
+          {cp.headline && <h3 style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.34, letterSpacing: "-0.01em", color: t.text, margin: "0 0 18px" }}>{cp.headline}</h3>}
+          {cells.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${cells.length}, 1fr)`, gap: "0 18px", paddingTop: 14, borderTop: `1px solid ${t.border}` }}>
+              {cells.map((c) => (
+                <div key={c.key}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7, color: c.color }}>
+                    {cellIcon(c.key)}
+                    <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.09em" }}>{c.label}</span>
+                  </div>
+                  <p style={{ fontSize: 12.5, color: t.sec, lineHeight: 1.55, margin: 0 }}>{c.text}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 16, fontSize: 11.5, color: t.mut }}>
+            <span>↓</span>
+            <span>Drawn from the <strong style={{ color: t.sec, fontWeight: 600 }}>{comps.length} competitor{comps.length === 1 ? "" : "s"}</strong> below</span>
+          </div>
+        </div>
+      )}
+      <CompetitorGrid competitors={comps} t={t} />
+    </div>
+  );
+}
+
+/* ---------- one idea's column for a given section ---------- */
+
+function IdeaTag({ side, name, t }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase", color: t.mut, marginBottom: 14 }}>
+      <span style={{ width: 7, height: 7, borderRadius: "50%", background: side === "a" ? A_DOT : B_DOT }} />
+      {name}
+    </div>
+  );
+}
+
+function SectionColumn({ side, screenKey, analysis, name, t }) {
+  const ev = analysis.evaluation;
+  let body = null;
+
+  if (screenKey === "market_demand") {
+    body = (
+      <DeepMetricCard
+        metricKey="market_demand"
+        metric={ev.market_demand}
+        name="Market Demand"
+        weightLabel="37.5% weight"
+        notes={[ev.market_demand && ev.market_demand.geographic_note, ev.market_demand && ev.market_demand.trajectory_note]}
+        competitors={analysis.competition && analysis.competition.competitors}
+        t={t}
+        wt={null}
+        onWt={NOOP}
+      />
+    );
+  } else if (screenKey === "monetization") {
+    body = (
+      <DeepMetricCard
+        metricKey="monetization"
+        metric={ev.monetization}
+        name={(ev.monetization && ev.monetization.label) || "Monetization Potential"}
+        weightLabel="31.25% weight"
+        competitors={analysis.competition && analysis.competition.competitors}
+        t={t}
+        wt={null}
+        onWt={NOOP}
+      />
+    );
+  } else if (screenKey === "originality") {
+    body = (
+      <DeepMetricCard
+        metricKey="originality"
+        metric={ev.originality}
+        name="Originality"
+        weightLabel="31.25% weight"
+        competitors={analysis.competition && analysis.competition.competitors}
+        t={t}
+        wt={null}
+        onWt={NOOP}
+      />
+    );
+  } else if (screenKey === "technical_complexity") {
+    body = <DeepTcCard tc={ev.technical_complexity} t={t} wt={null} onWt={NOOP} />;
+  } else if (screenKey === "competition") {
+    body = <CompetitionColumn analysis={analysis} t={t} />;
+  } else if (screenKey === "risks") {
+    body = <KeyRisks risks={ev.failure_risks || []} t={t} wt={null} onWt={NOOP} />;
+  } else if (screenKey === "execution_reality") {
+    body = <ExecutionReality estimates={analysis.estimates} mbColorFn={getMainBottleneckColor} MbIcon={MainBottleneckIcon} t={t} wt={null} onWt={NOOP} />;
   }
 
-  // Sonnet-generated tradeoff synthesis
-  const tr = tradeoffsResult;
+  return body;
+}
+
+/* ---------- main view ---------- */
+
+export default function ComparisonView({ ideaA, ideaB, onBack, authToken, t }) {
+  const [cur, setCur] = useState(0);
+  const [comparison, setComparison] = useState(null); // { sections, closure } | null
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const nameA = ideaA.title || "Idea A";
+  const nameB = ideaB.title || "Idea B";
+
+  useEffect(() => {
+    let alive = true;
+    if (!authToken) {
+      setLoading(false);
+      return;
+    }
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await fetch("/api/compare/comparison", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
+          body: JSON.stringify({
+            idea_a: { title: nameA, analysis: ideaA.analysis },
+            idea_b: { title: nameB, analysis: ideaB.analysis },
+          }),
+        });
+        if (!res.ok) {
+          if (alive) setError(`request failed (${res.status})`);
+          return;
+        }
+        const json = await res.json();
+        if (alive) setComparison(json.comparison || null);
+      } catch (e) {
+        if (alive) setError(e && e.message ? e.message : "network error");
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authToken]);
+
+  const screen = SCREENS[cur];
+  const isClosure = screen.key === "closure";
+  const accent = ACCENT[screen.key];
+  const tint = (pct) => `color-mix(in srgb, ${accent} ${pct}%, transparent)`;
+
+  const sections = comparison && comparison.sections;
+  const sectionRead = sections ? sections[screen.key] : null;
+
+  const ovA = (ideaA.analysis.evaluation && (ideaA.analysis.evaluation.overall_score ?? ideaA.analysis.evaluation.weighted_overall)) || 0;
+  const ovB = (ideaB.analysis.evaluation && (ideaB.analysis.evaluation.overall_score ?? ideaB.analysis.evaluation.weighted_overall)) || 0;
+
   return (
-    <div style={{ padding: "20px 24px" }}>
-      {/* Screen header */}
-      <div style={{ marginBottom: 20 }}>
-        <p style={{ fontSize: 18, fontWeight: 600, color: t.text, margin: "0 0 4px 0" }}>What you're choosing between</p>
-        <p style={{ fontSize: 12, color: t.mut, margin: 0 }}>Decision-relevant tensions across these two ideas</p>
+    <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 20px 80px" }}>
+      <style>{`
+        @keyframes cmpPulse { 0% { transform: scale(1); opacity: .55 } 100% { transform: scale(1.5); opacity: 0 } }
+        @keyframes cmpSpin { to { transform: rotate(360deg) } }
+        @keyframes cmpFade { from { opacity: 0; transform: translateY(8px) scale(.97) } to { opacity: 1; transform: none } }
+        .cmpPop { animation: cmpFade .22s ease both; }
+        .cmpNode:hover { transform: scale(1.06); }
+        .cmpTab::-webkit-scrollbar { height: 0; }
+      `}</style>
+
+      <button onClick={onBack} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer", padding: "16px 0 8px" }}>← Back to My Ideas</button>
+
+      <div style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: ACCENT.closure, marginBottom: 14 }}>
+        <span style={{ width: 6, height: 6, borderRadius: "50%", background: ACCENT.closure, boxShadow: `0 0 8px ${ACCENT.closure}` }} />
+        Compare · Deep × Deep
       </div>
-      {/* Decision summary */}
-      <div style={{ background: "rgba(96,165,250,0.06)", border: "1px solid rgba(96,165,250,0.15)", borderRadius: 14, padding: "16px 20px", marginBottom: 24 }}>
-        <p style={{ fontSize: 11, fontWeight: 600, color: "#60a5fa", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 8px 0" }}>Decision summary</p>
-        <p style={{ fontSize: 13, color: t.sec, lineHeight: 1.7, margin: 0 }}>{tr.decision_summary}</p>
-      </div>
 
-      {/* Tradeoff cards */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {(tr.tradeoffs || []).map((t, i) => (
-          <div key={i} style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, padding: "16px 20px", overflow: "hidden" }}>
-            {/* Tension label */}
-            <p style={{ fontSize: 13, fontWeight: 700, color: t.text, margin: "0 0 14px 0" }}>{t.tension}</p>
-
-            {/* Idea A */}
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#3b82f6", flexShrink: 0 }} />
-                <span style={{ fontSize: 11, fontWeight: 600, color: "#60a5fa" }}>{nA}</span>
-              </div>
-              <div style={{ marginLeft: 14 }}>
-                <div style={{ display: "flex", gap: 6, alignItems: "flex-start", marginBottom: 4 }}>
-                  <svg width="10" height="10" viewBox="0 0 10 10" style={{ flexShrink: 0, marginTop: 3 }}><path d="M5 1L9 6H1Z" fill="#10b981" /></svg>
-                  <p style={{ fontSize: 12, color: t.sec, margin: 0, lineHeight: 1.6 }}>{t.idea_a_advantage}</p>
-                </div>
-                <div style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
-                  <svg width="10" height="10" viewBox="0 0 10 10" style={{ flexShrink: 0, marginTop: 3 }}><path d="M5 9L1 4H9Z" fill="#ef4444" /></svg>
-                  <p style={{ fontSize: 12, color: t.mut, margin: 0, lineHeight: 1.6 }}>{t.idea_a_cost}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Idea B */}
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#a78bfa", flexShrink: 0 }} />
-                <span style={{ fontSize: 11, fontWeight: 600, color: "#a78bfa" }}>{nB}</span>
-              </div>
-              <div style={{ marginLeft: 14 }}>
-                <div style={{ display: "flex", gap: 6, alignItems: "flex-start", marginBottom: 4 }}>
-                  <svg width="10" height="10" viewBox="0 0 10 10" style={{ flexShrink: 0, marginTop: 3 }}><path d="M5 1L9 6H1Z" fill="#10b981" /></svg>
-                  <p style={{ fontSize: 12, color: t.sec, margin: 0, lineHeight: 1.6 }}>{t.idea_b_advantage}</p>
-                </div>
-                <div style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
-                  <svg width="10" height="10" viewBox="0 0 10 10" style={{ flexShrink: 0, marginTop: 3 }}><path d="M5 9L1 4H9Z" fill="#ef4444" /></svg>
-                  <p style={{ fontSize: 12, color: t.mut, margin: 0, lineHeight: 1.6 }}>{t.idea_b_cost}</p>
-                </div>
-              </div>
-            </div>
+      {/* idea strip */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: t.border, border: `1px solid ${t.border}`, borderRadius: 12, overflow: "hidden", marginBottom: 16 }}>
+        {[{ n: nameA, ov: ovA, dot: A_DOT }, { n: nameB, ov: ovB, dot: B_DOT }].map((s, i) => (
+          <div key={i} style={{ background: t.surface, padding: "11px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, fontWeight: 700, color: t.text }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: s.dot }} />{s.n}</span>
+            <span style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 15, fontWeight: 700, color: getScoreColor(s.ov, t) }}>{Number(s.ov).toFixed(1)}</span>
           </div>
         ))}
       </div>
 
-      {/* Dominant idea assessment (only if Sonnet found clear dominance) */}
-      {tr.dominant_idea && tr.dominant_reason && (
-        <div style={{ background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.15)", borderRadius: 14, padding: "16px 20px", marginTop: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-            <svg width="14" height="14" viewBox="0 0 14 14" style={{ flexShrink: 0 }}><path d="M7 1L9 5H13L10 8L11 12L7 10L3 12L4 8L1 5H5Z" fill="#34d399" /></svg>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#34d399" }}>
-              {tr.dominant_idea === "idea_a" ? nA : nB} is stronger overall
-            </span>
+      {/* tab bar */}
+      <div className="cmpTab" style={{ display: "flex", gap: 4, overflowX: "auto", borderBottom: `1px solid ${t.border}`, marginBottom: 22, paddingBottom: 0 }}>
+        {SCREENS.map((s, i) => {
+          const on = i === cur;
+          const a = ACCENT[s.key];
+          return (
+            <button
+              key={s.key}
+              onClick={() => setCur(i)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 7,
+                whiteSpace: "nowrap",
+                fontSize: 12.5,
+                fontWeight: on ? 600 : 500,
+                color: on ? t.text : t.mut,
+                background: "none",
+                border: "none",
+                borderBottom: on ? `2px solid ${a}` : "2px solid transparent",
+                cursor: "pointer",
+                padding: "10px 14px",
+              }}
+            >
+              <span style={{ color: on ? a : t.mut, display: "flex" }}>{ICONS[s.key]}</span>
+              {s.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {error && (
+        <div style={{ fontSize: 12, color: "#f87171", marginBottom: 16 }}>Cross-read unavailable: {error} — the sides are still shown for direct comparison.</div>
+      )}
+
+      {/* screen header — closure renders its own (with the lean meter) */}
+      {!isClosure && (
+        <div style={{ display: "flex", alignItems: "center", gap: 13, margin: "4px 2px 12px" }}>
+          <span style={{ width: 38, height: 38, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flex: "none", color: accent, background: tint(11) }}>{ICONS[screen.key]}</span>
+          <div>
+            <h2 style={{ fontSize: 19, fontWeight: 700, margin: 0, color: t.text }}>{screen.label}</h2>
+            <p style={{ fontSize: 12.5, color: t.mut, margin: "2px 0 0" }}>{screen.subtitle}</p>
           </div>
-          <p style={{ fontSize: 12, color: t.sec, lineHeight: 1.6, margin: 0 }}>{tr.dominant_reason}</p>
         </div>
       )}
 
-      {/* Score reference bar at bottom */}
-      <div style={{ borderTop: `1px solid ${t.border}`, paddingTop: 16, marginTop: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#3b82f6" }} />
-            <span style={{ fontSize: 12, color: t.mut }}>{nA}</span>
-            <span style={{ fontSize: 13, fontWeight: 600, fontFamily: "monospace", color: getScoreColor(data.overallA) }}>{data.overallA.toFixed(1)}</span>
-          </div>
-          <span style={{ fontSize: 12, color: t.mut }}>vs</span>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#a78bfa" }} />
-            <span style={{ fontSize: 12, color: t.mut }}>{nB}</span>
-            <span style={{ fontSize: 13, fontWeight: 600, fontFamily: "monospace", color: getScoreColor(data.overallB) }}>{data.overallB.toFixed(1)}</span>
+      {isClosure ? (
+        <CompareClosure closure={comparison && comparison.closure} nameA={nameA} nameB={nameB} scoreA={ovA} scoreB={ovB} sections={sections} loading={loading} t={t} />
+      ) : (
+        <div style={{ position: "relative" }}>
+          {/* connector lives above + on the seam; the node is positioned by the stage below */}
+          <div style={{ position: "relative", zIndex: 6 }}>
+            <ConnectorStage
+              screenKey={screen.key}
+              section={sectionRead}
+              accent={accent}
+              nameA={nameA}
+              nameB={nameB}
+              loading={loading}
+              t={t}
+              left={<SectionColumn side="a" screenKey={screen.key} analysis={ideaA.analysis} name={nameA} t={t} />}
+              right={<SectionColumn side="b" screenKey={screen.key} analysis={ideaB.analysis} name={nameB} t={t} />}
+            />
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
-// ============================================
-// MAIN COMPARISON VIEW
-// ============================================
-// ============================================
-// TRADEOFFS DATA PREPROCESSOR
-// ============================================
-function buildTradeoffsPayload(ideaA, ideaB, data) {
-  const extractCompSummary = (analysis) => analysis.competition?.competition_summary || analysis.competition?.summary || "";
-  const extractCompCount = (analysis) => (analysis.competition?.competitors || []).length;
-  const extractRisks = (analysis) => {
-    const r = analysis.evaluation?.failure_risks || analysis.failure_risks || analysis.risks || [];
-    if (!Array.isArray(r)) return [];
-    return r.map(x => typeof x === "string" ? x : (x.text || x.description || x.risk || x.title || "")).filter(Boolean);
-  };
+/* ---------- stage: the two columns butted at a seam, with the connector node on it ---------- */
 
-  const aE = ideaA.analysis.evaluation, bE = ideaB.analysis.evaluation;
-  const aScores = { md: aE.market_demand.score, mo: aE.monetization.score, or: aE.originality.score, tc: aE.technical_complexity.score, overall: aE.overall_score };
-  const bScores = { md: bE.market_demand.score, mo: bE.monetization.score, or: bE.originality.score, tc: bE.technical_complexity.score, overall: bE.overall_score };
+function ConnectorStage({ screenKey, section, accent, nameA, nameB, loading, t, left, right }) {
+  const [open, setOpen] = useState(true);
+  const winSide = section && section.separation === "winner" ? section.leans : null;
+  const equalize = screenKey === "market_demand" || screenKey === "monetization" || screenKey === "originality";
 
-  const risksA = extractRisks(ideaA.analysis), risksB = extractRisks(ideaB.analysis);
+  // soft wash on the leaning side — never a border (avoids the border/borderColor
+  // shorthand clash, and the reused Deep components already carry their own chrome)
+  const lift = (on) =>
+    on ? { background: `linear-gradient(180deg, color-mix(in srgb, ${accent} 7%, transparent), transparent 240px)` } : {};
 
-  // Competitor asymmetry
-  const directA = (ideaA.analysis.competition?.competitors || []).filter(c => c.competitor_type === "direct").length;
-  const directB = (ideaB.analysis.competition?.competitors || []).filter(c => c.competitor_type === "direct").length;
-  const competitorAsymmetry = `${ideaA.title} faces ${directA} direct competitor${directA !== 1 ? "s" : ""} out of ${extractCompCount(ideaA.analysis)} total. ${ideaB.title} faces ${directB} direct competitor${directB !== 1 ? "s" : ""} out of ${extractCompCount(ideaB.analysis)} total. ${data.sharedNames.size} shared competitor${data.sharedNames.size !== 1 ? "s" : ""}.`;
-
-  // Risk asymmetry
-  const riskAsymmetry = `${ideaA.title} has ${risksA.length} failure risk${risksA.length !== 1 ? "s" : ""}${risksA.length > 0 ? ": " + risksA.slice(0, 3).join("; ") : ""}. ${ideaB.title} has ${risksB.length} failure risk${risksB.length !== 1 ? "s" : ""}${risksB.length > 0 ? ": " + risksB.slice(0, 3).join("; ") : ""}.`;
-
-  // Execution asymmetry
-  const estA = ideaA.analysis.estimates || {}, estB = ideaB.analysis.estimates || {};
-  const executionAsymmetry = `${ideaA.title}: ${estA.duration || "N/A"} duration, ${estA.difficulty || "N/A"} difficulty, ${(ideaA.analysis.phases || []).length} roadmap phases. ${ideaB.title}: ${estB.duration || "N/A"} duration, ${estB.difficulty || "N/A"} difficulty, ${(ideaB.analysis.phases || []).length} roadmap phases.`;
-
-  return {
-    idea_a: {
-      title: ideaA.title,
-      scores: aScores,
-      failure_risks: risksA,
-      evidence_strength: aE.evidence_strength || null,
-      competition_summary: extractCompSummary(ideaA.analysis),
-      competitor_count: extractCompCount(ideaA.analysis),
-      roadmap_phase_count: (ideaA.analysis.phases || []).length,
-      estimated_duration: estA.duration || "N/A",
-      estimated_difficulty: estA.difficulty || "N/A",
-    },
-    idea_b: {
-      title: ideaB.title,
-      scores: bScores,
-      failure_risks: risksB,
-      evidence_strength: bE.evidence_strength || null,
-      competition_summary: extractCompSummary(ideaB.analysis),
-      competitor_count: extractCompCount(ideaB.analysis),
-      roadmap_phase_count: (ideaB.analysis.phases || []).length,
-      estimated_duration: estB.duration || "N/A",
-      estimated_difficulty: estB.difficulty || "N/A",
-    },
-    deltas: {
-      md: +(aScores.md - bScores.md).toFixed(1),
-      mo: +(aScores.mo - bScores.mo).toFixed(1),
-      or: +(aScores.or - bScores.or).toFixed(1),
-      tc: +(aScores.tc - bScores.tc).toFixed(1),
-      overall: +(aScores.overall - bScores.overall).toFixed(1),
-    },
-    shared_competitors: [...data.sharedNames],
-    competitor_asymmetry: competitorAsymmetry,
-    risk_asymmetry: riskAsymmetry,
-    execution_asymmetry: executionAsymmetry,
-  };
-}
-
-export default function ComparisonView({ ideaA, ideaB, onBack, authToken, t }) {
-  const [cur, setCur] = useState(0);
-  const [tab, setTab] = useState("a");
-  const [isMobile, setIsMobile] = useState(false);
-  const [tradeoffsResult, setTradeoffsResult] = useState(null);
-  const [tradeoffsLoading, setTradeoffsLoading] = useState(false);
-  const [tradeoffsError, setTradeoffsError] = useState("");
-  useEffect(() => { const c = () => setIsMobile(window.innerWidth < 768); c(); window.addEventListener("resize", c); return () => window.removeEventListener("resize", c); }, []);
-
-  const data = prepareComparisonData(ideaA, ideaB);
-
-  // Background fetch tradeoffs on mount
-  useEffect(() => {
-    if (!authToken || tradeoffsResult) return;
-    const fetchTradeoffs = async () => {
-      setTradeoffsLoading(true);
-      setTradeoffsError("");
-      try {
-        const payload = buildTradeoffsPayload(ideaA, ideaB, data);
-        const res = await fetch("/api/compare/tradeoffs", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
-          body: JSON.stringify({ comparisonData: payload }),
-        });
-        const json = await res.json();
-        if (json.error) throw new Error(json.error);
-        setTradeoffsResult(json.tradeoffs);
-      } catch (err) {
-        console.error("Tradeoffs fetch error:", err);
-        setTradeoffsError(err.message || "Failed to generate tradeoff analysis");
-      } finally {
-        setTradeoffsLoading(false);
-      }
-    };
-    fetchTradeoffs();
-  }, [authToken]);
-  const screen = SCREENS[cur];
-  const tA = shortTitle(ideaA.title, 28), tB = shortTitle(ideaB.title, 28);
-
-  const content = (() => {
-    switch (screen.key) {
-      case "competitors": return <CompetitorsScreen data={data} ideaA={ideaA} ideaB={ideaB} isMobile={isMobile} activeTab={tab} t={t} />;
-      case "scores": return <ScoresScreen data={data} isMobile={isMobile} activeTab={tab} t={t} />;
-      case "risks": return <RisksScreen data={data} isMobile={isMobile} activeTab={tab} t={t} />;
-      case "roadmap": return <RoadmapScreen data={data} isMobile={isMobile} activeTab={tab} t={t} />;
-      case "tools": return <ToolsScreen data={data} isMobile={isMobile} activeTab={tab} t={t} />;
-      case "tradeoffs": return <TradeoffsScreen data={data} ideaA={ideaA} ideaB={ideaB} tradeoffsResult={tradeoffsResult} tradeoffsLoading={tradeoffsLoading} tradeoffsError={tradeoffsError} t={t} />;
-      default: return null;
-    }
-  })();
+  const column = (side, name, body) => (
+    <div style={{ minWidth: 0, display: "flex", flexDirection: "column", borderRadius: 16, ...lift(winSide === side) }}>
+      <IdeaTag side={side} name={name} t={t} />
+      {equalize ? <div style={{ flex: 1, display: "grid" }}>{body}</div> : body}
+    </div>
+  );
 
   return (
-    <div style={{ maxWidth: 920, margin: "0 auto", padding: "0 16px" }}>
-      <button onClick={onBack} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer", padding: "12px 0", marginBottom: 8 }}>← Back to My Ideas</button>
-      <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 16, overflow: "hidden" }}>
-        {/* Screen tabs */}
-        <div style={{ display: "flex", borderBottom: `1px solid ${t.border}`, overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-          {SCREENS.map((s, i) => (
-            <button key={s.key} onClick={() => setCur(i)} style={{ flex: isMobile ? "none" : 1, padding: isMobile ? "10px 14px" : "10px 8px", fontSize: 12, fontWeight: 500, border: "none", cursor: "pointer", whiteSpace: "nowrap", background: i === cur ? t.surface : t.bg, color: i === cur ? t.text : t.mut, borderBottom: i === cur ? `2px solid ${t.text}` : "2px solid transparent" }}>{s.label}</button>
-          ))}
-        </div>
-        {/* Column headers / tab toggle */}
-        {screen.key !== "tradeoffs" && (
-          isMobile ? (
-            <div style={{ display: "flex", borderBottom: `1px solid ${t.border}` }}>
-              {["a", "b"].map(s => (
-                <button key={s} onClick={() => setTab(s)} style={{ flex: 1, padding: 10, fontSize: 13, fontWeight: 500, border: "none", cursor: "pointer", background: tab === s ? t.surface : t.bg, color: tab === s ? t.text : t.mut, borderBottom: tab === s ? `2px solid ${t.text}` : "2px solid transparent" }}>{s === "a" ? tA : tB}</button>
-              ))}
-            </div>
-          ) : (
-            <div style={{ display: "flex", borderBottom: `1px solid ${t.border}` }}>
-              <div style={{ flex: 1, padding: "12px 20px", background: t.surfAlt, borderRight: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: t.text }}>{tA}</span>
-                <span style={{ fontSize: 13, color: t.mut, fontFamily: "monospace" }}>{data.overallA.toFixed(1)}</span>
-              </div>
-              <div style={{ flex: 1, padding: "12px 20px", background: t.surfAlt, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: t.text }}>{tB}</span>
-                <span style={{ fontSize: 13, color: t.mut, fontFamily: "monospace" }}>{data.overallB.toFixed(1)}</span>
-              </div>
-            </div>
-          )
-        )}
-        {/* Content */}
-        <div style={{ minHeight: 200 }}>{content}</div>
-        {/* Nav */}
-        <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 16px", borderTop: `1px solid ${t.border}` }}>
-          <button onClick={() => setCur(p => Math.max(0, p - 1))} style={{ padding: "8px 16px", fontSize: 12, border: `1px solid ${t.border}`, borderRadius: 8, background: "transparent", color: t.mut, cursor: "pointer", visibility: cur === 0 ? "hidden" : "visible" }}>← {cur > 0 ? SCREENS[cur - 1].label : ""}</button>
-          <div style={{ display: "flex", gap: 5, alignItems: "center" }}>{SCREENS.map((_, i) => <div key={i} onClick={() => setCur(i)} style={{ width: 6, height: 6, borderRadius: "50%", background: i === cur ? t.text : t.divider, cursor: "pointer" }} />)}</div>
-          <button onClick={() => setCur(p => Math.min(SCREENS.length - 1, p + 1))} style={{ padding: "8px 16px", fontSize: 12, border: `1px solid ${t.border}`, borderRadius: 8, background: "transparent", color: t.mut, cursor: "pointer", visibility: cur === SCREENS.length - 1 ? "hidden" : "visible" }}>{cur < SCREENS.length - 1 ? SCREENS[cur + 1].label : ""} →</button>
-        </div>
+    <div style={{ position: "relative" }}>
+      {/* floating read, tethered down to the node */}
+      <PopHolder open={open} onClose={() => setOpen(false)} onReopen={() => setOpen(true)} section={section} accent={accent} nameA={nameA} nameB={nameB} loading={loading} t={t} />
+
+      {/* the node caps the seam and stays put at the top of the section — static, above the
+          columns, so it never travels with the scroll or covers a card */}
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 26 }}>
+        <SeamNode open={open} onToggle={() => setOpen((v) => !v)} section={section} accent={accent} nameA={nameA} nameB={nameB} loading={loading} t={t} />
+      </div>
+
+      {/* two ideas side by side; for metric surfaces the cards are equal-height so the
+          bottom-pinned feature (DEMAND TYPE / CAPTURE CASE) lines up across both */}
+      <div style={{ position: "relative", display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 56, alignItems: "stretch" }}>
+        <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: 1, background: t.divider || t.border, transform: "translateX(-50%)", pointerEvents: "none" }} />
+        {column("a", nameA, left)}
+        {column("b", nameB, right)}
       </div>
     </div>
   );
