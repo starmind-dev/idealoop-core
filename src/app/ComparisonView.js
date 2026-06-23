@@ -286,23 +286,19 @@ function splitParagraphs(text) {
   return out.length ? out : [text];
 }
 
-// Derive the closure's lean for the meter: net direction across the decisive axes
-// (falls back to all sections), scaled to a needle position. Reflects the real
-// comparison, not the raw score gap — A can outscore B yet the closure still tilt B.
-function deriveLean(closure, sections) {
-  if (!sections) return { dir: null, pos: 50 };
-  const keys = closure.decisive_axes && closure.decisive_axes.length ? closure.decisive_axes : SECTION_KEYS;
-  let net = 0;
-  let denom = 0;
-  keys.forEach((k) => {
-    const s = sections[k];
-    if (!s) return;
-    denom += 1;
-    if (s.separation === "winner") net += s.leans === "b" ? 1 : s.leans === "a" ? -1 : 0;
-  });
-  const frac = denom ? Math.max(-1, Math.min(1, net / denom)) : 0;
-  const pos = Math.max(12, Math.min(88, 50 + frac * 34));
-  return { dir: net > 0 ? "b" : net < 0 ? "a" : null, pos };
+// The needle tracks the two overall scores — the convergent Deep verdict. The
+// closure's narrative tilt is a prose point (it lives in the beats), so the
+// needle can never contradict the scores. (Earlier it was derived from section-
+// lean counts across decisive_axes, which let non-scored founder axes drag the
+// needle toward the LOWER-scored idea — the meter pointed the wrong way.)
+function deriveLean(scoreA, scoreB) {
+  const a = Number(scoreA);
+  const b = Number(scoreB);
+  if (!isFinite(a) || !isFinite(b)) return { dir: null, pos: 50 };
+  const gap = b - a; // positive → leans B (needle moves right)
+  const dir = gap > 0.05 ? "b" : gap < -0.05 ? "a" : null;
+  const pos = Math.max(12, Math.min(88, 50 + gap * 15));
+  return { dir, pos };
 }
 
 const SHAPE_QUALIFIER = {
@@ -341,7 +337,7 @@ function CompareClosure({ closure, nameA, nameB, scoreA, scoreB, sections, loadi
       ? closure.beats.filter((b) => b && b.text)
       : splitParagraphs(closure.text).map((text) => ({ text }));
 
-  const { dir, pos } = deriveLean(closure, sections);
+  const { dir, pos } = deriveLean(scoreA, scoreB);
   const leanName = dir === "a" ? nameA : dir === "b" ? nameB : null;
   const qual = SHAPE_QUALIFIER[closure.decision_shape] || "close";
   const sA = Number(scoreA || 0).toFixed(1);
