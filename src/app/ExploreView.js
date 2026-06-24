@@ -953,6 +953,7 @@ export default function ExploreView({
   onExploreVariation, // parent "Explore again" — re-widen idea-x
   onSaveExplore,     // parent "Save" — keep idea-x + all angles as one family
   savedBranchTexts,  // Set of branch texts already saved under this family (page.js)
+  handledAngleIds,   // Set of angle ids already taken forward (id-based, edit-proof)
 }) {
   if (!analysis || analysis.schema_version !== "ll2_explore_v1") return null;
 
@@ -971,16 +972,19 @@ export default function ExploreView({
     }
   }, [onSaveBranch]);
 
-  // Effective per-angle save state. Persisted saves (savedBranchTexts — derived in
-  // page.js from the family's REAL children, so it survives leaving + returning)
-  // seed "saved"; live in-session state overrides it (saving / error / just-saved).
-  // Match is by branch text: a saved rough child stores the angle text verbatim.
+  // Effective per-angle save state. Persisted handled-state (from page.js, derived
+  // from the family's REAL children so it survives leaving + returning) seeds
+  // "saved"; live in-session state overrides it (saving / error / just-saved).
+  // An angle counts as handled by ID (origin_angle_id on any child — robust to
+  // seed edits when taken to Deep/Explore) OR by branch TEXT (a rough-branch save
+  // stores the angle text verbatim; kept for older rows with no id).
   const persistedSaved = {};
-  if (savedBranchTexts && savedBranchTexts.size) {
-    (angles || []).forEach((a) => {
-      if (savedBranchTexts.has((a.branch_idea_text || "").trim())) persistedSaved[a.id] = "saved";
-    });
-  }
+  (angles || []).forEach((a) => {
+    const byId = handledAngleIds && handledAngleIds.has(a.id);
+    const byText =
+      savedBranchTexts && savedBranchTexts.has((a.branch_idea_text || "").trim());
+    if (byId || byText) persistedSaved[a.id] = "saved";
+  });
   const effectiveState = { ...persistedSaved, ...saveState };
   // Idempotent save: an already-saved (or in-flight) angle never re-POSTs, so the
   // same direction can't be saved twice into a pile of duplicates.

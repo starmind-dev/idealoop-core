@@ -2726,13 +2726,17 @@ export default function Home() {
                   // run), matching the lineage take-forward (onAdvance). The rough
                   // node graduates in place when they run: graduatingIdeaId carries
                   // its id, savedExploreIdeaId is cleared so it wins at the run.
+                  // hubReturnView -> "evaluated" so "← My Ideas" after graduating
+                  // lands where the now-evaluated card lives, not the rough shelf
+                  // it just left (mirrors onAdvance).
                   if (!roughRoomIdea) return;
+                  setHubReturnView("evaluated");
                   setSavedExploreIdeaId(null);
                   setGraduatingIdeaId(roughRoomIdea.id);
                   goToInput("explore", roughRoomIdea.text || "", true);
                 }}
-                disabled={isAnalyzing || !roughRoomIdea}
-                style={{ padding: "14px 26px", borderRadius: 12, fontSize: 14, fontWeight: 600, background: "transparent", color: isAnalyzing || !roughRoomIdea ? t.mut : t.text, border: `1px solid ${t.border}`, cursor: isAnalyzing || !roughRoomIdea ? "not-allowed" : "pointer", opacity: isAnalyzing || !roughRoomIdea ? 0.55 : 1 }}
+                disabled={!roughRoomIdea}
+                style={{ padding: "14px 26px", borderRadius: 12, fontSize: 14, fontWeight: 600, background: "transparent", color: !roughRoomIdea ? t.mut : t.text, border: `1px solid ${t.border}`, cursor: !roughRoomIdea ? "not-allowed" : "pointer", opacity: !roughRoomIdea ? 0.55 : 1 }}
               >
                 Explore
               </button>
@@ -2742,16 +2746,18 @@ export default function Home() {
                   // Route to the Deep INPUT screen pre-filled — review/edit before
                   // spending a credit (NOT an instant run), as the lineage
                   // take-forward (onAdvance) does. The rough node graduates in place
-                  // on run via graduatingIdeaId.
+                  // on run via graduatingIdeaId. hubReturnView -> "evaluated" so back
+                  // lands on the shelf the now-deep card moved to.
                   if (!roughRoomIdea) return;
+                  setHubReturnView("evaluated");
                   setSavedExploreIdeaId(null);
                   setGraduatingIdeaId(roughRoomIdea.id);
                   goToInput("deep", roughRoomIdea.text || "", true);
                 }}
-                disabled={isAnalyzing || !roughRoomIdea}
-                style={{ padding: "14px 34px", borderRadius: 12, fontSize: 14, fontWeight: 600, border: "none", cursor: isAnalyzing || !roughRoomIdea ? "not-allowed" : "pointer", background: isAnalyzing || !roughRoomIdea ? t.surfAlt : t.ctaBg, color: isAnalyzing || !roughRoomIdea ? t.mut : t.ctaText }}
+                disabled={!roughRoomIdea}
+                style={{ padding: "14px 34px", borderRadius: 12, fontSize: 14, fontWeight: 600, border: "none", cursor: !roughRoomIdea ? "not-allowed" : "pointer", background: !roughRoomIdea ? t.surfAlt : t.ctaBg, color: !roughRoomIdea ? t.mut : t.ctaText }}
               >
-                {isAnalyzing ? "Analyzing..." : "Deep evaluate"}
+                Deep evaluate
               </button>
             </div>
 

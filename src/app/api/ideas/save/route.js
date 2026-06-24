@@ -154,6 +154,11 @@ export async function POST(request) {
       // to ALL new-idea saves now — an explore angle, an explore RESULT, or a DEEP
       // eval taken straight from an angle. Absent = a fresh root.
       parent_idea_id,
+      // PROVENANCE BY ID: the id of the explore angle this idea was born from
+      // (rough-branch save, or an angle taken to Deep/Explore). Stored so the fan
+      // recognizes a handled angle by id, NOT by matching text — editing the seed
+      // before running no longer breaks the link. Null for non-angle saves.
+      origin_angle_id,
     } = body;
 
     const isExplore = mode === "explore";
@@ -369,6 +374,9 @@ export async function POST(request) {
       raw_idea_text: idea_text,
       profile_context_json: profile || {},
       status: "active",
+      // Angle provenance by id (null for non-angle saves). Lets the fan mark an
+      // angle handled by id rather than text, surviving seed edits.
+      origin_angle_id: origin_angle_id || null,
     };
 
     if (isExplore && !isExploreResult) {
