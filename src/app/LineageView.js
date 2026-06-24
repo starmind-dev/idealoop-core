@@ -172,13 +172,13 @@ function RefreshIcon() {
 export default function LineageView({
   myIdeas, targetIdeaId, t, onBack, onViewIdea, onStartComparison,
   onUpdateIdea, onDelete, onAdvance, onReEvaluate, loadingIdeaId,
+  compareSelected, onAddToCompare,
 }) {
   const [nodes, setNodes] = useState(() => deriveNodesFromMyIdeas(myIdeas, targetIdeaId));
   const [selected, setSelected] = useState(null);
   const [hover, setHover] = useState(null);
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
-  const [compare, setCompare] = useState([]); // ids, max 2
   const [toast, setToast] = useState(null);
   const [renaming, setRenaming] = useState(null); // { id, draft }
   const [detail, setDetail] = useState({}); // id -> { loading, verdict, reflection }
@@ -365,31 +365,19 @@ export default function LineageView({
     flash("Set as lead version");
   };
 
-  // ---- compare (same-mode guard; rough excluded) ----
-  const toggleCompare = (id) => {
+  // ---- compare → the global, cross-space tray (Deep-only) ----
+  // Routes a Deep node into the page-level basket so it can be paired with a node
+  // from another lineage tree or the evaluated room. Non-Deep nodes have no
+  // evaluation to compare; the tray itself lives below, rendered by page.js.
+  const addToCompare = (id) => {
     const node = posById[id];
     if (!node) return;
-    if (node.mode === "rough") { flash("Rough ideas have no evaluation to compare."); return; }
-    setCompare((prev) => {
-      const i = prev.indexOf(id);
-      if (i >= 0) return prev.filter((x) => x !== id);
-      if (prev.length === 1) {
-        const other = posById[prev[0]];
-        if (other && other.mode !== node.mode) {
-          flash("Compare needs two of the same type — two Deep, or two Explore.");
-          return prev;
-        }
-      }
-      const next = [...prev];
-      if (next.length >= 2) next.shift();
-      next.push(id);
-      flash(next.length === 2 ? "Two ideas ready to compare" : "Added to compare");
-      return next;
-    });
-  };
-  const doCompare = () => {
-    if (compare.length === 2) onStartComparison(compare.map((id) => ({ ideaId: id, evaluationId: null })));
-    else flash("Pick two ideas of the same type to compare");
+    if (node.mode !== "deep") { flash("Compare works on Deep analyses — run a Deep pass first."); return; }
+    const already = (compareSelected || []).some((s) => s.ideaId === id);
+    if (!already && (compareSelected || []).length >= 2) { flash("Compare is full — remove one in the tray first."); return; }
+    const title = node.title || (myIdeas.find((i) => i.id === id) || {}).title || "Idea";
+    onAddToCompare && onAddToCompare(id, null, { title, origin: "lineage", mode: "deep" });
+    flash(already ? "Removed from compare" : "Added to compare");
   };
 
   // ---- rename / delete ----
@@ -444,7 +432,7 @@ export default function LineageView({
     return () => { cancel = true; };
   }, [selected, posById]);
 
-  const cmpSet = new Set(compare);
+  const cmpSet = new Set((compareSelected || []).map((s) => s.ideaId));
 
   // ---- edges ----
   const edges = useMemo(() => {
@@ -636,9 +624,11 @@ export default function LineageView({
                 <ToolBtn title="Rename" onClick={(e) => { e.stopPropagation(); startRename(n.id); }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
                 </ToolBtn>
-                <ToolBtn title="Compare" active={inCmp} activeColor={m.a} activeBg={m.s} onClick={(e) => { e.stopPropagation(); toggleCompare(n.id); }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><path d="M13 6h3a2 2 0 0 1 2 2v7" /><path d="M11 18H8a2 2 0 0 1-2-2V9" /></svg>
-                </ToolBtn>
+                {n.mode === "deep" && (
+                  <ToolBtn title={inCmp ? "In compare" : "Add to compare"} active={inCmp} activeColor={m.a} activeBg={m.s} onClick={(e) => { e.stopPropagation(); addToCompare(n.id); }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><path d="M13 6h3a2 2 0 0 1 2 2v7" /><path d="M11 18H8a2 2 0 0 1-2-2V9" /></svg>
+                  </ToolBtn>
+                )}
                 {onDelete && (
                   <ToolBtn title="Remove" danger onClick={(e) => { e.stopPropagation(); deleteNode(n.id); }}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
@@ -713,12 +703,6 @@ export default function LineageView({
           <div style={{ width: 1, height: 18, background: "rgba(125,145,185,0.16)", margin: "0 2px" }} />
           <CtrlBtn title="Fit to view" onClick={(e) => { e.stopPropagation(); fit(); }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M21 8V5a2 2 0 0 0-2-2h-3" /><path d="M3 16v3a2 2 0 0 0 2 2h3" /><path d="M16 21h3a2 2 0 0 0 2-2v-3" /></svg></CtrlBtn>
         </div>
-
-        {/* compare button */}
-        <button onClick={(e) => { e.stopPropagation(); doCompare(); }} style={{ position: "absolute", right: 24, bottom: 24, display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 11, border: `1px solid ${compare.length === 2 ? "rgba(111,161,234,0.4)" : "rgba(125,145,185,0.16)"}`, background: compare.length === 2 ? "linear-gradient(180deg, rgba(111,161,234,0.22), rgba(111,161,234,0.08))" : "rgba(10,14,24,0.82)", color: compare.length === 2 ? "#eaf0fb" : "#8893a8", fontSize: 13, fontFamily: "inherit", fontWeight: 600, cursor: "pointer", backdropFilter: "blur(10px)", boxShadow: compare.length === 2 ? "0 10px 30px -10px rgba(111,161,234,0.5)" : "0 10px 30px -12px rgba(0,0,0,0.8)", transition: "all .2s", zIndex: 30 }}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><path d="M13 6h3a2 2 0 0 1 2 2v7" /><path d="M11 18H8a2 2 0 0 1-2-2V9" /></svg>
-          {compare.length ? `Compare (${compare.length}/2)` : "Compare"}
-        </button>
 
         {toast && (
           <div style={{ position: "absolute", left: "50%", bottom: 26, transform: "translateX(-50%)", padding: "9px 16px", borderRadius: 10, background: "rgba(14,20,34,0.95)", border: "1px solid rgba(125,145,185,0.2)", color: "#dce3f0", fontSize: 12.5, boxShadow: "0 12px 34px -10px rgba(0,0,0,0.8)", backdropFilter: "blur(10px)", zIndex: 60 }}>{toast}</div>
@@ -852,7 +836,7 @@ export default function LineageView({
               <button onClick={() => onViewIdea(selected)} style={{ width: "100%", padding: 11, borderRadius: 10, border: `1px solid ${sMode.b}`, background: `linear-gradient(180deg, ${sMode.s}, rgba(255,255,255,0.02))`, color: "#eaf0fb", fontSize: 13, fontFamily: "inherit", fontWeight: 600, cursor: "pointer" }}>Open this idea</button>
               <div style={{ display: "flex", gap: 8 }}>
                 {sNode.mode === "deep" && (
-                  <button onClick={() => toggleCompare(selected)} style={btnPanelGhost}>{cmpSet.has(selected) ? "In compare" : "Compare"}</button>
+                  <button onClick={() => addToCompare(selected)} style={btnPanelGhost}>{cmpSet.has(selected) ? "In compare" : "Add to compare"}</button>
                 )}
                 <button onClick={() => startRename(selected)} style={btnPanelGhost}>Edit</button>
               </div>

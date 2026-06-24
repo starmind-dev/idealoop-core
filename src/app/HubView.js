@@ -393,7 +393,7 @@ function RoughCard({ card, edit, onOpen, onMenu }) {
 /* =========================================================================
    CONTEXT MENU
    ========================================================================= */
-function ContextMenu({ menu, folders, onClose, setStep, onRename, onAskDelete, onDelete, onMove, onMoveNew }) {
+function ContextMenu({ menu, folders, onClose, setStep, onRename, onAskDelete, onDelete, onMove, onMoveNew, isDeep, inCompare, compareFull, onAddCompare }) {
   const { step, top, left } = menu;
   const item = (label, color, icon, onClick, extra) => (
     <div onClick={onClick} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 11px", borderRadius: 9, fontSize: 13.5, color, cursor: "pointer" }}
@@ -407,6 +407,14 @@ function ContextMenu({ menu, folders, onClose, setStep, onRename, onAskDelete, o
       <div style={{ position: "fixed", zIndex: 71, width: 210, top, left, background: "linear-gradient(180deg,#171C28,#10141D)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 13, padding: 6, boxShadow: "0 24px 60px -20px rgba(0,0,0,0.9)", animation: "hub-popIn .14s ease both" }}>
         {step === "main" && (
           <>
+            {isDeep && (
+              inCompare
+                ? item("Remove from compare", "#C9BEFF", <ICompare s={15} />, onAddCompare, "rgba(150,135,250,0.12)")
+                : compareFull
+                  ? <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 11px", borderRadius: 9, fontSize: 13.5, color: "#5B6478", cursor: "not-allowed" }}><ICompare s={15} />Compare is full (2)</div>
+                  : item("Add to compare", "#B6AAFF", <ICompare s={15} />, onAddCompare, "rgba(150,135,250,0.12)")
+            )}
+            {isDeep && <div style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "5px 8px" }} />}
             {item("Rename", "#D2D8E4", <IPencil />, onRename)}
             <div onClick={() => setStep("move")} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 11px", borderRadius: 9, fontSize: 13.5, color: "#D2D8E4", cursor: "pointer" }} onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
               <IFolder s={15} />Move to folder<span style={{ marginLeft: "auto", opacity: 0.5 }}><IChevR /></span>
@@ -489,7 +497,7 @@ const SerifH1 = ({ children, count }) => (
   </h1>
 );
 
-export default function HubView({ t, onOpenIdea, onOpenLineage, onBack, onCompare, initialView, onViewChange }) {
+export default function HubView({ t, onOpenIdea, onOpenLineage, onBack, compareSelected, onAddToCompare, initialView, onViewChange }) {
   const [data, setData] = useState({ folders: [], rough: [], ideas: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -497,8 +505,6 @@ export default function HubView({ t, onOpenIdea, onOpenLineage, onBack, onCompar
   const [view, setView] = useState(initialView || "hub"); // hub | rough | evaluated  (lineage-back opens the evaluated room directly)
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all"); // all | explore | deep
-  const [comparePick, setComparePick] = useState(false); // hub-level Deep×Deep picker
-  const [comparePicks, setComparePicks] = useState([]); // up to 2 deep idea ids
   const [activeFolder, setActiveFolder] = useState(null);
 
   const [hover, setHover] = useState(null);            // { item, type, top, left }
@@ -681,9 +687,11 @@ export default function HubView({ t, onOpenIdea, onOpenLineage, onBack, onCompar
 
   const goView = (v) => { setView(v); setSearch(""); setFilter("all"); setActiveFolder(null); setHover(null); setMenu(null); setEditingId(null); onViewChange && onViewChange(v); };
 
-  const enterCompare = () => { setComparePick(true); setComparePicks([]); setFilter("deep"); setSearch(""); setHover(null); setMenu(null); setEditingId(null); };
-  const cancelCompare = () => { setComparePick(false); setComparePicks([]); setFilter("all"); };
-  const togglePick = (id) => setComparePicks((p) => p.includes(id) ? p.filter((x) => x !== id) : (p.length >= 2 ? p : [...p, id]));
+  // Compare is now the global cross-space tray. "Add to compare" toggles a Deep
+  // card into the page-level basket (carrying title + origin so its chip renders);
+  // membership shows as a faint violet ring + an "In compare" menu state.
+  const addToCompare = (card) => { if (card && card.mode === "deep") onAddToCompare && onAddToCompare(card.id, null, { title: card.title, origin: "evaluated", mode: "deep" }); setMenu(null); };
+  const inTray = (id) => (compareSelected || []).some((s) => s.ideaId === id);
 
   const cardHandlers = (card) => ({
     onOpen: () => { if (editingId === card.id) return; onOpenIdea && onOpenIdea(card.id, view); },
@@ -793,53 +801,25 @@ export default function HubView({ t, onOpenIdea, onOpenLineage, onBack, onCompar
         <SearchBox value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search evaluated ideas" />
       </div>
       <FolderRail {...railProps} />
-      {comparePick ? (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, marginBottom: 24, padding: "12px 16px", borderRadius: 14, background: "rgba(150,135,250,0.10)", border: "1px solid rgba(150,135,250,0.34)", flexWrap: "wrap" }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 9, fontSize: 13, color: "#C9BEFF", fontWeight: 500 }}>
-            <ICompare s={15} /> Pick 2 Deep evaluations to compare <span style={{ color: "#8A85B0" }}>· {comparePicks.length}/2 selected</span>
-          </span>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <button onClick={cancelCompare} style={{ fontSize: 12.5, color: "#9AA3B6", background: "none", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Cancel</button>
-            <button onClick={() => comparePicks.length === 2 && onCompare && onCompare(comparePicks[0], comparePicks[1])} disabled={comparePicks.length !== 2}
-              style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 12.5, fontWeight: 600, borderRadius: 999, padding: "8px 18px", cursor: comparePicks.length === 2 ? "pointer" : "not-allowed", border: "1px solid rgba(150,135,250,0.5)", background: comparePicks.length === 2 ? "rgba(150,135,250,0.22)" : "rgba(150,135,250,0.08)", color: comparePicks.length === 2 ? "#D7CEFF" : "#6A6786", opacity: comparePicks.length === 2 ? 1 : 0.7 }}>
-              Compare <IArrowR />
-            </button>
-          </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 9, flexWrap: "wrap" }}>
+          {tab("All", "all", evalAll.length, () => setFilter("all"))}
+          {tab("Explored", "explore", exploreCount, () => setFilter("explore"))}
+          {tab("Deep", "deep", deepCount, () => setFilter("deep"))}
         </div>
-      ) : (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
-          <div style={{ display: "flex", gap: 9, flexWrap: "wrap" }}>
-            {tab("All", "all", evalAll.length, () => setFilter("all"))}
-            {tab("Explored", "explore", exploreCount, () => setFilter("explore"))}
-            {tab("Deep", "deep", deepCount, () => setFilter("deep"))}
-          </div>
-          <button onClick={enterCompare} disabled={deepCount < 2} title={deepCount < 2 ? "Need at least 2 Deep evaluations" : "Compare two Deep evaluations"}
-            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", borderRadius: 999, fontSize: 12.5, fontWeight: 600, cursor: deepCount < 2 ? "not-allowed" : "pointer", border: `1px solid ${deepCount < 2 ? "rgba(150,135,250,0.18)" : "rgba(150,135,250,0.5)"}`, background: deepCount < 2 ? "rgba(150,135,250,0.05)" : "rgba(150,135,250,0.14)", color: deepCount < 2 ? "#6A6786" : "#C9BEFF", opacity: deepCount < 2 ? 0.7 : 1 }}>
-            <ICompare s={14} />Compare
-          </button>
-        </div>
-      )}
+      </div>
       {evalVisible.length === 0 ? (
         <div style={{ padding: "70px 0", textAlign: "center", color: "#5B6478", fontSize: 14.5 }}>{q ? "No evaluated ideas match that search." : "No evaluated ideas yet."}</div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(232px,1fr))", gap: 13 }}>
           {evalVisible.map((c) => {
-            if (comparePick) {
-              const picked = comparePicks.includes(c.id);
-              const order = comparePicks.indexOf(c.id) + 1;
-              return (
-                <div key={c.id} onClick={() => togglePick(c.id)} style={{ position: "relative", cursor: "pointer", borderRadius: 18, outline: picked ? "2px solid #AEA0FF" : "2px solid transparent", outlineOffset: 3, transition: "outline-color .15s" }}>
-                  <div style={{ pointerEvents: "none", opacity: picked ? 1 : 0.94 }}>
-                    <EvalCard card={c} edit={editFor(c)} onOpen={HUB_NOOP} onMenu={HUB_NOOP} onEnter={HUB_NOOP} onLeave={HUB_NOOP} onLineage={HUB_NOOP} />
-                  </div>
-                  {picked && (
-                    <span style={{ position: "absolute", top: 10, right: 10, width: 24, height: 24, borderRadius: 999, background: "#AEA0FF", color: "#171526", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, boxShadow: "0 2px 10px rgba(0,0,0,0.4)", zIndex: 3 }}>{order}</span>
-                  )}
-                </div>
-              );
-            }
             const h = cardHandlers(c);
-            return <EvalCard key={c.id} card={c} edit={editFor(c)} {...h} />;
+            const ring = inTray(c.id);
+            return (
+              <div key={c.id} style={{ position: "relative", borderRadius: 18, outline: ring ? "2px solid rgba(150,135,250,0.6)" : "2px solid transparent", outlineOffset: 3, transition: "outline-color .15s" }}>
+                <EvalCard card={c} edit={editFor(c)} {...h} />
+              </div>
+            );
           })}
         </div>
       )}
@@ -869,6 +849,10 @@ export default function HubView({ t, onOpenIdea, onOpenLineage, onBack, onCompar
       {hover && <HoverPopover hover={hover} preview={previews[hover.item.id]} />}
       {menu && (
         <ContextMenu menu={menu} folders={menuFolders} onClose={closeMenu} setStep={setMenuStep}
+          isDeep={menu.type === "deep"}
+          inCompare={inTray(menu.id)}
+          compareFull={(compareSelected || []).length >= 2}
+          onAddCompare={() => { const it = data.ideas.find((c) => c.id === menu.id); if (it) addToCompare(it); }}
           onRename={() => { const all = data.rough.concat(data.ideas); const it = all.find((c) => c.id === menu.id); if (it) startRename(it); }}
           onAskDelete={() => setMenuStep("confirm")} onDelete={() => removeIdea(menu.id)}
           onMove={(fid) => moveTo(menu.id, fid)} onMoveNew={() => moveToNew(menu.id)} />

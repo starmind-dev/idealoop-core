@@ -205,6 +205,58 @@ function LeaveGuardModal({ target, dest, onCancel, onLeave, onSave }) {
   );
 }
 
+// ============================================================================
+// CompareTray — the one persistent, cross-space compare basket.
+// Backed by page-level `compareSelected`; rendered as a viewport-fixed sibling
+// on the hub and lineage branches so a half-finished pick survives navigation
+// between lineage trees and the evaluated room. Deep-only (startComparison
+// refuses non-Deep), so the identity is violet throughout. Each chip carries
+// its origin so two same-titled branches stay distinguishable.
+// ============================================================================
+function CompareTray({ selected, onRemove, onClear, onCompare }) {
+  if (!selected || selected.length === 0) return null;
+  const VI = "#9a8fd8";
+  const full = selected.length === 2;
+  const originLabel = (o) => (o === "lineage" ? "from lineage" : o === "evaluated" ? "from evaluated" : "deep");
+  const ICmp = (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><path d="M13 6h3a2 2 0 0 1 2 2v7" /><path d="M11 18H8a2 2 0 0 1-2-2V9" /></svg>
+  );
+  const ITarget = (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4.3" /><circle cx="12" cy="12" r="0.8" fill="currentColor" stroke="none" /></svg>
+  );
+  const IArrow = (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
+  );
+  return (
+    <div style={{ position: "fixed", left: "50%", bottom: 26, transform: "translateX(-50%)", zIndex: 220, display: "flex", alignItems: "center", gap: 12, background: "linear-gradient(180deg, rgba(138,130,194,0.13), rgba(13,17,25,0.97)), #0b0e15", border: "1px solid rgba(138,130,194,0.42)", borderRadius: 15, padding: "11px 12px 11px 16px", boxShadow: "0 0 0 1px rgba(138,130,194,0.05), 0 16px 40px -16px rgba(138,130,194,0.6)", fontFamily: "inherit", backdropFilter: "blur(10px)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: "'JetBrains Mono',monospace", fontSize: 10.5, letterSpacing: "0.16em", color: VI, textTransform: "uppercase", paddingRight: 2 }}>
+        {ICmp} Compare <span style={{ color: "#5a6373", letterSpacing: "0.1em" }}>{selected.length} / 2</span>
+      </div>
+      {selected.map((s, i) => (
+        <div key={`${s.ideaId}:${s.evaluationId || "latest"}:${i}`} style={{ display: "flex", alignItems: "center", gap: 9, background: "rgba(138,130,194,0.10)", border: "1px solid rgba(138,130,194,0.32)", borderRadius: 10, padding: "7px 9px 7px 8px", maxWidth: 212 }}>
+          <span style={{ width: 22, height: 22, borderRadius: 7, background: "rgba(138,130,194,0.16)", border: "1px solid rgba(138,130,194,0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: VI, flex: "0 0 auto" }}>{ITarget}</span>
+          <span style={{ minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 12.5, color: "#dfe3ec", lineHeight: 1.15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: 500 }}>{s.title || "Idea"}</span>
+            <span style={{ display: "block", fontFamily: "'JetBrains Mono',monospace", fontSize: 9, letterSpacing: "0.06em", color: "#5a6373", marginTop: 2, textTransform: "uppercase" }}>deep · {originLabel(s.origin)}</span>
+          </span>
+          <span role="button" tabIndex={0} onClick={() => onRemove(s)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onRemove(s); } }} title="Remove" style={{ flex: "0 0 auto", width: 18, height: 18, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", color: "#5a6373", cursor: "pointer", fontSize: 13 }} onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "#e9ecf2"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#5a6373"; }}>✕</span>
+        </div>
+      ))}
+      {!full && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, border: "1px dashed rgba(138,130,194,0.34)", borderRadius: 10, padding: "8px 12px", color: "#8b94a3", fontSize: 12, fontFamily: "'JetBrains Mono',monospace", letterSpacing: "0.04em" }}>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", background: VI }} /> pick one more — anywhere
+        </div>
+      )}
+      {full && (
+        <span role="button" tabIndex={0} onClick={onClear} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClear(); } }} style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: "0.05em", color: "#5a6373", cursor: "pointer", padding: "0 4px" }} onMouseEnter={(e) => (e.currentTarget.style.color = "#8b94a3")} onMouseLeave={(e) => (e.currentTarget.style.color = "#5a6373")}>clear</span>
+      )}
+      <button onClick={() => full && onCompare()} disabled={!full} style={{ display: "flex", alignItems: "center", gap: 8, borderRadius: 11, padding: "10px 16px", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", fontFamily: "inherit", cursor: full ? "pointer" : "not-allowed", border: full ? "1px solid rgba(138,130,194,0.5)" : "1px solid rgba(255,255,255,0.06)", background: full ? "linear-gradient(180deg,#938ac9,#7d75b5)" : "rgba(255,255,255,0.04)", color: full ? "#fff" : "#5a6373", boxShadow: full ? "0 8px 22px -10px rgba(138,130,194,0.9)" : "none" }}>
+        Compare {IArrow}
+      </button>
+    </div>
+  );
+}
+
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState("dashboard");
   // Which room HubView opens to. Lineage-back sets "evaluated" so you land on the
@@ -1827,14 +1879,17 @@ export default function Home() {
 
   // Toggle idea/evaluation selection for comparison
   // Each entry is { ideaId, evaluationId } — evaluationId null means "use latest"
-  const toggleCompareSelect = (ideaId, evaluationId = null) => {
+  const toggleCompareSelect = (ideaId, evaluationId = null, meta = null) => {
     setCompareSelected((prev) => {
       const existingIndex = prev.findIndex(
         (s) => s.ideaId === ideaId && s.evaluationId === evaluationId
       );
       if (existingIndex !== -1) return prev.filter((_, i) => i !== existingIndex);
       if (prev.length >= 2) return prev; // max 2
-      return [...prev, { ideaId, evaluationId }];
+      // meta carries { title, origin, mode } so the global CompareTray can render a
+      // chip without a re-fetch. startComparison ignores these extra fields; the
+      // iv_nav persistence keeps them so a refresh mid-pick restores the basket.
+      return [...prev, { ideaId, evaluationId, ...(meta || {}) }];
     });
   };
 
@@ -1970,6 +2025,7 @@ export default function Home() {
   // ==========================================
   if (currentScreen === "dashboard" && !lineageMode && !compareMode) {
     return (
+      <>
       <DashboardShell
         t={t}
         active={dashView}
@@ -1989,7 +2045,8 @@ export default function Home() {
             onViewChange={setHubReturnView}
             onOpenIdea={(id, fromView) => { if (fromView) setHubReturnView(fromView); loadSavedIdea(id); }}
             onOpenLineage={(id) => { setLineageTargetId(id); setLineageMode(true); }}
-            onCompare={(idA, idB) => startComparison([{ ideaId: idA, evaluationId: null }, { ideaId: idB, evaluationId: null }])}
+            compareSelected={compareSelected}
+            onAddToCompare={(id, evalId, meta) => toggleCompareSelect(id, evalId, meta)}
           />
         ) : (
           <OverviewView
@@ -2002,6 +2059,13 @@ export default function Home() {
           />
         )}
       </DashboardShell>
+      <CompareTray
+        selected={compareSelected}
+        onRemove={(s) => toggleCompareSelect(s.ideaId, s.evaluationId)}
+        onClear={() => setCompareSelected([])}
+        onCompare={() => startComparison(compareSelected)}
+      />
+      </>
     );
   }
 
@@ -2626,6 +2690,7 @@ export default function Home() {
     // LINEAGE MODE: render LineageView instead of hub (subscribers only)
     if (lineageMode && lineageTargetId) {
       return (
+        <>
         <DashboardShell
           t={t}
           active="hub"
@@ -2669,6 +2734,8 @@ export default function Home() {
                 setLineageMode(false);
                 setLineageTargetId(null);
               }}
+              compareSelected={compareSelected}
+              onAddToCompare={(id, evalId, meta) => toggleCompareSelect(id, evalId, meta)}
               onUpdateIdea={updateIdea}
               onDelete={async (ideaId) => {
                 // Determine (from the current tree) whether the lineage node
@@ -2693,6 +2760,13 @@ export default function Home() {
               loadingIdeaId={loadingIdeaId}
             />
         </DashboardShell>
+        <CompareTray
+          selected={compareSelected}
+          onRemove={(s) => toggleCompareSelect(s.ideaId, s.evaluationId)}
+          onClear={() => setCompareSelected([])}
+          onCompare={() => startComparison(compareSelected)}
+        />
+        </>
       );
     }
 
