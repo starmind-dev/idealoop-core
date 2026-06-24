@@ -477,9 +477,10 @@ export default function Home() {
         evalId: currentEvaluationId,
         lineageMode, lineageTargetId,
         compareMode: !!(compareMode && compareData), compareSel,
+        hubRoom: hubReturnView,
       }));
     } catch (e) {}
-  }, [currentScreen, dashView, inputMode, currentIdeaId, savedIdeaId, savedExploreIdeaId, roughRoomIdea, currentEvaluationId, lineageMode, lineageTargetId, compareMode, compareData, compareSelected]);
+  }, [currentScreen, dashView, inputMode, currentIdeaId, savedIdeaId, savedExploreIdeaId, roughRoomIdea, currentEvaluationId, lineageMode, lineageTargetId, compareMode, compareData, compareSelected, hubReturnView]);
 
   // A freshly-evaluated result lives only in memory until Save creates its row. Stash the
   // finished result so a refresh before saving rehydrates it instead of losing it. The moment
@@ -583,6 +584,7 @@ export default function Home() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("hub") === "new" || params.get("view") === "overview") return;
     if (!nav || !nav.screen) return; // no snapshot → stay on the Overview landing
+    if (nav.hubRoom) setHubReturnView(nav.hubRoom); // which hub room (evaluated/rough) survives a refresh
 
     // Fresh, unsaved result still held in the browser stash — rehydrate straight from memory
     // (no server, no id yet). Only when there's no saved id for this screen; a saved idea
@@ -1951,6 +1953,7 @@ export default function Home() {
           <HubView
             t={t}
             initialView={hubReturnView}
+            onViewChange={setHubReturnView}
             onOpenIdea={(id, fromView) => { if (fromView) setHubReturnView(fromView); loadSavedIdea(id); }}
             onOpenLineage={(id) => { setLineageTargetId(id); setLineageMode(true); }}
             onCompare={(idA, idB) => startComparison([{ ideaId: idA, evaluationId: null }, { ideaId: idB, evaluationId: null }])}

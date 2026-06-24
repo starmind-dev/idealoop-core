@@ -489,7 +489,7 @@ const SerifH1 = ({ children, count }) => (
   </h1>
 );
 
-export default function HubView({ t, onOpenIdea, onOpenLineage, onBack, onCompare, initialView }) {
+export default function HubView({ t, onOpenIdea, onOpenLineage, onBack, onCompare, initialView, onViewChange }) {
   const [data, setData] = useState({ folders: [], rough: [], ideas: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -679,7 +679,7 @@ export default function HubView({ t, onOpenIdea, onOpenLineage, onBack, onCompar
   const exploreCount = data.ideas.filter((c) => c.mode === "explore").length;
   const deepCount = data.ideas.filter((c) => c.mode === "deep").length;
 
-  const goView = (v) => { setView(v); setSearch(""); setFilter("all"); setActiveFolder(null); setHover(null); setMenu(null); setEditingId(null); };
+  const goView = (v) => { setView(v); setSearch(""); setFilter("all"); setActiveFolder(null); setHover(null); setMenu(null); setEditingId(null); onViewChange && onViewChange(v); };
 
   const enterCompare = () => { setComparePick(true); setComparePicks([]); setFilter("deep"); setSearch(""); setHover(null); setMenu(null); setEditingId(null); };
   const cancelCompare = () => { setComparePick(false); setComparePicks([]); setFilter("all"); };
