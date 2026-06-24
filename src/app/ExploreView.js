@@ -357,8 +357,8 @@ function SaveAffordance({ state, onClick }) {
   // Section 4 Save tile). "as rough idea" names what the save does: a rough branch.
   const color = saved ? EX.bright : err ? "#fca5a5" : (h ? "#d7deea" : "#aab4c3");
   return (
-    <span onClick={saving ? undefined : onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
-      style={{ fontSize: 13.5, fontWeight: 500, color, display: "inline-flex", gap: 8, alignItems: "center", cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1, whiteSpace: "nowrap" }}>
+    <span onClick={saving || saved ? undefined : onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+      style={{ fontSize: 13.5, fontWeight: 500, color, display: "inline-flex", gap: 8, alignItems: "center", cursor: saving || saved ? "default" : "pointer", opacity: saving ? 0.7 : 1, whiteSpace: "nowrap" }}>
       {saved ? <Svg w={15} sw={2}><path d="M5 13l4 4L19 7" /></Svg> : <Svg w={15} sw={1.8}><path d="M12 5v14M5 12h14" /></Svg>} {label}
     </span>
   );
@@ -952,6 +952,7 @@ export default function ExploreView({
   onExploreAngle,    // per-angle "explore" — widen one angle into its own fan
   onExploreVariation, // parent "Explore again" — re-widen idea-x
   onSaveExplore,     // parent "Save" — keep idea-x + all angles as one family
+  savedBranchTexts,  // Set of branch texts already saved under this family (page.js)
 }) {
   if (!analysis || analysis.schema_version !== "ll2_explore_v1") return null;
 
@@ -969,6 +970,26 @@ export default function ExploreView({
       setSaveState((s) => { const n = { ...s }; list.forEach((id) => { if (n[id] !== "saved") n[id] = "error"; }); return n; });
     }
   }, [onSaveBranch]);
+
+  // Effective per-angle save state. Persisted saves (savedBranchTexts — derived in
+  // page.js from the family's REAL children, so it survives leaving + returning)
+  // seed "saved"; live in-session state overrides it (saving / error / just-saved).
+  // Match is by branch text: a saved rough child stores the angle text verbatim.
+  const persistedSaved = {};
+  if (savedBranchTexts && savedBranchTexts.size) {
+    (angles || []).forEach((a) => {
+      if (savedBranchTexts.has((a.branch_idea_text || "").trim())) persistedSaved[a.id] = "saved";
+    });
+  }
+  const effectiveState = { ...persistedSaved, ...saveState };
+  // Idempotent save: an already-saved (or in-flight) angle never re-POSTs, so the
+  // same direction can't be saved twice into a pile of duplicates.
+  const onSaveAngle = (a) => {
+    if (!a) return;
+    const st = effectiveState[a.id];
+    if (st === "saved" || st === "saving") return;
+    saveBranch([a.id]);
+  };
 
   // Explore neutral surface palette — pinned to the locked mockup
   // (explore-mode-final.html), which uses faintly blue-tinted darks for cohesion
@@ -1006,7 +1027,7 @@ export default function ExploreView({
           <SeedSurface idea={idea} t={xt} />
           <ReadSurface read={read} t={xt} />
           <FanSurface idea={idea} angles={angles} fanState={fanState} t={xt}
-            onSave={(a) => saveBranch([a.id])} saveState={saveState}
+            onSave={onSaveAngle} saveState={effectiveState}
             onExploreAngle={(a) => onExploreAngle && onExploreAngle(a)}
             onTakeToDeep={onTakeToDeep} branchReason={read?.branchability?.reason} />
           <TerrainSurface terrain={terrain} angles={angles} t={xt} />

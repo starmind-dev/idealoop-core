@@ -1909,7 +1909,7 @@ export default function Home() {
     setHubReturnView("hub"); // a rail destination is a fresh hub entry → chooser (open-from-room overrides this)
     if (key === "overview") { setCurrentScreen("dashboard"); setDashView("overview"); }
     else if (key === "hub") goToMyIdeas();
-    else if (key === "explore") { setExploreSourceIdea(null); setInputMode("explore"); setSpecificityGate(null); setCurrentScreen("input"); }
+    else if (key === "explore") { setExploreSourceIdea(null); setPendingGraduateParent(false); setInputMode("explore"); setSpecificityGate(null); setCurrentScreen("input"); }
     else if (key === "deep") { setExploreSourceIdea(null); setPendingGraduateParent(false); setInputMode("deep"); setSpecificityGate(null); setCurrentScreen("input"); }
     // settings / plan / help: not wired yet
   };
@@ -2103,7 +2103,7 @@ export default function Home() {
         ) : (
           <OverviewView
             t={t}
-            onStartExplore={() => { setSpecificityGate(null); setInputMode("explore"); setCurrentScreen("input"); }}
+            onStartExplore={() => { setPendingGraduateParent(false); setSpecificityGate(null); setInputMode("explore"); setCurrentScreen("input"); }}
             onStartDeep={() => { setPendingGraduateParent(false); setSpecificityGate(null); setInputMode("deep"); setCurrentScreen("input"); }}
             onContinue={(id) => loadSavedIdea(id)}
             onOpenIdea={(id) => loadSavedIdea(id)}
@@ -2372,7 +2372,7 @@ export default function Home() {
           t={t}
           idea={idea}
           setIdea={setIdea}
-          onRun={() => handleAnalyze("explore")}
+          onRun={() => handleAnalyze("explore", null, pendingGraduateParent ? (graduatingIdeaId || null) : null)}
           onBack={goToMyIdeas}
           isAnalyzing={isAnalyzing}
           evalsRemaining={evalsRemaining}
@@ -2773,6 +2773,22 @@ export default function Home() {
                 setPendingReEvalId(ideaId);
                 await loadSavedIdea(ideaId);
               }}
+              onAdvance={(ideaId, action) => {
+                // Take a node forward to the matching INPUT screen, pre-filled — the
+                // founder reviews/edits the seed before spending a credit (NOT an
+                // instant run). Set up to graduate THIS node in place when they run:
+                // graduatingIdeaId carries the node id, and savedExploreIdeaId is
+                // cleared so it (not a stale saved-explore) wins at the Deep run.
+                const node = myIdeas.find((i) => i.id === ideaId);
+                if (!node) return;
+                const text = node.raw_idea_text || node.title || "";
+                setHubReturnView("evaluated");
+                setLineageMode(false);
+                setLineageTargetId(null);
+                setSavedExploreIdeaId(null);
+                setGraduatingIdeaId(ideaId);
+                goToInput(action, text, true);
+              }}
               onViewIdea={async (ideaId) => {
                 setLoadingIdeaId(ideaId);
                 await loadSavedIdea(ideaId);
@@ -2998,6 +3014,19 @@ export default function Home() {
   // SCREEN: EXPLORE (delegated to ExploreView)
   // ==========================================
   if (currentScreen === "explore" && exploreAnalysis) {
+    // Which angles are ALREADY saved (as rough branches) under this explore family.
+    // Derived from the real saved ideas so the per-angle "saved" state survives
+    // leaving + returning (ExploreView's own state is per-mount) and blocks dup
+    // saves. Family id: the explore saved this session, else the reopened one.
+    const exploreFamilyId = savedExploreIdeaId || (viewingFromSaved ? currentIdeaId : null);
+    const savedBranchTexts = exploreFamilyId
+      ? new Set(
+          (myIdeas || [])
+            .filter((i) => i.parent_idea_id === exploreFamilyId)
+            .map((i) => (i.raw_idea_text || "").trim())
+            .filter(Boolean)
+        )
+      : null;
     return (
       <DashboardShell
         t={t}
@@ -3012,6 +3041,7 @@ export default function Home() {
         screen="explore"
         t={t}
         analysis={exploreAnalysis}
+        savedBranchTexts={savedBranchTexts}
         user={user}
         viewingFromSaved={viewingFromSaved}
         showAuthModal={showAuthModal}
@@ -3051,6 +3081,9 @@ export default function Home() {
               throw new Error(e.error || "Save failed");
             }
           }
+          // Refresh so the derived "saved" state (savedBranchTexts) reflects this
+          // save on return — ExploreView's own per-mount state is lost on remount.
+          fetchMyIdeas();
         }}
         onTakeToDeep={(angleId, opts) => {
           // Reroute to Deep's INPUT screen (don't auto-run): the founder reviews /
