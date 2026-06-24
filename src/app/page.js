@@ -213,6 +213,9 @@ export default function Home() {
   // Lineage deep "Re-evaluate": load the idea first, then fire startReEvaluation
   // from an effect (it reads analysis/currentIdeaId off state — avoids a stale closure).
   const [pendingReEvalId, setPendingReEvalId] = useState(null);
+  // Which entry path opened re-eval: "lineage" (from the tree) or "analysis" (from
+  // a saved deep result opened off the Evaluated card). The back link points home.
+  const [reEvalSource, setReEvalSource] = useState("analysis");
   // Which view the Dashboard shell shows; the rail stays put, only this swaps.
   const [dashView, setDashView] = useState("overview"); // "overview" | "hub"
   const [profile, setProfile] = useState({ coding: "", ai: "", education: "" });
@@ -1181,7 +1184,10 @@ export default function Home() {
     }
   };
 
-  const startReEvaluation = () => {
+  const startReEvaluation = (source) => {
+    // Record the entry path so the back link points home: "lineage" (from the tree)
+    // → back to this idea's lineage; anything else → back to the analysis.
+    setReEvalSource(source === "lineage" ? "lineage" : "analysis");
     // Capture context snapshot for the "Evolve This Idea" screen
     const ideaTitle = myIdeas.find(i => i.id === currentIdeaId)?.title || "";
     setReEvalContextSnapshot(analysis ? {
@@ -1742,7 +1748,7 @@ export default function Home() {
   useEffect(() => {
     if (pendingReEvalId && currentIdeaId === pendingReEvalId && analysis) {
       setPendingReEvalId(null);
-      startReEvaluation();
+      startReEvaluation("lineage");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingReEvalId, currentIdeaId, analysis]);
@@ -2756,17 +2762,18 @@ export default function Home() {
         onNavigate={railNav}
       >
         <PageContainer>
-          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 14, padding: "4px 0 0" }}>
-            {/* Two directions out of re-eval. Lineage is idea-specific (this idea's
-                family tree); analysis is its deep evaluation. Re-eval can be entered
-                from either side, so neither is labelled "back". */}
-            <button onClick={() => { setReEvalMode(false); setCurrentScreen("dashboard"); setLineageTargetId(currentIdeaId); setLineageMode(true); }} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
-              Go to lineage
-            </button>
-            <span style={{ width: 1, height: 11, background: "rgba(255,255,255,0.14)" }} />
-            <button onClick={() => { setReEvalMode(false); setCurrentScreen("results2"); }} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
-              Go to the analysis
-            </button>
+          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", padding: "4px 0 0" }}>
+            {/* Contextual back: re-eval has two entry paths. From the lineage tree →
+                back to that idea's lineage; from a saved deep result → back to the analysis. */}
+            {reEvalSource === "lineage" ? (
+              <button onClick={() => { setReEvalMode(false); setCurrentScreen("dashboard"); setLineageTargetId(currentIdeaId); setLineageMode(true); }} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                ← Go back to the lineage
+              </button>
+            ) : (
+              <button onClick={() => { setReEvalMode(false); setCurrentScreen("results2"); }} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                ← Go back to the analysis
+              </button>
+            )}
           </div>
         </PageContainer>
 
