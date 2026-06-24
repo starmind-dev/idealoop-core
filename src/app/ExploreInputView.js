@@ -74,7 +74,7 @@ const RAIL = [
   { label: "FROM HERE", Icon: IcArrow },
 ];
 
-export default function ExploreInputView({ t, idea, setIdea, onRun, isAnalyzing, evalsRemaining, gateNode, error }) {
+export default function ExploreInputView({ t, idea, setIdea, onRun, isAnalyzing, evalsRemaining, gateNode, error, sourceIdea, onBackToSource }) {
   const inputRef = useRef(null);
   const noEvals = evalsRemaining != null && evalsRemaining <= 0;
   const canRun = !!(idea && idea.trim()) && !isAnalyzing && !noEvals;
@@ -93,7 +93,7 @@ export default function ExploreInputView({ t, idea, setIdea, onRun, isAnalyzing,
 
   return (
     <div style={{ position: "relative", width: "100%", minHeight: "calc(100vh - 90px)" }}>
-      <style>{`@keyframes ilcTwinkle { 0%, 100% { opacity: var(--ilc-mx); } 50% { opacity: var(--ilc-mn); } } @media (prefers-reduced-motion: reduce) { [data-ilc-stars] span { animation: none !important; } }`}</style>
+      <style>{`@keyframes ilcTwinkle { 0%, 100% { opacity: var(--ilc-mx); } 50% { opacity: var(--ilc-mn); } } @media (prefers-reduced-motion: reduce) { [data-ilc-stars] span { animation: none !important; } } @media (max-width: 1024px) { .ilc-jumpback { display: none !important; } }`}</style>
       {/* subtle full-bleed star field; each star twinkles on its own clock — varied
           speed, depth and phase — so the field shimmers organically, not in unison */}
       <div data-ilc-stars aria-hidden="true" style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 0 }}>
@@ -108,6 +108,45 @@ export default function ExploreInputView({ t, idea, setIdea, onRun, isAnalyzing,
           }} />
         ))}
       </div>
+
+      {/* Jump-back card — shown only when this Explore input was reached from a
+          saved explored idea (or one of its angles). Pinned to the left gutter,
+          heading height; auto-hides on narrow viewports. Whole card returns you
+          to that explored idea. Stays Dawn-blue (explore identity) by design. */}
+      {sourceIdea && (
+        <div
+          className="ilc-jumpback"
+          onClick={onBackToSource}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onBackToSource && onBackToSource(); } }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(96,165,250,0.55)"; e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 12px 30px -12px rgba(96,165,250,0.7)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(96,165,250,0.28)"; e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 8px 26px -14px rgba(96,165,250,0.5)"; }}
+          style={{
+            position: "absolute", left: 24, top: 52, width: 220, zIndex: 4, cursor: "pointer",
+            background: "linear-gradient(180deg, rgba(96,165,250,0.07), rgba(96,165,250,0.025))",
+            border: "1px solid rgba(96,165,250,0.28)", borderRadius: 13,
+            padding: "13px 14px 12px",
+            boxShadow: "0 8px 26px -14px rgba(96,165,250,0.5)",
+            transition: "border-color 0.18s, box-shadow 0.18s, transform 0.18s",
+          }}
+        >
+          <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: "0.18em", color: BLUE, textTransform: "uppercase", marginBottom: 9 }}>
+            ↩ you were exploring
+          </div>
+          <div style={{ fontSize: 12.5, lineHeight: 1.5, color: "#cfd6e2", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", marginBottom: sourceIdea.count > 0 ? 11 : 0 }}>
+            {sourceIdea.text}
+          </div>
+          {sourceIdea.count > 0 && (
+            <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: "0.1em", color: "#6b7484", marginBottom: 11 }}>
+              ◇ EXPLORED · {sourceIdea.count} direction{sourceIdea.count === 1 ? "" : "s"}
+            </div>
+          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 7, borderTop: "1px solid rgba(96,165,250,0.16)", paddingTop: 10, marginTop: sourceIdea.count > 0 ? 0 : 11, fontSize: 12, color: BLUE, fontWeight: 500 }}>
+            ← Back to this idea
+          </div>
+        </div>
+      )}
 
       <div style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 760, margin: "0 auto", transform: "translateY(-20px)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
