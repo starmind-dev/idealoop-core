@@ -2762,13 +2762,20 @@ export default function Home() {
         onNavigate={railNav}
       >
         <PageContainer>
-          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", padding: "4px 0 0" }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12, padding: "4px 0 0" }}>
             {/* Contextual back: re-eval has two entry paths. From the lineage tree →
-                back to that idea's lineage; from a saved deep result → back to the analysis. */}
+                back to that idea's lineage, plus a shortcut to peek at the analysis
+                without the roundtrip; from a saved deep result → back to the analysis. */}
             {reEvalSource === "lineage" ? (
-              <button onClick={() => { setReEvalMode(false); setCurrentScreen("dashboard"); setLineageTargetId(currentIdeaId); setLineageMode(true); }} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
-                ← Go back to the lineage
-              </button>
+              <>
+                <button onClick={() => { setReEvalMode(false); setCurrentScreen("dashboard"); setLineageTargetId(currentIdeaId); setLineageMode(true); }} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                  ← Go back to the lineage
+                </button>
+                <span style={{ width: 1, height: 11, background: "rgba(255,255,255,0.14)" }} />
+                <button onClick={() => { setReEvalMode(false); setCurrentScreen("results2"); }} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                  View the analysis
+                </button>
+              </>
             ) : (
               <button onClick={() => { setReEvalMode(false); setCurrentScreen("results2"); }} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
                 ← Go back to the analysis
