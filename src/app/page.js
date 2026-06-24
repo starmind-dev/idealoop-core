@@ -2756,9 +2756,16 @@ export default function Home() {
         onNavigate={railNav}
       >
         <PageContainer>
-          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", padding: "4px 0 0" }}>
-            <button onClick={() => { setReEvalMode(false); setCurrentScreen("results2"); }} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
-              ← Back to evaluation
+          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 14, padding: "4px 0 0" }}>
+            {/* Two directions out of re-eval. Lineage is idea-specific (this idea's
+                family tree); analysis is its deep evaluation. Re-eval can be entered
+                from either side, so neither is labelled "back". */}
+            <button onClick={() => { setReEvalMode(false); setCurrentScreen("dashboard"); setLineageTargetId(currentIdeaId); setLineageMode(true); }} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+              Go to lineage
+            </button>
+            <span style={{ width: 1, height: 11, background: "rgba(255,255,255,0.14)" }} />
+            <button onClick={() => { setReEvalMode(false); setCurrentScreen("results2"); }} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+              Go to the analysis
             </button>
           </div>
         </PageContainer>
