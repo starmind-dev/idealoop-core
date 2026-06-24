@@ -521,6 +521,18 @@ export default function Home() {
     } catch (e) {}
   }, [currentScreen]);
 
+  // Deep result sections (scores ↔ evidence/reality) are screen swaps inside the
+  // same window-scrolled container, so the page keeps its prior scroll offset and
+  // lands you at the bottom of the next section instead of its top. Reset to the
+  // top whenever either Deep results screen opens — covers "Continue to Evidence &
+  // Reality", the saved-idea "View Evidence & Reality", and the back transition.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (currentScreen === "results1" || currentScreen === "results2") {
+      window.scrollTo(0, 0);
+    }
+  }, [currentScreen]);
+
   // Draft autosave for the re-eval edits (target / problem / core), keyed per idea so each
   // idea keeps its own in-progress changes. Cleared on submit (in handleReEvaluate).
   // eslint-disable-next-line react-hooks/exhaustive-deps
