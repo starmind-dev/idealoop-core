@@ -17,7 +17,7 @@ import { useRef } from "react";
 // (not just the map), so the screen reads as one quiet sky.
 //
 // Rendered by page.js inside DashboardShell when inputMode === "explore".
-// Props: t, idea, setIdea, onRun, onBack, isAnalyzing, evalsRemaining,
+// Props: t, idea, setIdea, onRun, isAnalyzing, evalsRemaining,
 //        gateNode (SpecificityGate element if it fired, else null), error.
 // ============================================
 
@@ -74,7 +74,7 @@ const RAIL = [
   { label: "FROM HERE", Icon: IcArrow },
 ];
 
-export default function ExploreInputView({ t, idea, setIdea, onRun, onBack, isAnalyzing, evalsRemaining, gateNode, error }) {
+export default function ExploreInputView({ t, idea, setIdea, onRun, isAnalyzing, evalsRemaining, gateNode, error }) {
   const inputRef = useRef(null);
   const noEvals = evalsRemaining != null && evalsRemaining <= 0;
   const canRun = !!(idea && idea.trim()) && !isAnalyzing && !noEvals;
@@ -114,9 +114,6 @@ export default function ExploreInputView({ t, idea, setIdea, onRun, onBack, isAn
           <span style={{ fontFamily: MONO, fontSize: 12, letterSpacing: "0.2em", color: t.sec }}>
             <span style={{ color: BLUE, marginRight: 4 }}>◇</span>EXPLORE
           </span>
-          <button onClick={onBack} style={{ fontSize: 13, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
-            ← Back to My Ideas
-          </button>
         </div>
 
         <div style={{ textAlign: "center", maxWidth: 600, margin: "0 auto" }}>
