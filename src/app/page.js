@@ -2809,6 +2809,23 @@ export default function Home() {
                   setLineageTargetId(null);
                 }
               }}
+              onMakeStandalone={async (ideaId) => {
+                // Detach the node (+ its branch) into its own root card. The canvas
+                // already removed it optimistically; the refresh reconciles (and
+                // restores it if the server call failed).
+                try {
+                  const { data: { session } } = await supabase.auth.getSession();
+                  if (!session) return;
+                  await fetch(`/api/ideas/${ideaId}/detach`, {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${session.access_token}` },
+                  });
+                } catch (e) {
+                  // swallow — fetchMyIdeas below reconciles canvas ↔ server
+                } finally {
+                  fetchMyIdeas();
+                }
+              }}
               loadingIdeaId={loadingIdeaId}
             />
         </DashboardShell>

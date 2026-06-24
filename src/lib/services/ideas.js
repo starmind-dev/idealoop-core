@@ -349,6 +349,63 @@ export async function deleteIdea(userId, ideaId) {
   return { ok: true, archived_ids: subtree, archived_count: subtree.length };
 }
 
+// Detach an idea (and its branch) from its lineage: clear parent_idea_id so the
+// node becomes its own ROOT, surfacing in the hub as an independent card. The node
+// and everything below it travel together (no orphans) — one new family, one new
+// card. One-main invariant on BOTH sides: the detached node becomes the main of
+// its new family (any main among its descendants is cleared); and if the subtree
+// carried away the OLD family's main, the old root is promoted (mirrors deleteIdea).
+export async function detachIdea(userId, ideaId) {
+  const lineage = await getLineageByIdea(userId, ideaId);
+  if (!lineage) throw new Error("Idea not found.");
+  const self = lineage.nodes.find((n) => n.id === ideaId);
+  if (!self) throw new Error("Idea not found.");
+  if (self.is_root || self.parent_id == null) {
+    // Already a root — nothing to detach.
+    return { ok: true, idea_id: ideaId, already_root: true };
+  }
+
+  const childrenOf = {};
+  lineage.nodes.forEach((n) => { (childrenOf[n.parent_id] = childrenOf[n.parent_id] || []).push(n.id); });
+  const subtree = [];
+  const walk = (id) => { subtree.push(id); (childrenOf[id] || []).forEach(walk); };
+  walk(ideaId);
+
+  const oldMain = lineage.nodes.find((n) => n.is_main);
+  const oldMainId = oldMain ? oldMain.id : null;
+  const oldRootId = lineage.root_id;
+  const now = new Date().toISOString();
+
+  // 1) Cut the edge → the node becomes a new root.
+  const cut = await supabaseAdmin.from("ideas")
+    .update({ parent_idea_id: null, updated_at: now })
+    .eq("user_id", userId).eq("id", ideaId);
+  if (cut.error) throw cut.error;
+
+  // 2) New family gets exactly one main = the detached node. Clear any main that
+  //    travelled along in the descendants, then flag the new root.
+  const descendants = subtree.filter((id) => id !== ideaId);
+  if (descendants.length) {
+    const clr = await supabaseAdmin.from("ideas")
+      .update({ is_main_version: false }).eq("user_id", userId).in("id", descendants);
+    if (clr.error) throw clr.error;
+  }
+  const sm = await supabaseAdmin.from("ideas")
+    .update({ is_main_version: true }).eq("user_id", userId).eq("id", ideaId);
+  if (sm.error) throw sm.error;
+
+  // 3) Old family lost its main to the subtree → promote the old root.
+  let new_old_main = null;
+  if (oldMainId && subtree.includes(oldMainId) && oldRootId && !subtree.includes(oldRootId)) {
+    const pr = await supabaseAdmin.from("ideas")
+      .update({ is_main_version: true }).eq("user_id", userId).eq("id", oldRootId);
+    if (pr.error) throw pr.error;
+    new_old_main = oldRootId;
+  }
+
+  return { ok: true, idea_id: ideaId, moved_ids: subtree, moved_count: subtree.length, new_old_main };
+}
+
 // ============================================================================
 // EVALUATION VERBS
 // ============================================================================

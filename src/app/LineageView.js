@@ -172,7 +172,7 @@ function RefreshIcon() {
 export default function LineageView({
   myIdeas, targetIdeaId, t, onBack, onViewIdea, onStartComparison,
   onUpdateIdea, onDelete, onAdvance, onReEvaluate, loadingIdeaId,
-  compareSelected, onAddToCompare,
+  compareSelected, onAddToCompare, onMakeStandalone,
 }) {
   const [nodes, setNodes] = useState(() => deriveNodesFromMyIdeas(myIdeas, targetIdeaId));
   const [selected, setSelected] = useState(null);
@@ -405,6 +405,26 @@ export default function LineageView({
     setNodes((ns) => ns.filter((n) => !victims.has(n.id)));
     if (selected && victims.has(selected)) setSelected(null);
     onDelete(id);
+  };
+
+  // Make a node (and its branch) a standalone idea: it leaves this lineage and
+  // becomes its own root card in the hub. Mirrors deleteNode's confirm + optimistic
+  // subtree removal — the moved nodes vanish from THIS family's canvas; the server
+  // (detachIdea) re-roots them, and the hub refresh surfaces the new card.
+  const makeStandalone = (id) => {
+    if (!onMakeStandalone) return;
+    const node = posById[id];
+    if (!node || node.is_root) return; // a root is already standalone
+    const kids = descendantsOf(posById, id);
+    const title = node ? short(node.title, 44) : "this idea";
+    const msg = kids.length === 0
+      ? `Make “${title}” a standalone idea? It will leave this lineage and appear in your hub as its own card.`
+      : `Make “${title}” and the ${kids.length} branch${kids.length === 1 ? "" : "es"} below it a standalone idea? They'll leave this lineage as a new card.`;
+    if (!window.confirm(msg)) return;
+    const movers = new Set([id, ...kids]);
+    setNodes((ns) => ns.filter((n) => !movers.has(n.id)));
+    if (selected && movers.has(selected)) setSelected(null);
+    onMakeStandalone(id);
   };
 
   // ---- lazy detail (verdict / reflection) for the inspector ----
@@ -861,6 +881,16 @@ export default function LineageView({
                   </>
                 );
               })()}
+              {!sNode.is_root && (
+                <button onClick={() => makeStandalone(selected)}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "10px 13px", borderRadius: 9, cursor: "pointer", border: "1px solid rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.06)", color: "#fbbf24", fontFamily: "inherit", marginTop: 2 }}>
+                  <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 600 }}>⌗ Make standalone idea</span>
+                    <span style={{ fontSize: 10.5, color: "#566076", fontWeight: 400, marginTop: 2 }}>Moves it out of this lineage into Evaluated</span>
+                  </span>
+                  <span style={{ opacity: 0.5, fontSize: 15 }}>→</span>
+                </button>
+              )}
             </div>
           </aside>
         )}
