@@ -207,6 +207,12 @@ function LeaveGuardModal({ target, dest, onCancel, onLeave, onSave }) {
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState("dashboard");
+  // Which room HubView opens to. Lineage-back sets "evaluated" so you land on the
+  // evaluated shelf, not the rough-or-evaluated chooser. Normal hub entry = "hub".
+  const [hubReturnView, setHubReturnView] = useState("hub");
+  // Lineage deep "Re-evaluate": load the idea first, then fire startReEvaluation
+  // from an effect (it reads analysis/currentIdeaId off state — avoids a stale closure).
+  const [pendingReEvalId, setPendingReEvalId] = useState(null);
   // Which view the Dashboard shell shows; the rail stays put, only this swaps.
   const [dashView, setDashView] = useState("overview"); // "overview" | "hub"
   const [profile, setProfile] = useState({ coding: "", ai: "", education: "" });
@@ -1731,11 +1737,22 @@ export default function Home() {
     }
   };
 
+  // Lineage deep Re-evaluate: once the requested idea is loaded (analysis +
+  // currentIdeaId in state), drop into its Evolve re-eval flow.
+  useEffect(() => {
+    if (pendingReEvalId && currentIdeaId === pendingReEvalId && analysis) {
+      setPendingReEvalId(null);
+      startReEvaluation();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingReEvalId, currentIdeaId, analysis]);
+
   // Navigate to My Ideas Hub
   const goToMyIdeas = () => {
     // The hub IS the two-shelf HubView now (was the old flat list). Every "My
     // Ideas" link and every room's back-button lands here, so the new hub is
     // reachable and returnable without the ?hub=new URL or a page refresh.
+    setHubReturnView("hub"); // explicit hub entry → the chooser; lineage-back overrides to "evaluated"
     setCurrentScreen("dashboard");
     setDashView("hub");
     setLineageMode(false);
@@ -1927,6 +1944,7 @@ export default function Home() {
         {dashView === "hub" ? (
           <HubView
             t={t}
+            initialView={hubReturnView}
             onOpenIdea={(id) => loadSavedIdea(id)}
             onOpenLineage={(id) => { setLineageTargetId(id); setLineageMode(true); }}
             onCompare={(idA, idB) => startComparison([{ ideaId: idA, evaluationId: null }, { ideaId: idB, evaluationId: null }])}
@@ -2579,8 +2597,18 @@ export default function Home() {
               targetIdeaId={lineageTargetId}
               t={t}
               onBack={() => {
+                setHubReturnView("evaluated"); // came from the evaluated shelf → return there, not the chooser
                 setLineageMode(false);
                 setLineageTargetId(null);
+              }}
+              onReEvaluate={async (ideaId) => {
+                // Deep Re-evaluate from the tree: leave lineage, load the deep idea,
+                // and let the pending-flag effect drop into its Evolve flow.
+                setHubReturnView("evaluated");
+                setLineageMode(false);
+                setLineageTargetId(null);
+                setPendingReEvalId(ideaId);
+                await loadSavedIdea(ideaId);
               }}
               onViewIdea={async (ideaId) => {
                 setLoadingIdeaId(ideaId);
@@ -2611,6 +2639,7 @@ export default function Home() {
                 await deleteSavedIdea(ideaId);
                 // If the lineage we're viewing is now gone, go back to the hub.
                 if (willRemove.has(lineageTargetId)) {
+                  setHubReturnView("evaluated");
                   setLineageMode(false);
                   setLineageTargetId(null);
                 }

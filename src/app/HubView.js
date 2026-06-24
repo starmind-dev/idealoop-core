@@ -489,12 +489,12 @@ const SerifH1 = ({ children, count }) => (
   </h1>
 );
 
-export default function HubView({ t, onOpenIdea, onOpenLineage, onBack, onCompare }) {
+export default function HubView({ t, onOpenIdea, onOpenLineage, onBack, onCompare, initialView }) {
   const [data, setData] = useState({ folders: [], rough: [], ideas: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [view, setView] = useState("hub"); // hub | rough | evaluated
+  const [view, setView] = useState(initialView || "hub"); // hub | rough | evaluated  (lineage-back opens the evaluated room directly)
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all"); // all | explore | deep
   const [comparePick, setComparePick] = useState(false); // hub-level Deep×Deep picker

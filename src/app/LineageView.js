@@ -171,7 +171,7 @@ function RefreshIcon() {
 // ============================================================================
 export default function LineageView({
   myIdeas, targetIdeaId, t, onBack, onViewIdea, onStartComparison,
-  onUpdateIdea, onDelete, onAdvance, loadingIdeaId,
+  onUpdateIdea, onDelete, onAdvance, onReEvaluate, loadingIdeaId,
 }) {
   const [nodes, setNodes] = useState(() => deriveNodesFromMyIdeas(myIdeas, targetIdeaId));
   const [selected, setSelected] = useState(null);
@@ -851,12 +851,14 @@ export default function LineageView({
             <div style={{ padding: "18px 22px", marginTop: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
               <button onClick={() => onViewIdea(selected)} style={{ width: "100%", padding: 11, borderRadius: 10, border: `1px solid ${sMode.b}`, background: `linear-gradient(180deg, ${sMode.s}, rgba(255,255,255,0.02))`, color: "#eaf0fb", fontSize: 13, fontFamily: "inherit", fontWeight: 600, cursor: "pointer" }}>Open this idea</button>
               <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => toggleCompare(selected)} style={btnPanelGhost}>{cmpSet.has(selected) ? "In compare" : "Compare"}</button>
+                {sNode.mode === "deep" && (
+                  <button onClick={() => toggleCompare(selected)} style={btnPanelGhost}>{cmpSet.has(selected) ? "In compare" : "Compare"}</button>
+                )}
                 <button onClick={() => startRename(selected)} style={btnPanelGhost}>Edit</button>
               </div>
               {(() => {
                 const acts = sNode.mode === "explore"
-                  ? [{ action: "deep", label: "Take to Deep", ac: MODE.deep, g: "deep" }, { action: "reevaluate", label: "Re-evaluate", ac: MODE.explore, g: "refresh" }]
+                  ? [{ action: "deep", label: "Take to Deep", ac: MODE.deep, g: "deep" }]
                   : sNode.mode === "deep"
                   ? [{ action: "reevaluate", label: "Re-evaluate", ac: MODE.deep, g: "refresh" }]
                   : [{ action: "explore", label: "Take to Explore", ac: MODE.explore, g: "explore" }, { action: "deep", label: "Take to Deep", ac: MODE.deep, g: "deep" }];
@@ -865,7 +867,7 @@ export default function LineageView({
                     <div style={{ height: 1, background: "rgba(125,145,185,0.1)", margin: "5px 0 3px" }} />
                     <div style={{ display: "flex", gap: 8 }}>
                       {acts.map((a) => (
-                        <button key={a.action} onClick={() => { if (onAdvance) onAdvance(selected, a.action); else flash(a.label + " \u2014 not wired yet"); }}
+                        <button key={a.action} onClick={() => { if (a.action === "reevaluate" && onReEvaluate) { onReEvaluate(selected); return; } if (onAdvance) onAdvance(selected, a.action); else flash(a.label + " \u2014 not wired yet"); }}
                           style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "10px 8px", borderRadius: 9, border: `1px solid ${a.ac.b}`, background: `linear-gradient(180deg, ${a.ac.s}, rgba(255,255,255,0.012))`, color: "#eef2fb", fontSize: 12.5, fontFamily: "inherit", fontWeight: 600, cursor: "pointer" }}>
                           <span style={{ color: a.ac.a, display: "flex" }}>{a.g === "refresh" ? <RefreshIcon /> : <Glyph mode={a.g} size={13} />}</span>
                           {a.label}
