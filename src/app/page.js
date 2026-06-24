@@ -347,6 +347,7 @@ export default function Home() {
   const [branchReason, setBranchReason] = useState("");
   const [branchDimensions, setBranchDimensions] = useState([]); // array of strings like ["target_user", "problem"]
   const [branchSetAsMain, setBranchSetAsMain] = useState(false); // INERT — Lead is set only via SET LEAD (lineage). Remove its checkbox from EvaluationView.
+  const [saveStandalone, setSaveStandalone] = useState(false); // re-eval closure: save z as its OWN root deep card (no parent), not a branch
   const [reEvalEditTarget, setReEvalEditTarget] = useState(false); // toggle for target user edit field
   const [reEvalEditProblem, setReEvalEditProblem] = useState(false); // toggle for problem edit field
   const [reEvalEditCore, setReEvalEditCore] = useState(false); // toggle for core idea edit field
@@ -1353,7 +1354,7 @@ export default function Home() {
         return;
       }
 
-      if (isReEvalResult && currentIdeaId) {
+      if (isReEvalResult && currentIdeaId && !saveStandalone) {
         // Branch save: create new idea linked to parent
         // Validate branch form fields
         if (!branchReason.trim()) {
@@ -1404,6 +1405,42 @@ export default function Home() {
         // is set in exactly one place now: the SET LEAD control in the lineage view.
 
         // Refresh hub data so lineage view and hub reflect the new branch
+        fetchMyIdeas();
+      } else if (isReEvalResult && saveStandalone) {
+        // Standalone save: persist the evolved candidate as its OWN root idea
+        // (no parent_idea_id) so it lands in Evaluated as an independent deep
+        // card, outside the x→y→z lineage. Routes to the same root-save endpoint
+        // a first-time evaluation uses; no branch reason/dimensions apply.
+        const res = await fetch("/api/ideas/save", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            idea_text: idea || reEvalOriginalIdea || "",
+            idea_name: ideaName.trim(),
+            profile,
+            analysis,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setSaveStatus("error");
+          setSaveError(data.error || "Failed to save. Please try again.");
+          if (data.limit_reached) setSavedIdeasCount(data.saved_count);
+          return;
+        }
+
+        setSaveStatus("saved");
+        setSavedIdeaId(data.idea_id);
+        setCurrentIdeaId(data.idea_id);
+        setCurrentEvaluationId(data.evaluation_id);
+        setIsReEvalResult(false);
+        setSaveStandalone(false);
+        if (typeof data.saved_count === "number") setSavedIdeasCount(data.saved_count);
         fetchMyIdeas();
       } else {
         // Normal save: create new idea + evaluation
@@ -1993,12 +2030,27 @@ export default function Home() {
 
   const onDiscardReEval = () => {
     setIsReEvalResult(false);
+    setSaveStandalone(false);
     setReEvalRevisionNotes(null);
     setReEvalChangedFields(null);
     setReEvalContextSnapshot(null);
     setViewingFromSaved(true);
     setSaveStatus("saved");
     goToMyIdeas();
+  };
+
+  // Re-eval closure → "Save as a standalone deep card". Opens the naming form in
+  // standalone mode (no branch reason/dimensions) with a sensible default name
+  // pulled from the evolved idea text; the save handler routes it to the root path.
+  const startStandaloneSave = () => {
+    setSaveStandalone(true);
+    setBranchSetAsMain(false);
+    setBranchReason("");
+    setBranchDimensions([]);
+    const src = (idea || reEvalOriginalIdea || "").trim();
+    const firstLine = src.split(/[.!?\n]/)[0].trim();
+    setIdeaName(firstLine ? (firstLine.length <= 60 ? firstLine : firstLine.substring(0, 57) + "...") : "");
+    setSaveStatus("naming");
   };
 
   // RETIRED. The Lead (is_main_version) moves in ONE place only: the SET LEAD
@@ -3092,6 +3144,9 @@ export default function Home() {
         setBranchReason={setBranchReason}
         setBranchDimensions={setBranchDimensions}
         setBranchSetAsMain={setBranchSetAsMain}
+        saveStandalone={saveStandalone}
+        setSaveStandalone={setSaveStandalone}
+        onStartStandalone={startStandaloneSave}
         setIsReEvalResult={setIsReEvalResult}
         goToMyIdeas={goToMyIdeas}
         handleSaveIdea={handleSaveIdea}

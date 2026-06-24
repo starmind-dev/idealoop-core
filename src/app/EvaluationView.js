@@ -60,6 +60,8 @@ export default function EvaluationView({
   setBranchReason,
   setBranchDimensions,
   setBranchSetAsMain,
+  saveStandalone,
+  setSaveStandalone,
   setIsReEvalResult,
   // Functions
   goToMyIdeas,
@@ -70,6 +72,7 @@ export default function EvaluationView({
   onResetAndNewIdea,
   onBackToMyIdeasCleanup,
   onDiscardReEval,
+  onStartStandalone,
 }) {
 
   // V4S23 entitlement system removed. Content gating retired — all content is full.
@@ -651,6 +654,76 @@ export default function EvaluationView({
                           </p>
                         </div>
                         {saveStatus === "naming" ? (
+                          saveStandalone ? (
+                          <div style={{
+                            padding: "16px 20px",
+                            borderRadius: 12,
+                            background: t.surface,
+                            border: "1px solid rgba(245,158,11,0.3)",
+                          }}>
+                            <label style={{ fontSize: 13, fontWeight: 500, color: t.sec, display: "block", marginBottom: 8 }}>
+                              Name this idea
+                            </label>
+                            <input
+                              type="text"
+                              value={ideaName}
+                              onChange={(e) => setIdeaName(e.target.value)}
+                              placeholder="e.g., Dif Target user"
+                              autoFocus
+                              maxLength={80}
+                              style={{
+                                width: "100%",
+                                background: t.inputBg,
+                                border: `1px solid ${t.inputBorder}`,
+                                borderRadius: 10,
+                                padding: "10px 14px",
+                                fontSize: 14,
+                                color: t.inputText,
+                                outline: "none",
+                                boxSizing: "border-box",
+                                marginBottom: 12,
+                              }}
+                            />
+                            <p style={{ fontSize: 11.5, color: t.mut, margin: "0 0 14px", lineHeight: 1.55, display: "flex", gap: 7, alignItems: "flex-start" }}>
+                              <span style={{ color: "#fbbf24" }}>⌗</span>
+                              <span>Saved as its own deep card in Evaluated, separate from this lineage — it won’t appear in the tree.</span>
+                            </p>
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <button
+                                onClick={handleSaveIdea}
+                                disabled={!ideaName.trim() || saveStatus === "saving"}
+                                style={{
+                                  flex: 1,
+                                  padding: "10px 0",
+                                  borderRadius: 10,
+                                  fontSize: 13,
+                                  fontWeight: 600,
+                                  border: "none",
+                                  cursor: (!ideaName.trim() || saveStatus === "saving") ? "not-allowed" : "pointer",
+                                  background: (!ideaName.trim() || saveStatus === "saving") ? t.surfAlt : "rgba(245,158,11,0.2)",
+                                  color: (!ideaName.trim() || saveStatus === "saving") ? t.mut : "#fbbf24",
+                                }}
+                              >
+                                {saveStatus === "saving" ? "Saving..." : "Save standalone card"}
+                              </button>
+                              <button
+                                onClick={() => { setSaveStatus("idle"); setIdeaName(""); setSaveStandalone(false); }}
+                                style={{
+                                  padding: "10px 16px",
+                                  borderRadius: 10,
+                                  fontSize: 13,
+                                  fontWeight: 500,
+                                  border: `1px solid ${t.border}`,
+                                  background: "transparent",
+                                  color: t.mut,
+                                  cursor: "pointer",
+                                }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                          ) : (
                           <div style={{
                             padding: "16px 20px",
                             borderRadius: 12,
@@ -782,10 +855,11 @@ export default function EvaluationView({
                               </button>
                             </div>
                           </div>
+                          )
                         ) : (
                           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                             <button
-                              onClick={handleSaveIdea}
+                              onClick={() => { setSaveStandalone(false); handleSaveIdea(); }}
                               disabled={saveStatus === "saving"}
                               style={{
                                 width: "100%",
@@ -814,6 +888,7 @@ export default function EvaluationView({
                             <button
                               onClick={() => {
                                 // Open branch form with set-as-main flag
+                                setSaveStandalone(false);
                                 setBranchSetAsMain(true);
                                 setBranchReason("");
                                 setBranchDimensions([]);
@@ -841,6 +916,33 @@ export default function EvaluationView({
                               </div>
                               <p style={{ fontSize: 12, color: t.mut, margin: "6px 0 0", fontWeight: 400 }}>
                                 Save as branch and promote it as your current best direction
+                              </p>
+                            </button>
+
+                            {/* Save as a standalone deep card — its own root, outside this lineage */}
+                            <button
+                              onClick={onStartStandalone}
+                              disabled={saveStatus === "saving"}
+                              style={{
+                                width: "100%",
+                                padding: "14px 16px",
+                                borderRadius: 12,
+                                fontSize: 14,
+                                fontWeight: 600,
+                                border: "1px solid rgba(245,158,11,0.34)",
+                                cursor: saveStatus === "saving" ? "not-allowed" : "pointer",
+                                background: "rgba(245,158,11,0.07)",
+                                color: "#fbbf24",
+                                textAlign: "left",
+                                transition: "all 0.2s",
+                              }}
+                            >
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <span>⌗ Save as a standalone deep card</span>
+                                <span style={{ fontSize: 18, opacity: 0.5 }}>→</span>
+                              </div>
+                              <p style={{ fontSize: 12, color: t.sec, margin: "6px 0 0", fontWeight: 400 }}>
+                                A fresh, independent idea — not part of this lineage
                               </p>
                             </button>
 
