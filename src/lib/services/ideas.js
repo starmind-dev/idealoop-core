@@ -398,16 +398,3 @@ export async function saveBranch(userId, parentIdeaId, mode, opts = {}) {
   if (opts.makeMain) await setMain(userId, childId);
   return { ok: true, idea_id: childId, mode, main: !!opts.makeMain };
 }
-
-// ============================================================================
-// COMPARE — quiet same-state side-by-side (behavior unchanged this session).
-// Exposed for completeness + the apples-&-bananas guard; not yet wired to UI.
-// ============================================================================
-export async function getComparePair(userId, ideaIdA, ideaIdB) {
-  const [a, b] = await Promise.all([getIdea(userId, ideaIdA), getIdea(userId, ideaIdB)]);
-  if (!a || !b) throw new Error("Both ideas must exist.");
-  if (a.state !== b.state) {
-    throw new Error("Compare is same-state only — explore with explore, deep with deep.");
-  }
-  return { mode: a.state, a, b };
-}
