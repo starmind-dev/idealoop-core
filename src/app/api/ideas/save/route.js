@@ -148,9 +148,11 @@ export async function POST(request) {
       // Graduation: when set, flip THIS existing idea forward in place
       // (rough -> evaluated) instead of creating a new idea.
       graduate_idea_id,
-      // ORPHAN RULE: when an angle is saved AFTER its explored parent was saved,
-      // the frontend passes the parent's idea id so the angle attaches as a
-      // branch under it (verified explored below). Absent = a fresh rough root.
+      // ATTACH-UNDER-EXPLORE: when a forward result is saved AFTER its explored
+      // parent was saved, the frontend passes the parent's idea id so this idea
+      // attaches as a non-main branch under it (verified explored below). Applies
+      // to ALL new-idea saves now — an explore angle, an explore RESULT, or a DEEP
+      // eval taken straight from an angle. Absent = a fresh root.
       parent_idea_id,
     } = body;
 
@@ -375,18 +377,24 @@ export async function POST(request) {
         ? `Saved from Explore${basisPhrase ? ` — a ${basisPhrase}` : ""} of: ${String(origin_idea_text).trim().slice(0, 200)}`
         : "Saved from Explore";
       ideaInsert.changed_dimensions = basis ? [basis] : [];
+    }
 
-      // ORPHAN RULE: attach this angle UNDER its explored parent only when that
-      // parent is a real, owned, EXPLORED idea. Then it's a non-main child — it
-      // lives in the parent's lineage, never surfaces as a loose Rough card. If
-      // the parent isn't saved/explored (or doesn't resolve), the angle stays a
-      // fresh rough ROOT, exactly as before.
-      if (parent_idea_id) {
-        const parent = await getIdea(user.id, parent_idea_id);
-        if (parent && parent.state === "explore") {
-          ideaInsert.parent_idea_id = parent_idea_id;
-          ideaInsert.is_main_version = false;
-        }
+    // ATTACH UNDER AN EXPLORED PARENT (shared across deep / explore-result /
+    // explore-angle). When the frontend passes parent_idea_id and it resolves to
+    // a real, owned, EXPLORED idea, this new idea lands as a NON-MAIN child in
+    // that explore's lineage — never a loose root. This is what lets an angle
+    // taken STRAIGHT to Deep (or re-explored) branch under the explored idea it
+    // came from, instead of spawning a standalone root, with no manual
+    // save-as-rough-branch step in between. The PARENT must be explored (branching
+    // is explore-only); the child may be any species, so a deep child under an
+    // explore parent is permitted. If the parent isn't saved/explored (or doesn't
+    // resolve), this idea stays a fresh ROOT exactly as before — the unsaved-explore
+    // case keeps its standalone fallback.
+    if (parent_idea_id) {
+      const parent = await getIdea(user.id, parent_idea_id);
+      if (parent && parent.state === "explore") {
+        ideaInsert.parent_idea_id = parent_idea_id;
+        ideaInsert.is_main_version = false;
       }
     }
 
