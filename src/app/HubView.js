@@ -686,7 +686,7 @@ export default function HubView({ t, onOpenIdea, onOpenLineage, onBack, onCompar
   const togglePick = (id) => setComparePicks((p) => p.includes(id) ? p.filter((x) => x !== id) : (p.length >= 2 ? p : [...p, id]));
 
   const cardHandlers = (card) => ({
-    onOpen: () => { if (editingId === card.id) return; onOpenIdea && onOpenIdea(card.id); },
+    onOpen: () => { if (editingId === card.id) return; onOpenIdea && onOpenIdea(card.id, view); },
     onMenu: (e) => openMenu(e, card),
     onEnter: (e) => openHover(e, card),
     onLeave: closeHover,

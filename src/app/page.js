@@ -1758,7 +1758,6 @@ export default function Home() {
     // The hub IS the two-shelf HubView now (was the old flat list). Every "My
     // Ideas" link and every room's back-button lands here, so the new hub is
     // reachable and returnable without the ?hub=new URL or a page refresh.
-    setHubReturnView("hub"); // explicit hub entry → the chooser; lineage-back overrides to "evaluated"
     setCurrentScreen("dashboard");
     setDashView("hub");
     setLineageMode(false);
@@ -1783,6 +1782,7 @@ export default function Home() {
     setCompareSelecting(false);
     setCompareData(null);
     setCompareSelected([]);
+    setHubReturnView("hub"); // a rail destination is a fresh hub entry → chooser (open-from-room overrides this)
     if (key === "overview") { setCurrentScreen("dashboard"); setDashView("overview"); }
     else if (key === "hub") goToMyIdeas();
     else if (key === "explore") { setInputMode("explore"); setSpecificityGate(null); setCurrentScreen("input"); }
@@ -1951,7 +1951,7 @@ export default function Home() {
           <HubView
             t={t}
             initialView={hubReturnView}
-            onOpenIdea={(id) => loadSavedIdea(id)}
+            onOpenIdea={(id, fromView) => { if (fromView) setHubReturnView(fromView); loadSavedIdea(id); }}
             onOpenLineage={(id) => { setLineageTargetId(id); setLineageMode(true); }}
             onCompare={(idA, idB) => startComparison([{ ideaId: idA, evaluationId: null }, { ideaId: idB, evaluationId: null }])}
           />
