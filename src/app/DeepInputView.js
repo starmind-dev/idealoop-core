@@ -2,6 +2,8 @@
 
 import { useRef, useEffect } from "react";
 
+import { ModeTitle } from "./ModeTitle";
+
 // ============================================
 // DeepInputView — the Deep mode's own idea-input screen.
 //
@@ -284,9 +286,7 @@ export default function DeepInputView({
 
         {/* header: mode mark + profile chip (rail owns back nav) */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-          <span style={{ fontFamily: MONO, fontSize: 12, letterSpacing: "0.2em", color: t.sec }}>
-            <span style={{ color: ACCENT, marginRight: 6 }}>◆</span>DEEP ANALYSIS
-          </span>
+          <ModeTitle mode="deep" />
           {profile && (
             <button
               onClick={onEditProfile}

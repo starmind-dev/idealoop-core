@@ -1,6 +1,7 @@
 "use client";
 
 import { DirectionCard } from "./DirectionCard";
+import { ModeTitle } from "./ModeTitle";
 
 // ============================================================================
 // ExploreView — the Explore (LL2) results screen.
@@ -1042,9 +1043,7 @@ export default function ExploreView({
       <main style={{ flex: 1, paddingBottom: 80 }}>
         <PageContainer wide>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0 22px" }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 12, color: EX.bright, fontFamily: "monospace", letterSpacing: "0.04em" }}>
-              <span style={{ width: 9, height: 9, border: `1.5px solid ${EX.base}`, transform: "rotate(45deg)", boxShadow: `0 0 10px -1px ${EX.base}` }} /> explore
-            </span>
+            <ModeTitle mode="explore" />
             <button onClick={() => { if (viewingFromSaved) { setViewingFromSaved && setViewingFromSaved(false); goToMyIdeas && goToMyIdeas(); } else { setCurrentScreen && setCurrentScreen("input"); } }} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
               {viewingFromSaved ? "← Back to My Ideas" : "← Back to idea"}
             </button>

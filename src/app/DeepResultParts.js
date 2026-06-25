@@ -1,5 +1,6 @@
 // DeepResultParts.js — Deep evaluation-view presentation layer (V6 redesign).
 import { ChangeMarker } from "./ChangeWalkthrough";
+import { ModeTitle } from "./ModeTitle";
 //
 // The three genuinely-new pieces of the redesigned Deep result, plus the
 // "Pressure Read" verdict-first card that assembles them. Built to the geometry
@@ -68,22 +69,6 @@ export function ProvenanceStrip({ provenance, t }) {
     ? `linear-gradient(180deg, ${blue}, ${hex(blue, "1F")})`
     : `linear-gradient(180deg, ${t.mut}, ${hex(t.mut, "20")})`;
 
-  const ExploreIcon = (
-    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="7" y1="17" x2="17" y2="7" /><polyline points="7 7 17 7 17 17" />
-    </svg>
-  );
-  const DeepIcon = (
-    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4.5" /><circle cx="12" cy="12" r="0.6" fill="currentColor" />
-    </svg>
-  );
-  const Chevron = (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: t.mut }}>
-      <polyline points="9 18 15 12 9 6" />
-    </svg>
-  );
-
   const exploreClickable = isLive && typeof p.onExplore === "function";
   const exploreColor = isLive ? blue : t.mut;
   const exploreIcBg = isLive ? hex(blue, "1F") : t.surfAlt;
@@ -92,30 +77,21 @@ export function ProvenanceStrip({ provenance, t }) {
   return (
     <div style={{ position: "relative", padding: "2px 0 4px 22px", marginBottom: 28 }}>
       <div style={{ position: "absolute", left: 0, top: 5, bottom: 6, width: 2, borderRadius: 2, background: spine }} />
-      {/* breadcrumb lineage */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-        <button
-          onClick={exploreClickable ? p.onExplore : undefined}
-          disabled={!exploreClickable}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 7,
-            fontSize: 11.5, fontWeight: 600, letterSpacing: "0.04em",
-            color: exploreColor, background: "none", border: "none",
-            padding: 0, cursor: exploreClickable ? "pointer" : "default",
-          }}
-        >
-          <span style={{ width: 22, height: 22, borderRadius: 7, display: "grid", placeItems: "center", background: exploreIcBg, border: `1px solid ${exploreIcBorder}`, color: exploreColor }}>
-            {ExploreIcon}
-          </span>
-          Explore
-        </button>
-        {Chevron}
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 11.5, fontWeight: 600, letterSpacing: "0.04em", color: t.sec }}>
-          <span style={{ width: 22, height: 22, borderRadius: 7, display: "grid", placeItems: "center", background: t.surfAlt, border: `1px solid ${t.border}`, color: t.sec }}>
-            {DeepIcon}
-          </span>
-          Deep Analysis
-        </span>
+      {/* serious mode title leads; lineage is demoted to the sentence below */}
+      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12, flexWrap: "wrap" }}>
+        <ModeTitle mode="deep" />
+        {exploreClickable && (
+          <button
+            onClick={p.onExplore}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 5,
+              fontSize: 11.5, fontWeight: 500, letterSpacing: "0.04em",
+              color: exploreColor, background: "none", border: "none", padding: 0, cursor: "pointer",
+            }}
+          >
+            ↗ from the Explore pass
+          </button>
+        )}
       </div>
       {/* the line */}
       <p style={{ fontSize: 15, lineHeight: 1.7, color: t.sec, margin: 0, maxWidth: 820 }}>

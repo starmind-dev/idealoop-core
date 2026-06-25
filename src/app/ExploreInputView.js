@@ -2,6 +2,8 @@
 
 import { useRef } from "react";
 
+import { ModeTitle } from "./ModeTitle";
+
 // ============================================
 // ExploreInputView — the Explore mode's own idea-input screen.
 //
@@ -145,9 +147,7 @@ export default function ExploreInputView({ t, idea, setIdea, onRun, isAnalyzing,
 
       <div style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 760, margin: "0 auto", transform: "translateY(-20px)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-          <span style={{ fontFamily: MONO, fontSize: 12, letterSpacing: "0.2em", color: t.sec }}>
-            <span style={{ color: BLUE, marginRight: 4 }}>◇</span>EXPLORE
-          </span>
+          <ModeTitle mode="explore" />
         </div>
 
         <div style={{ textAlign: "center", maxWidth: 600, margin: "0 auto" }}>
