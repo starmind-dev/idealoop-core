@@ -361,13 +361,13 @@ function SaveAffordance({ state, onClick }) {
   return (
     <span onClick={saving || saved ? undefined : onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
       style={{ fontSize: 13.5, fontWeight: 500, color, display: "inline-flex", gap: 8, alignItems: "center", cursor: saving || saved ? "default" : "pointer", opacity: saving ? 0.7 : 1, whiteSpace: "nowrap" }}>
-      {saved ? <Svg w={15} sw={2}><path d="M5 13l4 4L19 7" /></Svg> : <Svg w={15} sw={1.8}><path d="M12 5v14M5 12h14" /></Svg>} {label}
+      {saved ? <Svg w={15} sw={2}><path d="M5 13l4 4L19 7" /></Svg> : <Svg w={15} sw={1.7}><circle cx="12" cy="5" r="1.9" /><circle cx="6" cy="19" r="1.9" /><circle cx="18" cy="19" r="1.9" /><path d="M12 6.9v4.6M6 17.1v-3a1.5 1.5 0 0 1 1.5-1.5h9A1.5 1.5 0 0 1 18 14.1v3" /></Svg>} {label}
     </span>
   );
 }
 
-// Per-angle "explore" — Dawn, diamond glyph (Explore's identity mark), arrow that
-// slides on hover. Replaces the old per-angle "compare" (two rough idea texts have
+// Per-angle "explore" — Dawn, compass glyph (Explore's identity mark, same as the
+// hub + Section 4 card), arrow that slides on hover. Replaces the old per-angle "compare" (two rough idea texts have
 // nothing to compare; explore is the move that widens a rough angle into its own fan).
 // When this angle has ALREADY been widened into a saved exploration (doneIdeaId),
 // it flips to a done-state that OPENS that exploration instead of starting a new one.
@@ -379,14 +379,15 @@ function ExploreAffordance({ onClick, doneIdeaId, onOpen }) {
       style={{ fontSize: 13.5, fontWeight: 500, color: EX.base, display: "inline-flex", gap: 8, alignItems: "center", cursor: "pointer", whiteSpace: "nowrap", filter: h ? "brightness(1.12)" : "none", transition: "filter .16s" }}>
       {done
         ? <><Svg w={15} sw={2}><path d="M5 13l4 4L19 7" /></Svg> in explore — open</>
-        : <><Svg w={15} sw={1.7}><path d="M12 4 20 12 12 20 4 12Z" /></Svg> take it to explore</>}
+        : <><Svg w={15} sw={2}><circle cx="12" cy="12" r="9" /><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88" fill="currentColor" stroke="none" /></Svg> take it to explore</>}
       <span style={{ display: "inline-flex", transform: h ? "translateX(3px)" : "none", transition: "transform .18s" }}><Svg w={14} sw={1.9}><path d="M5 12h14M13 6l6 6-6 6" /></Svg></span>
     </span>
   );
 }
 
-// Per-angle "take it to deep" — violet (the cross-mode handoff colour), flask glyph
-// (distil to a verdict), arrow that slides on hover. #9a8fd8 is a legible lift of
+// Per-angle "take it to deep" — violet (the cross-mode handoff colour), concentric
+// target glyph (Deep's identity mark, same as the hub + Section 4 card), arrow that
+// slides on hover. #9a8fd8 is a legible lift of
 // the locked Deep accent (#8a82c2) — the pale tint washed out at text size.
 // When this angle has ALREADY been taken to Deep (doneIdeaId), it flips to a
 // done-state that OPENS that Deep verdict instead of starting a new evaluation.
@@ -398,7 +399,7 @@ function DeepAffordance({ onClick, doneIdeaId, onOpen }) {
       style={{ fontSize: 13.5, fontWeight: 500, color: "#9a8fd8", display: "inline-flex", gap: 8, alignItems: "center", cursor: "pointer", whiteSpace: "nowrap", filter: h ? "brightness(1.12)" : "none", transition: "filter .16s" }}>
       {done
         ? <><Svg w={15} sw={2}><path d="M5 13l4 4L19 7" /></Svg> in deep — view verdict</>
-        : <><Svg w={15} sw={1.6}><path d="M9.5 3h5M11 3v5.2L6.2 16.9A1.4 1.4 0 0 0 7.5 19h9a1.4 1.4 0 0 0 1.3-2.1L13 8.2V3" /><path d="M8.7 14h6.6" /></Svg> take it to deep</>}
+        : <><Svg w={15} sw={2}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.6" fill="currentColor" /></Svg> take it to deep</>}
       <span style={{ display: "inline-flex", transform: h ? "translateX(3px)" : "none", transition: "transform .18s" }}><Svg w={14} sw={1.9}><path d="M5 12h14M13 6l6 6-6 6" /></Svg></span>
     </span>
   );
