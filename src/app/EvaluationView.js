@@ -14,6 +14,7 @@ import {
 } from "./components";
 import { ProvenanceStrip, PressureRead, DeepMetricCard, DeepTcCard, ExecutionReality, KeyRisks, CompetitorGrid } from "./DeepResultParts";
 import { ChangeWalkthrough, ChangeMarker } from "./ChangeWalkthrough";
+import { DirectionCard, DirectionRow } from "./DirectionCard";
 
 export default function EvaluationView({
   // Screen
@@ -857,35 +858,17 @@ export default function EvaluationView({
                           </div>
                           )
                         ) : (
-                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                            <button
-                              onClick={() => { setSaveStandalone(false); handleSaveIdea(); }}
-                              disabled={saveStatus === "saving"}
-                              style={{
-                                width: "100%",
-                                padding: "14px 16px",
-                                borderRadius: 12,
-                                fontSize: 14,
-                                fontWeight: 600,
-                                border: "1px solid rgba(108,99,255,0.4)",
-                                cursor: saveStatus === "saving" ? "not-allowed" : "pointer",
-                                background: saveStatus === "saving" ? t.surfAlt : "rgba(108,99,255,0.12)",
-                                color: saveStatus === "saving" ? t.mut : "#a78bfa",
-                                textAlign: "left",
-                                transition: "all 0.2s",
-                              }}
-                            >
-                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                <span>{saveStatus === "saving" ? "Saving..." : "Save as branch"}</span>
-                                <span style={{ fontSize: 18, opacity: 0.5 }}>→</span>
-                              </div>
-                              <p style={{ fontSize: 12, color: t.sec, margin: "6px 0 0", fontWeight: 400 }}>
-                                Keep this as a new direction linked to the parent idea
-                              </p>
-                            </button>
+                          <DirectionRow cols={2}>
+                            <DirectionCard
+                              skin="deep" glyph="save" title="Save as branch"
+                              desc="Keep this as a new direction linked to the parent idea"
+                              cue="Keep" busy={saveStatus === "saving"}
+                              onClick={() => { setSaveStandalone(false); handleSaveIdea(); }} />
 
-                            {/* Set as main version — saves branch + marks it as main */}
-                            <button
+                            <DirectionCard
+                              skin="green" glyph="main" title="Set as main version"
+                              desc="Save as branch and promote it as your current best direction"
+                              cue="Promote" disabled={saveStatus === "saving"}
                               onClick={() => {
                                 // Open branch form with set-as-main flag
                                 setSaveStandalone(false);
@@ -894,83 +877,20 @@ export default function EvaluationView({
                                 setBranchDimensions([]);
                                 setIdeaName("Branch");
                                 setSaveStatus("naming");
-                              }}
-                              disabled={saveStatus === "saving"}
-                              style={{
-                                width: "100%",
-                                padding: "14px 16px",
-                                borderRadius: 12,
-                                fontSize: 14,
-                                fontWeight: 500,
-                                border: "1px solid rgba(16,185,129,0.3)",
-                                cursor: saveStatus === "saving" ? "not-allowed" : "pointer",
-                                background: "rgba(16,185,129,0.06)",
-                                color: "#34d399",
-                                textAlign: "left",
-                                transition: "all 0.2s",
-                              }}
-                            >
-                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                <span>★ Set as main version</span>
-                                <span style={{ fontSize: 18, opacity: 0.5 }}>→</span>
-                              </div>
-                              <p style={{ fontSize: 12, color: t.mut, margin: "6px 0 0", fontWeight: 400 }}>
-                                Save as branch and promote it as your current best direction
-                              </p>
-                            </button>
+                              }} />
 
-                            {/* Save as a standalone deep card — its own root, outside this lineage */}
-                            <button
-                              onClick={onStartStandalone}
-                              disabled={saveStatus === "saving"}
-                              style={{
-                                width: "100%",
-                                padding: "14px 16px",
-                                borderRadius: 12,
-                                fontSize: 14,
-                                fontWeight: 600,
-                                border: "1px solid rgba(245,158,11,0.34)",
-                                cursor: saveStatus === "saving" ? "not-allowed" : "pointer",
-                                background: "rgba(245,158,11,0.07)",
-                                color: "#fbbf24",
-                                textAlign: "left",
-                                transition: "all 0.2s",
-                              }}
-                            >
-                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                <span>⌗ Save as a standalone deep card</span>
-                                <span style={{ fontSize: 18, opacity: 0.5 }}>→</span>
-                              </div>
-                              <p style={{ fontSize: 12, color: t.sec, margin: "6px 0 0", fontWeight: 400 }}>
-                                A fresh, independent idea — not part of this lineage
-                              </p>
-                            </button>
+                            <DirectionCard
+                              skin="amber" glyph="standalone" title="Save as a standalone deep card"
+                              desc="A fresh, independent idea — not part of this lineage"
+                              cue="Detach" disabled={saveStatus === "saving"}
+                              onClick={onStartStandalone} />
 
-                            <button
-                              onClick={onDiscardReEval}
-                              style={{
-                                width: "100%",
-                                padding: "14px 16px",
-                                borderRadius: 12,
-                                fontSize: 14,
-                                fontWeight: 500,
-                                border: `1px solid ${t.border}`,
-                                background: "transparent",
-                                color: t.sec,
-                                cursor: "pointer",
-                                textAlign: "left",
-                                transition: "all 0.2s",
-                              }}
-                            >
-                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                <span>Discard</span>
-                                <span style={{ fontSize: 18, opacity: 0.3 }}>×</span>
-                              </div>
-                              <p style={{ fontSize: 12, color: t.mut, margin: "6px 0 0", fontWeight: 400 }}>
-                                This was just a test, don't save
-                              </p>
-                            </button>
-                          </div>
+                            <DirectionCard
+                              skin="save" glyph="discard" title="Discard"
+                              desc="This was just a test, don't save"
+                              cue="Drop" arrow={false}
+                              onClick={onDiscardReEval} />
+                          </DirectionRow>
                         )}
                         {saveStatus === "error" && saveError && (
                           <p style={{ fontSize: 12, color: "#f87171", textAlign: "center", marginTop: 8 }}>

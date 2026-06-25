@@ -1,5 +1,7 @@
 "use client";
 
+import { DirectionCard } from "./DirectionCard";
+
 // ============================================================================
 // ExploreView — the Explore (LL2) results screen.
 //
@@ -876,9 +878,9 @@ function SaveTile({ user, viewingFromSaved, onSave, onAuth, goToMyIdeas, angleCo
   };
   if (state === "saved") {
     return (
-      <Tile variant="save" glyph={<GlyphSave />} title="Saved"
+      <DirectionCard skin="save" glyph="save" title="Saved"
         desc={`Your idea ${fam}, kept together.`}
-        cue="IN MY IDEAS ✓" onClick={() => goToMyIdeas && goToMyIdeas()} />
+        cue="In my ideas" done onClick={() => goToMyIdeas && goToMyIdeas()} />
     );
   }
   const title = state === "saving" ? "Saving…" : state === "error" ? "Try again" : "Save";
@@ -886,8 +888,8 @@ function SaveTile({ user, viewingFromSaved, onSave, onAuth, goToMyIdeas, angleCo
     ? `Log in to keep your idea ${fam} together.`
     : `Keeps your idea ${fam} together in My Ideas.`;
   return (
-    <Tile variant="save" glyph={<GlyphSave />} title={title} desc={desc}
-      cue={state === "error" ? "RETRY" : "KEEPS THE FAMILY"} busy={state === "saving"} onClick={doSave} />
+    <DirectionCard skin="save" glyph="save" title={title} desc={desc}
+      cue={state === "error" ? "Retry" : "Keeps the family"} busy={state === "saving"} onClick={doSave} />
   );
 }
 
@@ -920,12 +922,12 @@ function NextMoveSurface({ nextMove, angleCount, t, user, viewingFromSaved, onSa
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>
           <SaveTile user={user} viewingFromSaved={viewingFromSaved} onSave={onSave} onAuth={onAuth} goToMyIdeas={goToMyIdeas} angleCount={angleCount} />
-          <Tile variant="explore" glyph={<GlyphExplore />} title="Explore again"
+          <DirectionCard skin="explore" glyph="explore" title="Explore again"
             desc="Re-widen into a fresh fan of directions."
-            cue="WIDEN" arrow onClick={() => onExplore && onExplore()} />
-          <Tile variant="deep" glyph={<GlyphDeep />} title="Take to Deep"
+            cue="Widen" onClick={() => onExplore && onExplore()} />
+          <DirectionCard skin="deep" glyph="deep" title="Take to Deep"
             desc="Send the whole idea for a scored verdict."
-            cue="TO VERDICT" arrow onClick={() => onDeep && onDeep()} />
+            cue="To verdict" onClick={() => onDeep && onDeep()} />
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 11, marginTop: 22, paddingTop: 18, borderTop: `1px solid ${M4.line2}`, fontSize: 13, color: M4.mut }}>
