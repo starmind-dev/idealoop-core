@@ -367,12 +367,17 @@ function SaveAffordance({ state, onClick }) {
 // Per-angle "explore" — Dawn, diamond glyph (Explore's identity mark), arrow that
 // slides on hover. Replaces the old per-angle "compare" (two rough idea texts have
 // nothing to compare; explore is the move that widens a rough angle into its own fan).
-function ExploreAffordance({ onClick }) {
+// When this angle has ALREADY been widened into a saved exploration (doneIdeaId),
+// it flips to a done-state that OPENS that exploration instead of starting a new one.
+function ExploreAffordance({ onClick, doneIdeaId, onOpen }) {
   const [h, setH] = useState(false);
+  const done = !!doneIdeaId;
   return (
-    <span onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+    <span onClick={done ? () => onOpen && onOpen(doneIdeaId) : onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
       style={{ fontSize: 13.5, fontWeight: 500, color: EX.base, display: "inline-flex", gap: 8, alignItems: "center", cursor: "pointer", whiteSpace: "nowrap", filter: h ? "brightness(1.12)" : "none", transition: "filter .16s" }}>
-      <Svg w={15} sw={1.7}><path d="M12 4 20 12 12 20 4 12Z" /></Svg> take it to explore
+      {done
+        ? <><Svg w={15} sw={2}><path d="M5 13l4 4L19 7" /></Svg> in explore — open</>
+        : <><Svg w={15} sw={1.7}><path d="M12 4 20 12 12 20 4 12Z" /></Svg> take it to explore</>}
       <span style={{ display: "inline-flex", transform: h ? "translateX(3px)" : "none", transition: "transform .18s" }}><Svg w={14} sw={1.9}><path d="M5 12h14M13 6l6 6-6 6" /></Svg></span>
     </span>
   );
@@ -381,18 +386,23 @@ function ExploreAffordance({ onClick }) {
 // Per-angle "take it to deep" — violet (the cross-mode handoff colour), flask glyph
 // (distil to a verdict), arrow that slides on hover. #9a8fd8 is a legible lift of
 // the locked Deep accent (#8a82c2) — the pale tint washed out at text size.
-function DeepAffordance({ onClick }) {
+// When this angle has ALREADY been taken to Deep (doneIdeaId), it flips to a
+// done-state that OPENS that Deep verdict instead of starting a new evaluation.
+function DeepAffordance({ onClick, doneIdeaId, onOpen }) {
   const [h, setH] = useState(false);
+  const done = !!doneIdeaId;
   return (
-    <span onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+    <span onClick={done ? () => onOpen && onOpen(doneIdeaId) : onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
       style={{ fontSize: 13.5, fontWeight: 500, color: "#9a8fd8", display: "inline-flex", gap: 8, alignItems: "center", cursor: "pointer", whiteSpace: "nowrap", filter: h ? "brightness(1.12)" : "none", transition: "filter .16s" }}>
-      <Svg w={15} sw={1.6}><path d="M9.5 3h5M11 3v5.2L6.2 16.9A1.4 1.4 0 0 0 7.5 19h9a1.4 1.4 0 0 0 1.3-2.1L13 8.2V3" /><path d="M8.7 14h6.6" /></Svg> take it to deep
+      {done
+        ? <><Svg w={15} sw={2}><path d="M5 13l4 4L19 7" /></Svg> in deep — view verdict</>
+        : <><Svg w={15} sw={1.6}><path d="M9.5 3h5M11 3v5.2L6.2 16.9A1.4 1.4 0 0 0 7.5 19h9a1.4 1.4 0 0 0 1.3-2.1L13 8.2V3" /><path d="M8.7 14h6.6" /></Svg> take it to deep</>}
       <span style={{ display: "inline-flex", transform: h ? "translateX(3px)" : "none", transition: "transform .18s" }}><Svg w={14} sw={1.9}><path d="M5 12h14M13 6l6 6-6 6" /></Svg></span>
     </span>
   );
 }
 
-function FanSurface({ idea, angles, fanState, t, onSave, saveState, onExploreAngle, onTakeToDeep, branchReason }) {
+function FanSurface({ idea, angles, fanState, t, onSave, saveState, onExploreAngle, onTakeToDeep, branchReason, angleStatus, onOpenChild }) {
   const fanRef = useRef(null);
   const nodeRef = useRef(null);
   const rowRef = useRef(null);
@@ -588,8 +598,14 @@ function FanSurface({ idea, angles, fanState, t, onSave, saveState, onExploreAng
                   </div>
                   <div style={{ display: "flex", gap: 26, alignItems: "center", borderTop: "1px solid var(--exdivider)", paddingTop: 14, marginTop: 2, flexWrap: "wrap" }}>
                     <SaveAffordance state={(saveState || {})[pa.id]} onClick={() => onSave && onSave(pa)} />
-                    <ExploreAffordance onClick={() => onExploreAngle && onExploreAngle(pa)} />
-                    <DeepAffordance onClick={() => onTakeToDeep && onTakeToDeep(pa.id, { useOriginalIdea: false })} />
+                    <ExploreAffordance
+                      doneIdeaId={(angleStatus && angleStatus[pa.id] && angleStatus[pa.id].explore) || null}
+                      onOpen={onOpenChild}
+                      onClick={() => onExploreAngle && onExploreAngle(pa)} />
+                    <DeepAffordance
+                      doneIdeaId={(angleStatus && angleStatus[pa.id] && angleStatus[pa.id].deep) || null}
+                      onOpen={onOpenChild}
+                      onClick={() => onTakeToDeep && onTakeToDeep(pa.id, { useOriginalIdea: false })} />
                   </div>
                 </div>
               )}
@@ -954,6 +970,8 @@ export default function ExploreView({
   onSaveExplore,     // parent "Save" — keep idea-x + all angles as one family
   savedBranchTexts,  // Set of branch texts already saved under this family (page.js)
   handledAngleIds,   // Set of angle ids already taken forward (id-based, edit-proof)
+  angleStatus,       // { [angleId]: { explore: ideaId, deep: ideaId } } — per-angle done targets
+  onOpenChild,       // (ideaId) => open that saved child (jump to its Explore/Deep)
 }) {
   if (!analysis || analysis.schema_version !== "ll2_explore_v1") return null;
 
@@ -1033,7 +1051,8 @@ export default function ExploreView({
           <FanSurface idea={idea} angles={angles} fanState={fanState} t={xt}
             onSave={onSaveAngle} saveState={effectiveState}
             onExploreAngle={(a) => onExploreAngle && onExploreAngle(a)}
-            onTakeToDeep={onTakeToDeep} branchReason={read?.branchability?.reason} />
+            onTakeToDeep={onTakeToDeep} branchReason={read?.branchability?.reason}
+            angleStatus={angleStatus} onOpenChild={onOpenChild} />
           <TerrainSurface terrain={terrain} angles={angles} t={xt} />
           <NextMoveSurface
             nextMove={nextMove}

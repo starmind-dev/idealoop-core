@@ -3118,6 +3118,22 @@ export default function Home() {
     const handledAngleIds = exploreFamilyId
       ? new Set(familyChildren.map((i) => i.origin_angle_id).filter(Boolean))
       : null;
+    // Per-angle done targets for the fan footer: which angle has been taken to
+    // Explore / Deep, and the child idea id to jump to. Mode is read off the
+    // child's latest eval — a Deep child carries a weighted score; an Explore
+    // child's eval has none; no eval at all is a rough-branch save. Built from the
+    // same family children, so it stays in sync after every save + refresh.
+    const angleStatus = {};
+    familyChildren.forEach((c) => {
+      const aid = c.origin_angle_id;
+      if (!aid) return;
+      const latest = (c.evaluations || [])[0] || null;
+      const slot = angleStatus[aid] || {};
+      if (!latest) slot.saved = true;
+      else if (latest.weighted_overall_score != null) slot.deep = c.id;
+      else slot.explore = c.id;
+      angleStatus[aid] = slot;
+    });
     return (
       <DashboardShell
         t={t}
@@ -3134,6 +3150,8 @@ export default function Home() {
         analysis={exploreAnalysis}
         savedBranchTexts={savedBranchTexts}
         handledAngleIds={handledAngleIds}
+        angleStatus={angleStatus}
+        onOpenChild={(id) => loadSavedIdea(id)}
         user={user}
         viewingFromSaved={viewingFromSaved}
         showAuthModal={showAuthModal}
