@@ -739,6 +739,14 @@ export default function Home() {
   // existing unsaved-explore warning + fallback is untouched).
   const [pendingBranchParent, setPendingBranchParent] = useState(false);
   const [branchParentId, setBranchParentId] = useState(null);
+  // Which explore ANGLE a forward-from-angle run came from (its id). Travels with
+  // the branch parent so the saved deep/explore child is tagged with
+  // origin_angle_id — the fan then recognizes a handled angle by id, not by
+  // matching text, so editing the seed never breaks the link. pendingOriginAngle
+  // is set at the handoff; resolved into originAngleId at the run; sent at save;
+  // cleared after. Null for non-angle runs.
+  const [pendingOriginAngle, setPendingOriginAngle] = useState(null);
+  const [originAngleId, setOriginAngleId] = useState(null);
   // The unsaved-exploration leave guard: { target, dest, proceed } | null.
   const [leaveGuard, setLeaveGuard] = useState(null);
 
@@ -764,6 +772,9 @@ export default function Home() {
         // exclusive with graduate. Null for a normal / whole-idea exploration
         // save (the Section-4 Save tile and the leave-guard "Save & continue").
         ...(branchParentId ? { parent_idea_id: branchParentId } : {}),
+        // Tag this exploration with the angle it was widened from (angle handoff),
+        // so the parent fan marks that angle handled by id.
+        ...(originAngleId ? { origin_angle_id: originAngleId } : {}),
       }),
     });
     const data = await res.json();
@@ -775,6 +786,7 @@ export default function Home() {
     }
     // Branch intent (angle → Explore under a saved root) is spent once saved.
     setBranchParentId(null);
+    setOriginAngleId(null);
     fetchMyIdeas();
     return data;
   };
@@ -782,7 +794,7 @@ export default function Home() {
   // Reroute a take-to action to the matching INPUT screen pre-filled, instead of
   // auto-running. The founder reviews/edits the seed before spending a credit.
   // graduateParent flags the parent → Deep graduation (see DeepInputView onRun).
-  const goToInput = (mode, text, graduateParent = false, branchParent = false) => {
+  const goToInput = (mode, text, graduateParent = false, branchParent = false, originAngle = null) => {
     // Jump-back card source: capture the explored idea ONLY when this handoff came
     // from a saved one (or one of its angles) — savedExploreIdeaId (saved this
     // session) or currentIdeaId (reopened from My Ideas). A fresh, unsaved
@@ -803,6 +815,9 @@ export default function Home() {
     // to a concrete parent id at the input onRun (savedExploreIdeaId still intact
     // there); mutually exclusive with graduateParent by construction.
     setPendingBranchParent(!!branchParent);
+    // The angle id this handoff carries (when from a specific angle), tagged onto
+    // the saved child so the fan recognizes it by id.
+    setPendingOriginAngle(originAngle || null);
     setSpecificityGate(null);
     setInputMode(mode);
     setCurrentScreen("input");
@@ -1020,7 +1035,7 @@ export default function Home() {
     }
   };
 
-  const handleAnalyze = async (mode = "deep", ideaTextOverride = null, graduateId = null, branchParentArg = null) => {
+  const handleAnalyze = async (mode = "deep", ideaTextOverride = null, graduateId = null, branchParentArg = null, originAngleArg = null) => {
     const ideaToUse = ideaTextOverride != null ? ideaTextOverride : idea;
     if (!ideaToUse.trim()) return;
 
@@ -1075,10 +1090,14 @@ export default function Home() {
     // live by the input onRun; stored here so it survives to save time even though
     // savedExploreIdeaId is cleared just below. A cold-open run passes null.
     setBranchParentId(branchParentArg);
+    // ...and the originating angle id (when forward-from-angle), tagged onto the
+    // saved child at save time so the fan recognizes it by id.
+    setOriginAngleId(originAngleArg);
     // The parent-graduate flag is consumed by the Deep run's onRun (which resolved
     // graduateId from it); clear it so it never leaks into a later cold-open run.
     setPendingGraduateParent(false);
     setPendingBranchParent(false);
+    setPendingOriginAngle(null);
     // A new run starts a clean Explore session — no saved explored idea yet.
     setSavedExploreIdeaId(null);
     // ...and no explored idea to jump back to once a run commits.
@@ -1497,6 +1516,9 @@ export default function Home() {
             // place; this spawns a child). Null on a normal fresh deep or an
             // unsaved-explore angle — which keeps the standalone fallback.
             ...(branchParentId ? { parent_idea_id: branchParentId } : {}),
+            // Tag the deep child with the angle it was born from, so the fan marks
+            // that angle handled by id (survives seed edits). Null otherwise.
+            ...(originAngleId ? { origin_angle_id: originAngleId } : {}),
           }),
         });
 
@@ -1528,6 +1550,7 @@ export default function Home() {
           // Angle → Deep child: a new deep node now lives in the explore's
           // lineage. Spend the branch intent and refresh so it appears there.
           setBranchParentId(null);
+          setOriginAngleId(null);
           fetchMyIdeas();
         }
       }
@@ -1948,8 +1971,8 @@ export default function Home() {
     setHubReturnView("hub"); // a rail destination is a fresh hub entry → chooser (open-from-room overrides this)
     if (key === "overview") { setCurrentScreen("dashboard"); setDashView("overview"); }
     else if (key === "hub") goToMyIdeas();
-    else if (key === "explore") { setExploreSourceIdea(null); setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setInputMode("explore"); setSpecificityGate(null); setCurrentScreen("input"); }
-    else if (key === "deep") { setExploreSourceIdea(null); setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setInputMode("deep"); setSpecificityGate(null); setCurrentScreen("input"); }
+    else if (key === "explore") { setExploreSourceIdea(null); setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setPendingOriginAngle(null); setOriginAngleId(null); setInputMode("explore"); setSpecificityGate(null); setCurrentScreen("input"); }
+    else if (key === "deep") { setExploreSourceIdea(null); setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setPendingOriginAngle(null); setOriginAngleId(null); setInputMode("deep"); setSpecificityGate(null); setCurrentScreen("input"); }
     // settings / plan / help: not wired yet
   };
 
@@ -2142,8 +2165,8 @@ export default function Home() {
         ) : (
           <OverviewView
             t={t}
-            onStartExplore={() => { setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setSpecificityGate(null); setInputMode("explore"); setCurrentScreen("input"); }}
-            onStartDeep={() => { setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setSpecificityGate(null); setInputMode("deep"); setCurrentScreen("input"); }}
+            onStartExplore={() => { setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setPendingOriginAngle(null); setOriginAngleId(null); setSpecificityGate(null); setInputMode("explore"); setCurrentScreen("input"); }}
+            onStartDeep={() => { setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setPendingOriginAngle(null); setOriginAngleId(null); setSpecificityGate(null); setInputMode("deep"); setCurrentScreen("input"); }}
             onContinue={(id) => loadSavedIdea(id)}
             onOpenIdea={(id) => loadSavedIdea(id)}
             onViewAll={goToMyIdeas}
@@ -2411,7 +2434,7 @@ export default function Home() {
           t={t}
           idea={idea}
           setIdea={setIdea}
-          onRun={() => handleAnalyze("explore", null, pendingGraduateParent ? (graduatingIdeaId || null) : null, pendingBranchParent ? (savedExploreIdeaId || (viewingFromSaved ? currentIdeaId : null)) : null)}
+          onRun={() => handleAnalyze("explore", null, pendingGraduateParent ? (graduatingIdeaId || null) : null, pendingBranchParent ? (savedExploreIdeaId || (viewingFromSaved ? currentIdeaId : null)) : null, pendingBranchParent ? pendingOriginAngle : null)}
           onBack={goToMyIdeas}
           isAnalyzing={isAnalyzing}
           evalsRemaining={evalsRemaining}
@@ -2448,7 +2471,7 @@ export default function Home() {
           t={t}
           idea={idea}
           setIdea={setIdea}
-          onRun={() => handleAnalyze("deep", null, pendingGraduateParent ? (savedExploreIdeaId || graduatingIdeaId || null) : null, pendingBranchParent ? (savedExploreIdeaId || (viewingFromSaved ? currentIdeaId : null)) : null)}
+          onRun={() => handleAnalyze("deep", null, pendingGraduateParent ? (savedExploreIdeaId || graduatingIdeaId || null) : null, pendingBranchParent ? (savedExploreIdeaId || (viewingFromSaved ? currentIdeaId : null)) : null, pendingBranchParent ? pendingOriginAngle : null)}
           onBack={goToMyIdeas}
           isAnalyzing={isAnalyzing}
           evalsRemaining={evalsRemaining}
@@ -3083,13 +3106,17 @@ export default function Home() {
     // leaving + returning (ExploreView's own state is per-mount) and blocks dup
     // saves. Family id: the explore saved this session, else the reopened one.
     const exploreFamilyId = savedExploreIdeaId || (viewingFromSaved ? currentIdeaId : null);
+    const familyChildren = exploreFamilyId
+      ? (myIdeas || []).filter((i) => i.parent_idea_id === exploreFamilyId)
+      : [];
     const savedBranchTexts = exploreFamilyId
-      ? new Set(
-          (myIdeas || [])
-            .filter((i) => i.parent_idea_id === exploreFamilyId)
-            .map((i) => (i.raw_idea_text || "").trim())
-            .filter(Boolean)
-        )
+      ? new Set(familyChildren.map((i) => (i.raw_idea_text || "").trim()).filter(Boolean))
+      : null;
+    // Angles already taken forward (saved as a rough branch, or sent to
+    // Deep/Explore) recognized BY ID — robust to seed edits, unlike the text set
+    // above. An angle counts as handled if any child carries its origin_angle_id.
+    const handledAngleIds = exploreFamilyId
+      ? new Set(familyChildren.map((i) => i.origin_angle_id).filter(Boolean))
       : null;
     return (
       <DashboardShell
@@ -3106,6 +3133,7 @@ export default function Home() {
         t={t}
         analysis={exploreAnalysis}
         savedBranchTexts={savedBranchTexts}
+        handledAngleIds={handledAngleIds}
         user={user}
         viewingFromSaved={viewingFromSaved}
         showAuthModal={showAuthModal}
@@ -3135,6 +3163,9 @@ export default function Home() {
                 basis: angle.basis?.primary || null,
                 profile,
                 origin_idea_text: exploreAnalysis.idea,
+                // Tag the rough branch with its source angle id so the fan marks
+                // it handled by id (verbatim here, but keeps recognition uniform).
+                origin_angle_id: angle.id || null,
                 // If the explored idea was saved this session, branch the angle
                 // under it (orphan rule); the route verifies it's explored.
                 ...(savedExploreIdeaId ? { parent_idea_id: savedExploreIdeaId } : {}),
@@ -3173,7 +3204,7 @@ export default function Home() {
             graduateParent = false;
             branchParent = true;
           }
-          guardLeave(target, "deep", () => goToInput("deep", text, graduateParent, branchParent));
+          guardLeave(target, "deep", () => goToInput("deep", text, graduateParent, branchParent, branchParent ? angleId : null));
         }}
         onSaveExplore={persistExploration}
         onExploreVariation={() =>
@@ -3187,7 +3218,7 @@ export default function Home() {
           // Guarded like the others.
           const text = (a && a.branch_idea_text) || exploreAnalysis.idea;
           const target = (a && a.title) || "this direction";
-          guardLeave(target, "explore", () => goToInput("explore", text, false, true));
+          guardLeave(target, "explore", () => goToInput("explore", text, false, true, a ? a.id : null));
         }}
       />
       {leaveGuard && (

@@ -1,4 +1,11 @@
-// src/app/api/ideas/route.js  (hub list)
+// src/app/api/ideas/list/route.js  (hub list — the flat list page.js fetches at /api/ideas/list)
+//
+// PATH NOTE: this file lives at /api/ideas/list/route.js. Do NOT confuse it with
+// src/app/api/ideas/route.js (the THIN collection root: GET -> listHub, POST ->
+// createIdea) or src/app/api/ideas/[id]/route.js (single-idea card rooms). The
+// header here previously read "/api/ideas/route.js", which is why this file got
+// mixed up with the other two — corrected.
+//
 // CHANGES:
 //   - Removed roadmap_json from the evaluations select (column dropped) — this
 //     was the hard-throw: PostgREST errors on selecting a non-existent column.
@@ -62,6 +69,7 @@ export async function GET(request) {
         changed_dimensions,
         is_main_version,
         status_label,
+        origin_angle_id,
         evaluations (
           id,
           weighted_overall_score,
