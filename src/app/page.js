@@ -13,6 +13,7 @@ import DeepInputView from "./DeepInputView";
 import DeepEvolveView from "./DeepEvolveView";
 import HubView from "./HubView";
 import OverviewView from "./OverviewView";
+import LandingView from "./LandingView";
 import DashboardShell from "./DashboardShell";
 import {
   StepProgress,
@@ -277,6 +278,12 @@ export default function Home() {
   const [evalUnlimited, setEvalUnlimited] = useState(false); // dev plan → no eval limit
   const [user, setUser] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  // Public marketing landing gate. Stays false during SSR/first paint to avoid a
+  // hydration flash; an effect (below, after auth resolves) flips it on only for a
+  // genuine logged-out first-touch visit (no saved nav snapshot, no deep-link). Any
+  // CTA or a successful login dismisses it. Returning logged-in users never see it.
+  const [showLanding, setShowLanding] = useState(false);
+  const landingDecidedRef = useRef(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState("idle"); // idle | naming | saving | saved | error
   const [saveError, setSaveError] = useState("");
@@ -388,6 +395,37 @@ export default function Home() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Decide once, after auth resolves, whether to show the public landing. Show it only
+  // for a logged-out first-touch visit: no signed-in user, no saved nav snapshot, and no
+  // explicit deep-link into the app. A logged-in user, a restorable session, or a deep-link
+  // all skip straight into the app. Runs once (landingDecidedRef) so a later state change
+  // can't re-raise the landing over someone already working.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (authLoading || landingDecidedRef.current) return;
+    landingDecidedRef.current = true;
+    if (user) return; // signed in → app
+    let nav = null;
+    try { nav = JSON.parse(sessionStorage.getItem("iv_nav") || "null"); } catch (e) {}
+    if (nav && nav.screen) return; // mid-session refresh → restore handles it
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("hub") || params.get("view")) return; // deep-link into app
+    setShowLanding(true);
+  }, [authLoading, user]);
+
+  // A successful login from the landing dismisses it and drops the visitor into the app.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (user && showLanding) setShowLanding(false);
+  }, [user]);
+
+  // Leave the landing and enter the app at Overview. Used by every landing CTA except Log in.
+  const enterApp = () => {
+    setShowLanding(false);
+    setCurrentScreen("dashboard");
+    setDashView("overview");
+  };
 
   // On login: load THIS account's profile from the DB into state. Profile is per-account;
   // localStorage is per-device, so reading it back from the DB is what makes the profile
@@ -2128,6 +2166,29 @@ export default function Home() {
       <div style={{ minHeight: "100vh", background: t.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <p style={{ color: t.mut, fontSize: 14, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase" }}>IdeaLoop Core</p>
       </div>
+    );
+  }
+
+  // ==========================================
+  // PUBLIC LANDING — first-touch marketing page (logged-out, no session/deep-link).
+  // The page owns its own nav/footer/CTAs; "Start an idea loop" enters the app at
+  // Overview, "Log in" opens the existing AuthModal (a successful login auto-dismisses
+  // the landing via the effect above). Pricing + "View sample loop" are stubbed inside
+  // LandingView for now.
+  // ==========================================
+  if (showLanding) {
+    return (
+      <>
+        <LandingView
+          onStartLoop={enterApp}
+          onStartFree={enterApp}
+          onGetCredits={enterApp}
+          onLogIn={() => setShowAuthModal(true)}
+        />
+        {showAuthModal && (
+          <AuthModal onClose={() => setShowAuthModal(false)} onAuth={(u) => setUser(u)} t={t} />
+        )}
+      </>
     );
   }
 
