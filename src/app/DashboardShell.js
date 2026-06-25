@@ -51,17 +51,15 @@ const Stack = ({ color, size = 18 }) => (
     <path d="M12 3.5l8.5 4.2-8.5 4.2-8.5-4.2 8.5-4.2z" /><path d="M3.5 12l8.5 4.2 8.5-4.2" /><path d="M3.5 16l8.5 4.2 8.5-4.2" />
   </svg>
 );
-const Telescope = ({ color, size = 18 }) => (
+const Compass = ({ color, size = 18 }) => (
   <svg {...ip(color, size)}>
-    <path d="M4 14.5l10.5-4" />
-    <path d="M14.2 10.2l2.8 1a1.6 1.6 0 0 0 2-1l.4-1.1a1.6 1.6 0 0 0-1-2l-2.4-.9" />
-    <path d="M5.5 14.8L7.6 19" /><path d="M11 12.8l1.9 3.9" />
+    <circle cx="12" cy="12" r="9" />
+    <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88" fill={color} stroke="none" />
   </svg>
 );
-const Microscope = ({ color, size = 18 }) => (
+const Target = ({ color, size = 18 }) => (
   <svg {...ip(color, size)}>
-    <path d="M6 19h8" /><path d="M9 19v-2.5" /><path d="M9 16.5a4.5 4.5 0 0 0 4.2-6.2" />
-    <path d="M11.7 9.2l3.1 1.8" /><path d="M13.2 6.6l3.1 1.8-1.5 2.6-3.1-1.8z" />
+    <circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.6" fill={color} stroke="none" />
   </svg>
 );
 const Settings = ({ color, size = 18 }) => (
@@ -87,8 +85,8 @@ const NAV_MAIN = [
   { key: "hub", label: "My ideas hub", Icon: Stack },
 ];
 const NAV_EVAL = [
-  { key: "explore", label: "Explore mode", Icon: Telescope, color: "#60a5fa" },
-  { key: "deep", label: "Deep analysis", Icon: Microscope, color: "#2dd4bf" },
+  { key: "explore", label: "Explore mode", Icon: Compass, color: "#7aa2ff" },
+  { key: "deep", label: "Deep analysis", Icon: Target, color: "#8a82c2" },
 ];
 const NAV_FOOT = [
   { key: "settings", label: "Settings", Icon: Settings },
