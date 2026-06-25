@@ -296,7 +296,7 @@ function EvalCard({ card, edit, onOpen, onMenu, onEnter, onLeave, onLineage }) {
   const accent = isDeep ? "rgba(150,135,250,0.5)" : "rgba(96,150,255,0.5)";
   const base = {
     position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "space-between",
-    gap: 11, minHeight: 122, borderRadius: 14, border: "1px solid rgba(255,255,255,0.07)", cursor: "pointer",
+    gap: 11, minHeight: 122, flex: 1, borderRadius: 14, border: "1px solid rgba(255,255,255,0.07)", cursor: "pointer",
     transition: "transform .18s ease,border-color .18s ease,box-shadow .18s ease",
   };
   const exploreBg = "radial-gradient(120% 86% at 16% 2%, rgba(96,150,255,0.20), transparent 54%),radial-gradient(1.6px 1.6px at 22% 28%,rgba(255,255,255,.55),transparent),radial-gradient(1.2px 1.2px at 72% 22%,rgba(127,176,255,.7),transparent),radial-gradient(1.6px 1.6px at 84% 66%,rgba(127,176,255,.55),transparent),radial-gradient(1.1px 1.1px at 38% 78%,rgba(255,255,255,.4),transparent),radial-gradient(1.1px 1.1px at 58% 52%,rgba(255,255,255,.35),transparent),radial-gradient(1.3px 1.3px at 12% 60%,rgba(127,176,255,.6),transparent),radial-gradient(1.1px 1.1px at 92% 38%,rgba(255,255,255,.45),transparent),radial-gradient(1.2px 1.2px at 46% 16%,rgba(127,176,255,.55),transparent),radial-gradient(1px 1px at 68% 84%,rgba(255,255,255,.35),transparent),linear-gradient(180deg,#101727,#0C1018)";
@@ -816,7 +816,7 @@ export default function HubView({ t, onOpenIdea, onOpenLineage, onBack, compareS
             const h = cardHandlers(c);
             const ring = inTray(c.id);
             return (
-              <div key={c.id} style={{ position: "relative", borderRadius: 18, outline: ring ? "2px solid rgba(150,135,250,0.6)" : "2px solid transparent", outlineOffset: 3, transition: "outline-color .15s" }}>
+              <div key={c.id} style={{ position: "relative", display: "flex", flexDirection: "column", borderRadius: 18, outline: ring ? "2px solid rgba(150,135,250,0.6)" : "2px solid transparent", outlineOffset: 3, transition: "outline-color .15s" }}>
                 <EvalCard card={c} edit={editFor(c)} {...h} />
               </div>
             );
