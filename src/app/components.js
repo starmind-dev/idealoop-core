@@ -703,8 +703,11 @@ export function PageContainer({ children, wide = false }) {
 // ============================================
 // AUTH MODAL
 // ============================================
-// MOVED → ./AuthModal.js (the redesigned login/sign-up modal). Imported there
-// in page.js; this definition was retired to avoid two AuthModal sources.
+// MOVED → ./AuthModal.js (the redesigned login/sign-up modal). Re-exported here
+// so existing importers that pull it from "./components" (EvaluationView,
+// ExploreView, and any others) keep resolving against the single new source —
+// no per-file import rewrites needed. page.js imports it directly from ./AuthModal.
+export { AuthModal } from "./AuthModal";
 // ============================================
 // CONTENT GATING COMPONENTS (V4S25)
 // ============================================
