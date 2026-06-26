@@ -15,6 +15,7 @@ import HubView from "./HubView";
 import OverviewView from "./OverviewView";
 import LandingView from "./LandingView";
 import DashboardShell from "./DashboardShell";
+import { AuthModal } from "./AuthModal";
 import {
   StepProgress,
   StatusBadge,
@@ -22,7 +23,6 @@ import {
   SectionHeader,
   Card,
   PageContainer,
-  AuthModal,
   SpecificityGate,
   getTheme,
   getScoreColor,
