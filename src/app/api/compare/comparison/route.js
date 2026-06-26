@@ -20,6 +20,7 @@ import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { COMPARISON_SYSTEM_PROMPT } from "../../prompts/prompt-comparison";
+import { logActivity } from "@/lib/services/activity";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const supabase = createClient(
@@ -190,6 +191,17 @@ export async function POST(request) {
       console.error("Comparison shape invalid:", JSON.stringify(parsed)?.slice(0, 500));
       return NextResponse.json({ comparison: null });
     }
+
+    // Ledger: a real comparison ran. idea_id stays null (a compare spans two
+    // ideas); both titles ride in summary + meta. Compares aren't persisted
+    // anywhere else, so this is the only record they ever leave.
+    const titleA = a.title || "Idea A";
+    const titleB = b.title || "Idea B";
+    await logActivity(user.id, {
+      kind: "compared", idea_id: null,
+      summary: `Compared ${titleA} vs ${titleB}.`,
+      meta: { a: titleA, b: titleB },
+    });
 
     return NextResponse.json({ comparison: parsed });
   } catch (err) {

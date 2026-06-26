@@ -28,6 +28,7 @@
 //   SET-MAIN is pure user choice, fully decoupled from mode.
 
 import { supabaseAdmin } from "../supabase-admin";
+import { logActivity, listActivity } from "./activity";
 
 const FORWARD_RANK = { rough: 0, explore: 1, deep: 2 };
 
@@ -121,18 +122,112 @@ function rootIdOf(id, byId) {
 // READS
 // ============================================================================
 
+// FAMILY-LEVEL ROLLUP for the Overview board / loop-strip / stats. ADDITIVE: it
+// reads the SAME light eval data already loaded (no extra query, no heavy payload)
+// and reports, per family, the FURTHEST point reached in the loop + a few flags.
+// The hub card stays the ROOT (identity never moves); these fields describe the
+// whole family that lives one click away in the lineage.
+//
+// loop_bucket is a SINGLE, mutually-exclusive lifecycle bucket per family (the six
+// buckets sum to the family count → they drive the "across the loop" strip). The
+// priority order below is the one tunable knob: it picks the furthest meaningful
+// point in loop order. evolve (a kept re-eval) > handoff (a brief) > branched
+// (angle children) > the furthest plain stage (deep|explore|rough).
+function familyAggregate(members) {
+  const rank = { rough: 0, explore: 1, deep: 2 };
+  const nodes = (members || []).map((m) => {
+    const st = resolveState(m);
+    const latest = (m.evaluations || [])[0] || null;
+    return {
+      id: m.id,
+      parent_id: m.parent_idea_id || null,
+      mode: st.mode,                                  // rough | explore | deep
+      score: st.score,                                // deep only
+      has_brief: !!(latest && latest.execution_brief_json),
+      eval_at: latest ? latest.created_at : null,
+      updated_at: m.updated_at || m.created_at || null,
+      created_at: m.created_at || null,
+    };
+  });
+
+  // furthest plain stage in the family
+  let stageRank = 0;
+  nodes.forEach((n) => { stageRank = Math.max(stageRank, rank[n.mode] ?? 0); });
+  const stage = stageRank === 2 ? "deep" : stageRank === 1 ? "explore" : "rough";
+
+  const hasBrief = nodes.some((n) => n.has_brief);
+
+  // latest deep verdict in the family (most recent deep eval that carries a score)
+  const deeps = nodes
+    .filter((n) => n.mode === "deep" && n.score != null)
+    .sort((a, b) => new Date(b.eval_at || 0) - new Date(a.eval_at || 0));
+  const familyScore = deeps.length ? deeps[0].score : null;
+
+  // A kept RE-EVAL grows a SAME-MODE child (deep->deep, explore->explore). Angle
+  // branching instead drops rough/explore children under an explore parent (a
+  // DIFFERENT kind) — those fall under "branched". This distinguishes the two.
+  const modeOf = {};
+  nodes.forEach((n) => { modeOf[n.id] = n.mode; });
+  const hasReEval = nodes.some(
+    (n) => n.parent_id && modeOf[n.parent_id] &&
+      n.mode === modeOf[n.parent_id] && (n.mode === "deep" || n.mode === "explore")
+  );
+  const branched = nodes.length > 1;
+
+  let bucket;
+  if (hasReEval) bucket = "evolve";
+  else if (hasBrief) bucket = "handoff";
+  else if (branched) bucket = "branched";
+  else bucket = stage; // deep | explore | rough
+
+  // generation span = max depth of the family tree (root = generation 1)
+  const childrenOf = {};
+  nodes.forEach((n) => { (childrenOf[n.parent_id] = childrenOf[n.parent_id] || []).push(n.id); });
+  let generation = 1;
+  const rootNode = nodes.find((n) => n.parent_id == null) || nodes[0];
+  const walkDepth = (id, d) => {
+    generation = Math.max(generation, d);
+    (childrenOf[id] || []).forEach((cid) => walkDepth(cid, d + 1));
+  };
+  if (rootNode) walkDepth(rootNode.id, 1);
+
+  // newest touch anywhere in the family (node edit OR eval landing) — powers the
+  // resume "last edited" line, recents ordering, and the derived-lite ledger.
+  let lastActivity = null;
+  nodes.forEach((n) => {
+    [n.updated_at, n.eval_at, n.created_at].forEach((ts) => {
+      if (ts && (!lastActivity || new Date(ts) > new Date(lastActivity))) lastActivity = ts;
+    });
+  });
+
+  return {
+    family_stage: stage,            // 'rough' | 'explore' | 'deep' (furthest plain stage)
+    family_score: familyScore,      // number | null (family's latest deep verdict)
+    family_has_brief: hasBrief,     // any node handed off to an execution brief
+    loop_bucket: bucket,            // single lifecycle bucket (strip)
+    generation,                     // max tree depth (lineage "G{n}")
+    last_activity_at: lastActivity, // newest touch in the family
+  };
+}
+
 // The hub: one card per family, split into two shelves by the card's state.
 // Returns { folders, rough: [card], ideas: [card] }. A card = the family's ROOT,
 // always — never its Lead. (Lead is a visual-only marker in the lineage view.)
 // Rough cards are quarantined to their shelf; every card in `ideas` is explore/deep
 // BY ITS ROOT'S state — a family rooted in explore stays on the explored shelf even
 // if it has deep branches; those live in its lineage.
+//
+// Each card now ALSO carries the additive family rollup (family_stage / family_score
+// / family_has_brief / loop_bucket / generation / last_activity_at) for the Overview
+// board, loop-strip, and stats. These are additive — existing consumers (HubView)
+// ignore them; the root fields (mode/score/has_brief) are unchanged.
 export async function listHub(userId) {
-  const [ideaRes, folderRes] = await Promise.all([
+  const [ideaRes, folderRes, activity] = await Promise.all([
     supabaseAdmin.from("ideas").select(IDEA_LIGHT_SELECT)
       .eq("user_id", userId).eq("status", "active"),
     supabaseAdmin.from("folders").select("id, name, sort_order")
       .eq("user_id", userId).order("sort_order", { ascending: true }),
+    listActivity(userId, 12),
   ]);
   if (ideaRes.error) throw ideaRes.error;
 
@@ -153,13 +248,14 @@ export async function listHub(userId) {
     // decoupled: re-eval / branch / set-lead can never reshuffle the hub.
     const root = byId[rootId] || members[0];
     const node = shapeNode(root, { isRoot: true });
-    return { ...node, family_size: members.length };
+    return { ...node, family_size: members.length, ...familyAggregate(members) };
   });
 
   return {
     folders: folderRes.data || [],
     rough: cards.filter((c) => c.mode === "rough"),
     ideas: cards.filter((c) => c.mode !== "rough"),
+    activity: activity || [],
   };
 }
 
@@ -281,7 +377,15 @@ export async function createIdea(userId, opts = {}) {
       throw new Error("Angles branch under an explored idea only (branching is explore-only).");
     }
   }
-  return createIdeaInternal(userId, opts);
+  const created = await createIdeaInternal(userId, opts);
+  // Ledger: a new rough idea entered the loop. (Angle-saves go through the save
+  // route, which logs its own CAPTURED — these two entry points never overlap.)
+  const title = opts.title?.trim() || deriveTitle(opts.raw_idea_text || "");
+  await logActivity(userId, {
+    kind: "captured", idea_id: created.id,
+    summary: `${title} — captured as a rough idea.`,
+  });
+  return created;
 }
 
 // Rename, move-to-folder, edit branch note. Whitelisted fields only.
@@ -302,6 +406,20 @@ export async function updateIdea(userId, ideaId, patch = {}) {
   const { error } = await supabaseAdmin.from("ideas").update(set)
     .eq("user_id", userId).eq("id", ideaId);
   if (error) throw error;
+
+  // Ledger: parking / killing is a lifecycle moment. Only fires when disposition
+  // was actually set to parked|killed (not on un-park/clear). One light title read.
+  if (set.disposition === "parked" || set.disposition === "killed") {
+    const { data: row } = await supabaseAdmin.from("ideas")
+      .select("title").eq("user_id", userId).eq("id", ideaId).maybeSingle();
+    const title = row?.title || "An idea";
+    await logActivity(userId, {
+      kind: set.disposition, idea_id: ideaId,
+      summary: set.disposition === "parked"
+        ? `${title} — parked, kept revivable.`
+        : `${title} — set aside as killed.`,
+    });
+  }
   return { ok: true };
 }
 
@@ -453,5 +571,17 @@ export async function saveBranch(userId, parentIdeaId, mode, opts = {}) {
   });
   await writeEvaluation(userId, childId, mode, opts.payload || {});
   if (opts.makeMain) await setMain(userId, childId);
+
+  // Ledger: a kept re-evaluation — the loop came back around. Carry the new deep
+  // verdict (and the prior one, if handed in) so the row can read "re-judged 4.2 → 4.7".
+  const newScore = mode === "deep"
+    ? (opts.payload?.weighted_overall_score ?? null)
+    : null;
+  const title = opts.title || parent.title || "An idea";
+  await logActivity(userId, {
+    kind: "rejudged", idea_id: childId,
+    summary: `${title} — re‑judged${newScore != null ? ` at ${Number(newScore).toFixed(1)}` : ""}.`,
+    meta: { mode, new_score: newScore, prev_score: opts.prev_score ?? null },
+  });
   return { ok: true, idea_id: childId, mode, main: !!opts.makeMain };
 }

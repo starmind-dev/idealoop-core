@@ -29,6 +29,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getIdea } from "@/lib/services/ideas";
+import { logActivity } from "@/lib/services/activity";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -235,6 +236,11 @@ export async function POST(request) {
           .eq("id", graduate_idea_id)
           .eq("user_id", user.id);
 
+        await logActivity(user.id, {
+          kind: "explored", idea_id: graduate_idea_id,
+          summary: `${(ideaPatch.title || target.title || "An idea")} — widened into angles.`,
+        });
+
         return NextResponse.json({
           success: true,
           mode,
@@ -307,6 +313,12 @@ export async function POST(request) {
         .update(ideaPatch)
         .eq("id", graduate_idea_id)
         .eq("user_id", user.id);
+
+      await logActivity(user.id, {
+        kind: "judged", idea_id: graduate_idea_id,
+        summary: `${(ideaPatch.title || target.title || "An idea")} — deep verdict landed at ${Number(analysis?.evaluation?.overall_score ?? 0).toFixed(1)}.`,
+        meta: { score: analysis?.evaluation?.overall_score ?? null, graduated: true },
+      });
 
       return NextResponse.json({
         success: true,
@@ -465,6 +477,28 @@ export async function POST(request) {
     // ------------------------------------------------
     // 7. Return success — evaluation_id is null only for an Explore ANGLE
     // ------------------------------------------------
+    // Ledger: one event for the new-idea save, by behaviour —
+    //   deep save     -> judged (verdict landed)
+    //   explore result-> explored (widened, no verdict)
+    //   explore angle -> captured (a saved angle is a fresh rough idea)
+    if (!isExplore) {
+      await logActivity(user.id, {
+        kind: "judged", idea_id: ideaRow.id,
+        summary: `${title} — deep verdict landed at ${Number(analysis?.evaluation?.overall_score ?? 0).toFixed(1)}.`,
+        meta: { score: analysis?.evaluation?.overall_score ?? null },
+      });
+    } else if (isExploreResult) {
+      await logActivity(user.id, {
+        kind: "explored", idea_id: ideaRow.id,
+        summary: `${title} — widened into angles.`,
+      });
+    } else {
+      await logActivity(user.id, {
+        kind: "captured", idea_id: ideaRow.id,
+        summary: `${title} — angle saved as a rough idea.`,
+      });
+    }
+
     return NextResponse.json({
       success: true,
       mode,
