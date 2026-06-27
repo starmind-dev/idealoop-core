@@ -25,56 +25,9 @@
 //   onLogout   — fn(): log out clicked
 //   children   — the active screen
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 const RAIL_W = 232;
-
-// The brand wordmark "oo" — the gradient infinity that sits inside "IdeaL[oo]p".
-// Same lemniscate geometry as the favicon / Google tile, so the rail logo, the
-// browser tab, and the consent screen are all the one mark.
-const LOOP_PATH =
-  "M20.2,4.5 20.1,5.1 19.9,5.7 19.6,6.3 19.1,6.7 18.6,7.0 18.1,7.3 17.5,7.4 16.9,7.4 16.4,7.4 15.9,7.2 15.4,7.1 14.9,6.9 14.5,6.6 14.1,6.4 13.7,6.1 13.3,5.8 13.0,5.5 12.6,5.1 12.3,4.8 12.0,4.5 11.7,4.2 11.4,3.9 11.0,3.5 10.7,3.2 10.3,2.9 9.9,2.6 9.5,2.4 9.1,2.1 8.6,1.9 8.1,1.8 7.6,1.6 7.1,1.6 6.5,1.6 5.9,1.7 5.4,2.0 4.9,2.3 4.4,2.7 4.1,3.3 3.9,3.9 3.8,4.5 3.9,5.1 4.1,5.7 4.4,6.3 4.9,6.7 5.4,7.0 5.9,7.3 6.5,7.4 7.1,7.4 7.6,7.4 8.1,7.2 8.6,7.1 9.1,6.9 9.5,6.6 9.9,6.4 10.3,6.1 10.7,5.8 11.0,5.5 11.4,5.1 11.7,4.8 12.0,4.5 12.3,4.2 12.6,3.9 13.0,3.5 13.3,3.2 13.7,2.9 14.1,2.6 14.5,2.4 14.9,2.1 15.4,1.9 15.9,1.8 16.4,1.6 16.9,1.6 17.5,1.6 18.1,1.7 18.6,2.0 19.1,2.3 19.6,2.7 19.9,3.3 20.1,3.9 20.2,4.5Z";
-
-const LoopMark = ({ h = 12 }) => {
-  const w = (h * 24) / 9;
-  return (
-    <svg
-      width={w} height={h} viewBox="0 0 24 9" fill="none"
-      style={{ display: "block", overflow: "visible", margin: "0 1px", transform: "translateY(1.5px)" }}
-      aria-hidden="true"
-    >
-      <defs>
-        <linearGradient id="ilcLoopGrad" x1="4" y1="2" x2="20" y2="7" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#7af0cf" />
-          <stop offset="1" stopColor="#23c4a0" />
-        </linearGradient>
-      </defs>
-      <path d={LOOP_PATH} stroke="url(#ilcLoopGrad)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-};
-
-// The full brand lockup: serif "IdeaL" + the gradient ∞ as "oo" + "p", with the
-// mono "CORE" caption beneath — the locked wordmark.
-function BrandLockup({ t }) {
-  return (
-    <div style={{ padding: "0 8px", marginBottom: 26 }}>
-      <div style={{
-        display: "flex", alignItems: "baseline",
-        fontFamily: "'Spectral', Georgia, serif", fontWeight: 600, fontSize: 24,
-        lineHeight: 1, color: t.text, letterSpacing: "-0.01em",
-      }}>
-        <span>IdeaL</span>
-        <LoopMark h={12} />
-        <span>p</span>
-      </div>
-      <div style={{
-        fontFamily: "'JetBrains Mono', monospace", fontSize: 8.5, fontWeight: 500,
-        letterSpacing: "0.34em", color: "#34d8a8", marginTop: 4, paddingLeft: 1,
-      }}>CORE</div>
-    </div>
-  );
-}
 
 // ── inline icons (stroke style, matches the rest of ILC) ─────────────────────
 const ip = (color, size = 18) => ({
@@ -164,17 +117,6 @@ function RailItem({ t, item, active, onNavigate }) {
 }
 
 export default function DashboardShell({ t, active = "overview", onNavigate, userEmail, authLoading = false, onLogin, onLogout, children }) {
-  // Ensure the wordmark fonts (Spectral serif + JetBrains Mono) are present, so
-  // the brand lockup renders correctly on any screen the shell hosts.
-  useEffect(() => {
-    const id = "ilc-brand-fonts";
-    if (typeof document !== "undefined" && !document.getElementById(id)) {
-      const l = document.createElement("link");
-      l.id = id; l.rel = "stylesheet";
-      l.href = "https://fonts.googleapis.com/css2?family=Spectral:wght@500;600&family=JetBrains+Mono:wght@500&display=swap";
-      document.head.appendChild(l);
-    }
-  }, []);
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: t.bg, color: t.text }}>
       {/* ── left rail ── */}
@@ -186,7 +128,13 @@ export default function DashboardShell({ t, active = "overview", onNavigate, use
           position: "sticky", top: 0, height: "100vh",
         }}
       >
-        <BrandLockup t={t} />
+        <div style={{ padding: "0 8px", marginBottom: 26 }}>
+          <img
+            src="/idealoop-wordmark.png"
+            alt="IdeaLoop Core"
+            style={{ display: "block", height: 46, width: "auto" }}
+          />
+        </div>
 
         <nav style={{ display: "flex", flexDirection: "column", gap: 3 }}>
           {NAV_MAIN.map((item) => (
