@@ -590,15 +590,25 @@ function FanSurface({ idea, angles, fanState, t, onSave, saveState, onExploreAng
                     <span style={{ fontFamily: "monospace", fontSize: 9.5, letterSpacing: "0.13em", textTransform: "uppercase", color: EX.bright, border: `1px solid ${EX.line}`, borderRadius: 5, padding: "3px 7px" }}>{SHIFT_LABEL[pa.basis?.primary] || "New angle"}</span>
                     <span style={{ fontSize: 14.5, fontWeight: 600, color: "var(--extext)", letterSpacing: "0.1px" }}>{pa.title}</span>
                   </div>
+                  {/* The expansion COMPLETES the card: full opening + full wall
+                      (the two fields the card clamps to 2 lines), then the bet as
+                      the deeper read. "the wall" and the old "the limit" were the
+                      same field (justification.disconfirmer) shown twice — the
+                      duplicate row is dropped so clicking finishes the thought the
+                      card started instead of repeating the wall. */}
+                  <div style={{ display: "flex", gap: 16, marginBottom: 13 }}>
+                    <span style={{ ...lead, color: EX.base }}>the opening</span>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 13, lineHeight: 1.58, color: "#e3e5e9" }}>{pa.justification?.opening?.text}</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 16, marginBottom: 13 }}>
+                    <span style={{ ...lead, color: WALL_CLAY }}>the wall</span>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, lineHeight: 1.58, color: "var(--exsec)" }}>{pa.justification?.disconfirmer}</span>
+                  </div>
                   <div style={{ display: "flex", gap: 16, marginBottom: 13 }}>
                     <span style={{ ...lead, color: EX.bright }}>the bet</span>
                     <span style={{ flex: 1, minWidth: 0, fontSize: 13, lineHeight: 1.58, color: "#e3e5e9" }}>Works only if {bet.text}.{bet.rests_on && (
                       <span style={{ fontFamily: "monospace", fontSize: 9.5, letterSpacing: "0.06em", color: "var(--exmut)", border: "1px solid var(--exborder-soft)", borderRadius: 4, padding: "1px 6px", marginLeft: 7, whiteSpace: "nowrap", textTransform: "uppercase" }}>{bet.rests_on}</span>
                     )}</span>
-                  </div>
-                  <div style={{ display: "flex", gap: 16, marginBottom: 13 }}>
-                    <span style={{ ...lead, color: "var(--exmut)" }}>the limit</span>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, lineHeight: 1.58, color: "var(--exsec)" }}>{pa.justification?.disconfirmer}</span>
                   </div>
                   <div style={{ display: "flex", gap: 26, alignItems: "center", borderTop: "1px solid var(--exdivider)", paddingTop: 14, marginTop: 2, flexWrap: "wrap" }}>
                     <SaveAffordance state={(saveState || {})[pa.id]} onClick={() => onSave && onSave(pa)} />
