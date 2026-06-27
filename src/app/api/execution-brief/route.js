@@ -44,6 +44,7 @@ import { createClient } from "@supabase/supabase-js";
 // Adjust this path to wherever the prompt module lives in the tree
 // (the stage prompts sit alongside it).
 import { EXECUTION_BRIEF_SYSTEM_PROMPT } from "@/lib/services/prompt-execution-brief";
+import { logActivity } from "@/lib/services/activity";
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -454,13 +455,34 @@ export async function POST(request) {
         // Unsaved ideas carry the brief back on `complete` and persist on save.
         const brief = { ...assembled };
         if (evaluationId) {
-          const { error: persistError } = await supabaseAdmin
+          const { data: persisted, error: persistError } = await supabaseAdmin
             .from("evaluations")
             .update({ execution_brief_json: brief })
             .eq("id", evaluationId)
-            .eq("user_id", user.id);
+            .eq("user_id", user.id)
+            .select("idea_id")
+            .maybeSingle();
           if (persistError) {
             console.error("Brief persist failed:", persistError.message);
+          } else if (persisted?.idea_id) {
+            // The brief IS the Handoff moment. Two best-effort follow-ups, neither
+            // of which blocks the stream close or throws: bump the parent idea's
+            // clock so the Overview "last edited / resume" reflects the brief, and
+            // log the BRIEFED event to the activity ledger. (An UNSAVED idea has no
+            // evaluationId yet — its brief persists with the idea on save, and that
+            // save path is where its BRIEFED event belongs.)
+            const { data: bumped } = await supabaseAdmin
+              .from("ideas")
+              .update({ updated_at: new Date().toISOString() })
+              .eq("id", persisted.idea_id)
+              .eq("user_id", user.id)
+              .select("title")
+              .maybeSingle();
+            await logActivity(user.id, {
+              kind: "briefed",
+              idea_id: persisted.idea_id,
+              summary: `${bumped?.title || "This idea"} — execution brief generated.`,
+            });
           }
         }
 

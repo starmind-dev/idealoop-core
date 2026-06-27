@@ -335,7 +335,7 @@ function ResumeCard({ card, bindingConstraint, onContinue }) {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 9, flexShrink: 0 }}>
         <button
-          onClick={() => onContinue(card.id)}
+          onClick={() => onContinue(card.id, hasBrief ? "brief" : null)}
           onMouseEnter={() => setH1(true)} onMouseLeave={() => setH1(false)}
           style={{
             whiteSpace: "nowrap", background: C.violet2, color: "#fff", border: "none", borderRadius: 11,
@@ -469,6 +469,7 @@ const KIND_META = {
   compared: { label: "COMPARED", color: C.blueAlt },
   parked: { label: "PARKED", color: C.amber },
   killed: { label: "KILLED", color: C.red },
+  briefed: { label: "BRIEFED", color: C.violet2 },
 };
 // Real activity rows (newest-first) → ledger display rows. This is the full,
 // honest ledger — it carries the three events the derived-lite version can't:

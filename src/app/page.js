@@ -2228,7 +2228,11 @@ export default function Home() {
             t={t}
             onStartExplore={() => { setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setPendingOriginAngle(null); setOriginAngleId(null); setSpecificityGate(null); setInputMode("explore"); setCurrentScreen("input"); }}
             onStartDeep={() => { setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setPendingOriginAngle(null); setOriginAngleId(null); setSpecificityGate(null); setInputMode("deep"); setCurrentScreen("input"); }}
-            onContinue={(id) => loadSavedIdea(id)}
+            onContinue={(id, target) =>
+              Promise.resolve(loadSavedIdea(id)).then(() => {
+                if (target === "brief") setCurrentScreen("brief");
+              })
+            }
             onOpenIdea={(id) => loadSavedIdea(id)}
             onViewAll={goToMyIdeas}
           />

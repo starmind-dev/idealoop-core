@@ -19,7 +19,7 @@
 import { supabaseAdmin } from "../supabase-admin";
 
 const VALID_KINDS = new Set([
-  "captured", "explored", "judged", "rejudged", "compared", "parked", "killed",
+  "captured", "explored", "judged", "rejudged", "compared", "parked", "killed", "briefed",
 ]);
 
 // Fire a ledger event. Safe by construction: bad input or a DB error is logged
