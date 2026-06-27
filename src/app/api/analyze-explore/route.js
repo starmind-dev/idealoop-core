@@ -14,7 +14,7 @@ import { EXPLORE_SYSTEM_PROMPT } from "../../../lib/services/prompt-explore";
 // EXPLORE ROUTE — LL2 (base, V1.2 four-surface shape)
 // ============================================
 // Cognitive mode: Explore (widen). Front half is SPINE-IDENTICAL to the Deep
-// route (analyze-pro): keywords + specificity gate -> same four-source search
+// route (analyze-pro): keywords -> same four-source search
 // -> same dedup/slice(7)/sort -> same buildCompetitorContext/Instructions ->
 // the SAME hardened Stage 1 call (temp 0, top_k 1, top_p 0.1). Then it DIVERGES:
 // instead of Stage 2a -> scorers -> 2c -> 3 (Deep's eight calls), it makes ONE
@@ -253,16 +253,14 @@ export async function POST(request) {
     const evaluationId = crypto.randomUUID();
     const encoder = new TextEncoder();
 
-    // ── TEST-ONLY GATE BYPASS ──
-    // The Haiku specificity gate is tuned for Deep and false-positives on
-    // Explore inputs (specific-but-rough ideas), which both blocks legit ideas
-    // and biases the cross-case probe sample. While the real Explore gate is
-    // still unbuilt, the probe runner sends `_skip_gate: true` to bypass it.
-    // STRUCTURALLY INERT IN PRODUCTION: the NODE_ENV guard makes this null on
-    // the live site regardless of what a request sends (same safety model as the
-    // Deep route's _test_fault harness). Remove this and the fallback below when
-    // the Explore-tuned gate is built.
-    const skipGate = process.env.NODE_ENV !== "production" && body._skip_gate === true;
+    // ── NO SPECIFICITY GATE IN EXPLORE ──
+    // Explore's whole job is to WIDEN a rough/vague seed, so the Haiku
+    // specificity gate (which is tuned for Deep and halts before search on
+    // under-specified ideas) is intentionally NOT run here. A vague seed like
+    // "something with AI for small businesses" is a valid Explore input — the
+    // fan is supposed to give it shape, not refuse it. Deep keeps its gate; only
+    // Explore skips it. The query fallback below covers the case where the
+    // extractor short-circuited on a vague idea without building search queries.
 
     const stream = new ReadableStream({
       async start(controller) {
@@ -328,27 +326,14 @@ export async function POST(request) {
           const keywordsResult = await extractKeywords(idea);
           __timing.keywords_ms = Date.now() - __kwStart;
 
-          // Specificity gate — the upstream half of "not branchable yet".
-          // Halts before search / Stage 1 / synthesis. No credit charged.
-          // Honors the test-only bypass (skipGate); always fires in production.
-          if (keywordsResult.specificity_insufficient && !skipGate) {
-            sendEvent({
-              step: "complete",
-              data: {
-                specificity_insufficient: true,
-                missing_elements: keywordsResult.missing_elements || [],
-                message: keywordsResult.message || "",
-              },
-            });
-            controller.close();
-            return;
-          }
+          // No specificity gate in Explore (see note above): a vague seed is a
+          // valid input to widen, never a halt. Proceed straight to search.
 
-          // Query resolution with fallback. When the gate is bypassed on an
-          // idea the extractor flagged insufficient, it may not have built
-          // search queries (it short-circuits). Fall back to the keywords, then
-          // the raw idea text, so search still runs. In the normal (non-skipped)
-          // path these fallbacks never trigger — the extractor populated them.
+          // Query resolution with fallback. A vague idea the extractor flagged
+          // insufficient may not have built search queries (it short-circuits).
+          // Fall back to the keywords, then the raw idea text, so search still
+          // runs on any input. On a well-formed idea these fallbacks never
+          // trigger — the extractor populated the queries.
           const kw = Array.isArray(keywordsResult.keywords) ? keywordsResult.keywords : [];
           const fallbackQuery = kw.length ? kw.join(" ") : idea;
           const keywords = kw;
