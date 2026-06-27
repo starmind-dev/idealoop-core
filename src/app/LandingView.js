@@ -100,7 +100,7 @@ export default function LandingView({
               <img
                 src="/idealoop-wordmark.png"
                 alt="IdeaLoop Core"
-                style={{ display: "block", height: "30px", width: "auto" }}
+                style={{ display: "block", height: "46px", width: "auto" }}
               />
             </div>
             <nav style={{ display: "flex", alignItems: "center", gap: "30px", fontSize: "14px", color: "#b4b4bd" }}>
