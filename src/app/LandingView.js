@@ -1112,13 +1112,12 @@ export default function LandingView({
                 </div>
               </div>
               <div style={{ background: "linear-gradient(180deg,rgba(52,216,168,0.06),rgba(255,255,255,0.012))", border: "1px solid rgba(52,216,168,0.3)", borderRadius: "16px", padding: "26px", boxShadow: "0 0 50px rgba(52,216,168,0.07)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ color: "#34d8a8", fontSize: "17px" }}>
-                    ∞
-                  </span>
-                  <span style={{ fontSize: "16px", color: "#f4f4f5", fontWeight: "600" }}>
-                    IdeaLoop Core
-                  </span>
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <img
+                    src="/idealoop-wordmark.png"
+                    alt="IdeaLoop Core"
+                    style={{ display: "block", height: "24px", width: "auto" }}
+                  />
                 </div>
                 <div style={{ fontSize: "13.5px", color: "#5fe3bd", marginTop: "6px" }}>
                   the decision workspace
