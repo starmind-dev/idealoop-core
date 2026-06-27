@@ -96,13 +96,12 @@ export default function LandingView({
   return (
         <div style={{ background: "#09090b", color: "#f4f4f5", fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif", WebkitFontSmoothing: "antialiased", overflowX: "hidden" }}>
           <header style={{ position: "sticky", top: "0", zIndex: "50", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 40px", background: "rgba(9,9,11,0.82)", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ color: "#34d8a8", fontSize: "21px" }}>
-                ∞
-              </span>
-              <span style={{ fontWeight: "700", fontSize: "16px" }}>
-                IdeaLoop Core
-              </span>
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <img
+                src="/idealoop-wordmark.png"
+                alt="IdeaLoop Core"
+                style={{ display: "block", height: "30px", width: "auto" }}
+              />
             </div>
             <nav style={{ display: "flex", alignItems: "center", gap: "30px", fontSize: "14px", color: "#b4b4bd" }}>
               <span onClick={() => scrollToId("how-it-works")} style={{ cursor: "pointer" }}>
@@ -1341,13 +1340,12 @@ export default function LandingView({
             </div>
           </section>
           <footer style={{ maxWidth: "1180px", margin: "0 auto", padding: "80px 24px 50px", display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid rgba(255,255,255,0.06)", marginTop: "120px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ color: "#34d8a8", fontSize: "18px" }}>
-                ∞
-              </span>
-              <span style={{ fontWeight: "700", fontSize: "15px" }}>
-                IdeaLoop Core
-              </span>
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <img
+                src="/idealoop-wordmark.png"
+                alt="IdeaLoop Core"
+                style={{ display: "block", height: "26px", width: "auto" }}
+              />
             </div>
             <div style={{ display: "flex", gap: "26px", fontSize: "13.5px", color: "#9a9aa3" }}>
               <span>
