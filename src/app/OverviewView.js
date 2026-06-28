@@ -183,6 +183,7 @@ function resumeTheme(card) {
       connectorDone: "rgba(107,147,245,0.5)",
       tagLabel: "EXPLORED",
       secondLabel: "Take one deep", secondText: C.blueLed, secondBorder: "rgba(107,147,245,0.30)",
+      secondIntent: "graduate-deep",
     };
   }
   return {
@@ -193,6 +194,7 @@ function resumeTheme(card) {
     connectorDone: "rgba(154,154,163,0.5)",
     tagLabel: "ROUGH",
     secondLabel: "Explore this", secondText: C.sec2, secondBorder: "rgba(154,154,163,0.28)",
+    secondIntent: "graduate-explore",
   };
 }
 

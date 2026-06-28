@@ -1693,6 +1693,16 @@ export default function Home() {
     recordLastIdea(ideaId);
     if (state === "rough") {
       const txt = data.idea?.raw_idea_text || "";
+      // Overview "Explore this" (rough secondary): graduate this rough idea
+      // forward into the Explore input in place — mirrors the rough-room door
+      // (graduatingIdeaId carries the node so running flips it forward, not a dup).
+      if (afterLoad === "graduate-explore") {
+        setHubReturnView("evaluated");
+        setSavedExploreIdeaId(null);
+        setGraduatingIdeaId(ideaId);
+        goToInput("explore", txt, true);
+        return;
+      }
       setRoughRoomIdea({
         id: ideaId,
         text: txt,
@@ -1703,6 +1713,20 @@ export default function Home() {
     }
     if (state === "explore") {
       if (data.explore) {
+        // Overview "Take one deep" (explore secondary): graduate this explored
+        // idea forward into the Deep input in place. graduatingIdeaId carries the
+        // explore node so the deep run flips it forward (line: deep onRun reads
+        // savedExploreIdeaId || graduatingIdeaId); clearing savedExploreIdeaId
+        // keeps it on the graduate path, not the branch-under-explore path.
+        if (afterLoad === "graduate-deep") {
+          setExploreAnalysis(data.explore);
+          setViewingFromSaved(true);
+          setHubReturnView("evaluated");
+          setSavedExploreIdeaId(null);
+          setGraduatingIdeaId(ideaId);
+          goToInput("deep", data.explore.idea || "", true);
+          return;
+        }
         setExploreAnalysis(data.explore);
         // Reopened from the hub: this explored idea is already saved. Mark it so
         // the "Keep this explored idea" bar doesn't offer to save it again, and
@@ -2248,7 +2272,18 @@ export default function Home() {
                 loadSavedIdea(id);
                 return;
               }
-              loadSavedIdea(id, undefined, target === "brief" ? "brief" : undefined);
+              // "graduate-deep" (explore → Deep input) and "graduate-explore"
+              // (rough → Explore input) are honored in routeLoadedIdea's rough/
+              // explore branches: load the node, then graduate it forward in place
+              // into the right input (text + graduatingIdeaId carried). "brief"
+              // opens the saved execution brief. Plain open otherwise.
+              const afterLoad =
+                target === "brief" ||
+                target === "graduate-deep" ||
+                target === "graduate-explore"
+                  ? target
+                  : undefined;
+              loadSavedIdea(id, undefined, afterLoad);
             }}
             onOpenIdea={(id) => loadSavedIdea(id)}
             onViewAll={goToMyIdeas}
