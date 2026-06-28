@@ -1622,7 +1622,7 @@ export default function Home() {
   };
 
   // Apply loaded evaluation data to state (shared by cache hit and fetch paths)
-  const applyLoadedIdea = (data, ideaId) => {
+  const applyLoadedIdea = (data, ideaId, afterLoad) => {
     setIdea(data.idea.raw_idea_text);
     setAnalysis(data.analysis);
     // V87 Stage 3c — restore persisted walkthrough markers on reload. The GET
@@ -1670,13 +1670,23 @@ export default function Home() {
       });
     }
     setLoadedIdeaText(fullIdeaText);
-    setCurrentScreen("results1");
+    // afterLoad intent: the Overview "Open execution brief →" resume routes here.
+    // We set the brief screen in the SAME synchronous batch as setAnalysis above,
+    // so the brief guard (currentScreen === "brief" && analysis) is satisfied on
+    // the next render. Routing via a post-load setCurrentScreen in a .then() would
+    // race the not-yet-committed analysis state and fall through to the white
+    // screen (return null). Only honor "brief" when analysis is actually present.
+    if (afterLoad === "brief" && data.analysis) {
+      setCurrentScreen("brief");
+    } else {
+      setCurrentScreen("results1");
+    }
   };
 
   // Route a loaded idea to the right room based on its derived state. Deep ideas
   // carry an analysis and open the results room; rough ideas have none and open
   // the two-door rough room; explore ideas open the explore room.
-  const routeLoadedIdea = (data, ideaId) => {
+  const routeLoadedIdea = (data, ideaId, afterLoad) => {
     const state = data && data.state;
     // Mark this as the family the user last opened — the Overview "continue
     // where you left off" resume target (per-browser; resolved to a hub card).
@@ -1707,11 +1717,11 @@ export default function Home() {
       return;
     }
     // deep (default) — analysis present
-    applyLoadedIdea(data, ideaId);
+    applyLoadedIdea(data, ideaId, afterLoad);
   };
 
   // Load a saved idea's full evaluation and show it
-  const loadSavedIdea = async (ideaId, evaluationId) => {
+  const loadSavedIdea = async (ideaId, evaluationId, afterLoad) => {
     if (!user) return;
     setMyIdeasError("");
     setShowAlternativesPopup(false);
@@ -1721,7 +1731,7 @@ export default function Home() {
     // Check cache first — instant load if available
     if (evaluationCacheRef.current[cacheKey]) {
       const cached = evaluationCacheRef.current[cacheKey];
-      routeLoadedIdea(cached, ideaId);
+      routeLoadedIdea(cached, ideaId, afterLoad);
       return;
     }
 
@@ -1742,7 +1752,7 @@ export default function Home() {
       // Store in cache
       evaluationCacheRef.current[cacheKey] = data;
 
-      routeLoadedIdea(data, ideaId);
+      routeLoadedIdea(data, ideaId, afterLoad);
     } catch (err) {
       setMyIdeasError(err.message || "Failed to load idea.");
     } finally {
@@ -2229,9 +2239,7 @@ export default function Home() {
             onStartExplore={() => { setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setPendingOriginAngle(null); setOriginAngleId(null); setSpecificityGate(null); setInputMode("explore"); setCurrentScreen("input"); }}
             onStartDeep={() => { setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setPendingOriginAngle(null); setOriginAngleId(null); setSpecificityGate(null); setInputMode("deep"); setCurrentScreen("input"); }}
             onContinue={(id, target) =>
-              Promise.resolve(loadSavedIdea(id)).then(() => {
-                if (target === "brief") setCurrentScreen("brief");
-              })
+              loadSavedIdea(id, undefined, target === "brief" ? "brief" : undefined)
             }
             onOpenIdea={(id) => loadSavedIdea(id)}
             onViewAll={goToMyIdeas}
