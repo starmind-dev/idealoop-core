@@ -171,6 +171,7 @@ function resumeTheme(card) {
       connectorDone: "rgba(139,127,240,0.5)",
       tagLabel: "DEEP",
       secondLabel: "Evolve", secondText: C.violetText, secondBorder: "rgba(139,127,240,0.3)",
+      secondIntent: "evolve",
     };
   }
   if (stage === "explore") {
@@ -420,7 +421,7 @@ function ResumeCard({ card, bindingConstraint, onContinue }) {
           }}
         >{hasBrief ? "Open execution brief →" : "Continue →"}</button>
         <button
-          onClick={() => onContinue(resumeId)}
+          onClick={() => onContinue(resumeId, theme.secondIntent || null)}
           onMouseEnter={() => setH2(true)} onMouseLeave={() => setH2(false)}
           style={{
             whiteSpace: "nowrap", background: h2 ? "rgba(255,255,255,0.04)" : "transparent", color: theme.secondText,

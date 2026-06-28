@@ -2238,9 +2238,18 @@ export default function Home() {
             t={t}
             onStartExplore={() => { setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setPendingOriginAngle(null); setOriginAngleId(null); setSpecificityGate(null); setInputMode("explore"); setCurrentScreen("input"); }}
             onStartDeep={() => { setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setPendingOriginAngle(null); setOriginAngleId(null); setSpecificityGate(null); setInputMode("deep"); setCurrentScreen("input"); }}
-            onContinue={(id, target) =>
-              loadSavedIdea(id, undefined, target === "brief" ? "brief" : undefined)
-            }
+            onContinue={(id, target) => {
+              if (target === "evolve") {
+                // Defer: load the resume node first; the pendingReEvalId effect
+                // fires startReEvaluation once its analysis + currentIdeaId land.
+                // (Mirrors the lineage "Re-evaluate" entry — re-eval needs analysis
+                // in state, so we can't enter the screen synchronously here.)
+                setPendingReEvalId(id);
+                loadSavedIdea(id);
+                return;
+              }
+              loadSavedIdea(id, undefined, target === "brief" ? "brief" : undefined);
+            }}
             onOpenIdea={(id) => loadSavedIdea(id)}
             onViewAll={goToMyIdeas}
           />
