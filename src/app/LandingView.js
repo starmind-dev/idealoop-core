@@ -3,11 +3,13 @@ import React, { useRef, useEffect } from "react";
 /*
  * LandingView — IdeaLoop Core public marketing landing page.
  *
- * Faithful build of the approved Claude Design landing ("grounded inspiration"
- * rework). No Tailwind — inline styles only. Section order:
- *   Hero → Two Problems → Explore (grounded fan) → Lineage → Footing
- *   (Deep/Re-eval/Compare) → The whole loop (recap) → Handoff → Why-not
- *   → Use-cases → Pricing → Final CTA.
+ * Recognition-first rebuild. The page now leads with the loop-as-cognition
+ * (hero ring) instead of the old "grounded inspiration" differentiator, then
+ * earns the differentiator inside the Explore beat. No Tailwind — inline styles
+ * only. Section order:
+ *   Nav → Hero (loop ring) → The Gap → The Loop Walked (spine) → Explore
+ *   (grounded fan) → Footing (Deep/Re-eval/Compare) → Lineage → Handoff
+ *   → Why-not → When-to-open (strip) → Pricing → Final CTA → Footer.
  *
  * ───────────────────────────────────────────────────────────────────────────
  *  EASY-TO-FILL STUBS (left intentionally inert for now — see memory):
@@ -24,8 +26,8 @@ import React, { useRef, useEffect } from "react";
  *     are passed in as props so the routing gate in page.js decides what
  *     "enter the app" means.
  *
- *  4. heroFlow / showFooting — render toggles for the hero pipeline strip and the
- *     "footing" (Deep/Re-eval/Compare) section. Default true.
+ *  4. showFooting — render toggle for the "footing" (Deep/Re-eval/Compare)
+ *     section. Default true.
  * ───────────────────────────────────────────────────────────────────────────
  */
 
@@ -51,23 +53,25 @@ export default function LandingView({
   onStartFree,
   onGetCredits,
   onViewSample,
-  heroFlow = true,
   showFooting = true,
 }) {
   const boardRef = useRef(null);
 
   // ── Fit-scaler for the lineage board (1240px design → scales to container).
+  //    The new lineage inner is 1240×360 (was 560 in the old design).
   useEffect(() => {
     const wrap = boardRef.current;
     if (!wrap) return;
+    const DESIGN_W = 1240;
+    const DESIGN_H = 360;
     const fit = () => {
       const inner = wrap.firstElementChild;
       if (!inner) return;
-      const avail = wrap.clientWidth || 1240;
-      const s = Math.min(1, avail / 1240);
+      const avail = wrap.clientWidth || DESIGN_W;
+      const s = Math.min(1, avail / DESIGN_W);
       inner.style.transform = "scale(" + s + ")";
-      inner.style.left = (s >= 1 ? (avail - 1240) / 2 : 0) + "px";
-      wrap.style.height = (560 * s) + "px";
+      inner.style.left = (s >= 1 ? (avail - DESIGN_W) / 2 : 0) + "px";
+      wrap.style.height = (DESIGN_H * s) + "px";
     };
     fit();
     const raf = requestAnimationFrame(fit);
@@ -81,13 +85,28 @@ export default function LandingView({
   // ── Load display + mono faces (Spectral / JetBrains Mono) once.
   useEffect(() => {
     const id = "ilc-landing-fonts";
+    if (!document.getElementById(id)) {
+      const link = document.createElement("link");
+      link.id = id;
+      link.rel = "stylesheet";
+      link.href =
+        "https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@400;500;600&display=swap";
+      document.head.appendChild(link);
+    }
+  }, []);
+
+  // ── Inject keyframes + navlink hover (ring trace, reduced-motion guard) once.
+  useEffect(() => {
+    const id = "ilc-landing-kf";
     if (document.getElementById(id)) return;
-    const link = document.createElement("link");
-    link.id = id;
-    link.rel = "stylesheet";
-    link.href =
-      "https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap";
-    document.head.appendChild(link);
+    const style = document.createElement("style");
+    style.id = id;
+    style.textContent =
+      "@keyframes ilcCircle{to{stroke-dashoffset:-973.9}}" +
+      ".ringtrace{animation:ilcCircle 4.5s linear infinite;}" +
+      "@media (prefers-reduced-motion: reduce){.ringtrace{animation:none;opacity:0}}" +
+      "a.navlink{color:#b4b4bd;text-decoration:none;}a.navlink:hover{color:#e4e4e7;}";
+    document.head.appendChild(style);
   }, []);
 
   const scrollToId = (id) => smoothScrollTo(document.getElementById(id));
@@ -103,62 +122,89 @@ export default function LandingView({
 
 <div style={{ background: '#09090b', color: '#f4f4f5', fontFamily: '-apple-system,BlinkMacSystemFont,\'Segoe UI\',Helvetica,Arial,sans-serif', WebkitFontSmoothing: 'antialiased', overflowX: 'hidden' }}>
 
-  
   {/* NAV */}
-      <header style={{ position: "sticky", top: "0", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 40px", background: "rgba(9,9,11,0.82)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <img src="/idealoop-wordmark.png" alt="IdeaLoop Core" style={{ display: "block", height: "46px", width: "auto" }} />
-        </div>
-        <nav style={{ display: "flex", alignItems: "center", gap: "30px", fontSize: "14px", color: "#b4b4bd" }}>
-          <span onClick={() => scrollToId("explore")} style={{ cursor: "pointer" }}>Grounded Explore</span>
-          <span onClick={() => scrollToId("the-loop")} style={{ cursor: "pointer" }}>The loop</span>
-          <span onClick={() => scrollToId("pricing")} style={{ cursor: "pointer" }}>Pricing</span>
-        </nav>
-        <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
-          <span onClick={onLogIn} style={{ fontSize: "14px", color: "#a1a1aa", cursor: "pointer" }}>Log in</span>
-          <span onClick={onStartLoop} style={{ fontSize: "14px", fontWeight: "600", color: "#fff", background: "#8b7ff0", padding: "9px 18px", borderRadius: "10px", cursor: "pointer" }}>Start an idea loop</span>
-        </div>
-      </header>
+  <header style={{ position: 'sticky', top: '0', zIndex: '50', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 40px', background: 'rgba(9,9,11,0.82)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+    <div style={{ display: 'flex', alignItems: 'center' }}><img src="/idealoop-wordmark.png" alt="IdeaLoop Core" style={{ display: 'block', height: '46px', width: 'auto' }} /></div>
+    <nav style={{ display: 'flex', alignItems: 'center', gap: '30px', fontSize: '14px' }}><a className="navlink" href="#the-loop">The loop</a><a className="navlink" href="#explore">Explore</a><a className="navlink" href="#pricing">Pricing</a></nav>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}><span onClick={onLogIn} style={{ fontSize: '14px', color: '#a1a1aa', cursor: 'pointer' }}>Log in</span><span onClick={onStartLoop} style={{ fontSize: '14px', fontWeight: '600', color: '#fff', background: '#8b7ff0', padding: '9px 18px', borderRadius: '10px', cursor: 'pointer' }}>Start an idea loop</span></div>
+  </header>
 
-  
-  <section style={{ position: 'relative', textAlign: 'center', padding: '72px 24px 0', maxWidth: '1180px', margin: '0 auto' }}>
-    <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', width: '760px', height: '380px', background: 'radial-gradient(ellipse at center, rgba(52,216,168,0.10), rgba(139,127,240,0.06) 45%, transparent 70%)', pointerEvents: 'none' }}></div>
+  {/* 1 HERO — RECOGNITION */}
+  <section style={{ position: 'relative', textAlign: 'center', padding: '74px 24px 0', maxWidth: '1180px', margin: '0 auto' }}>
+    <div style={{ position: 'absolute', top: '0', left: '50%', transform: 'translateX(-50%)', width: '820px', height: '520px', background: 'radial-gradient(ellipse at center, rgba(52,216,168,0.09), rgba(139,127,240,0.05) 46%, transparent 70%)', pointerEvents: 'none' }}></div>
     <div style={{ position: 'relative' }}>
-      <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', letterSpacing: '.18em', color: '#6b7280', display: 'inline-flex', alignItems: 'center', gap: '9px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '999px', padding: '7px 16px' }}><span style={{ color: '#34d8a8' }}>∞</span> GROUNDED INSPIRATION FOR FOUNDERS</div>
-      <h1 style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '62px', lineHeight: '1.06', letterSpacing: '-0.02em', margin: '26px auto 0', maxWidth: '900px', color: '#fafafa' }}>A direction you can believe in — and the evidence it’s worth it.</h1>
-      <p style={{ fontFamily: '\'Spectral\',serif', fontStyle: 'italic', fontSize: '21px', color: '#8a8a93', margin: '20px 0 0' }}>Inspiration is everywhere. Footing is what’s rare.</p>
-      <p style={{ fontSize: '18px', lineHeight: '1.6', color: '#b4b4bd', margin: '22px auto 0', maxWidth: '700px' }}>Every AI will hand you ten exciting directions and stand behind none of them. IdeaLoop Core surfaces the ones <span style={{ color: '#f0f0f1', fontWeight: '500' }}>worth shaping</span> — each already pressure-tested against real sources you can open. Inspiration that arrives with receipts.</p>
+      <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', letterSpacing: '.18em', color: '#6b7280', display: 'inline-flex', alignItems: 'center', gap: '9px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '999px', padding: '7px 16px' }}><span style={{ color: '#34d8a8' }}>∞</span> THE LOOP YOU ALREADY RUN</div>
+      <h1 style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '44px', lineHeight: '1.2', letterSpacing: '-0.015em', margin: '24px auto 0', maxWidth: '900px', color: '#fafafa' }}>Every serious idea moves in a loop.<span style={{ display: 'block', marginTop: '12px', color: '#c8c8cc' }}>Until now, that loop lived in your head.</span></h1>
+      <p style={{ fontSize: '17.5px', lineHeight: '1.62', color: '#b4b4bd', margin: '22px auto 0', maxWidth: '680px' }}>A spark arrives. You turn it over. Another version appears. One angle starts to hold. You pressure it, revise it, compare it, return to it. That is not a workflow to learn — it is how thinking already moves. <span style={{ color: '#f0f0f1', fontWeight: '500' }}>IdeaLoop Core gives that motion somewhere to live.</span></p>
 
-      {heroFlow && (<>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '9px', flexWrap: 'wrap', marginTop: '26px', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px' }}>
-        <span style={{ color: '#d4d4d8', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 13px' }}>Paste idea</span>
-        <span style={{ color: '#52525b' }}>→</span>
-        <span style={{ color: '#8aa9f7', background: 'rgba(107,147,245,0.08)', border: '1px solid rgba(107,147,245,0.22)', borderRadius: '8px', padding: '8px 13px' }}>Explore</span>
-        <span style={{ color: '#52525b' }}>→</span>
-        <span style={{ color: '#b3a3f5', background: 'rgba(157,134,240,0.08)', border: '1px solid rgba(157,134,240,0.22)', borderRadius: '8px', padding: '8px 13px' }}>Deep Analysis</span>
-        <span style={{ color: '#52525b' }}>→</span>
-        <span style={{ color: '#5fe3bd', background: 'rgba(52,216,168,0.07)', border: '1px solid rgba(52,216,168,0.24)', borderRadius: '8px', padding: '8px 13px' }}>Re-evaluate</span>
-        <span style={{ color: '#52525b' }}>→</span>
-        <span style={{ color: '#a6b6f5', background: 'rgba(142,162,240,0.08)', border: '1px solid rgba(142,162,240,0.22)', borderRadius: '8px', padding: '8px 13px' }}>Compare</span>
-        <span style={{ color: '#52525b' }}>→</span>
-        <span style={{ color: '#08120e', background: '#5fe3bd', border: '1px solid #5fe3bd', borderRadius: '8px', padding: '8px 13px', fontWeight: '600' }}>Hand off</span>
+      {/* SIGNATURE: LOOP RING */}
+      <div style={{ position: 'relative', width: '600px', maxWidth: '100%', margin: '30px auto 0', aspectRatio: '600/470' }}>
+        <svg viewBox="0 0 600 470" style={{ position: 'absolute', inset: '0', width: '100%', height: '100%', overflow: 'visible' }}>
+          <defs>
+            <linearGradient id="ringgrad" x1="300" y1="60" x2="300" y2="370" gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#8aa9f7" /><stop offset="50%" stopColor="#9d86f0" /><stop offset="100%" stopColor="#34d8a8" /></linearGradient>
+          </defs>
+          <circle cx="300" cy="215" r="155" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+          {/* solid forward arc: Spark -> Explore -> Deep -> Decide (right) */}
+          <path d="M300,60 A155,155 0 0 1 300,370" fill="none" stroke="url(#ringgrad)" strokeWidth="2" opacity="0.85" />
+          {/* dotted return arc: Decide -> Re-evaluate -> Compare -> Spark (left) */}
+          <path d="M300,370 A155,155 0 0 1 300,60" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="1.4" strokeDasharray="2 7" />
+          {/* animated load trace */}
+          <path className="ringtrace" d="M300,60 A155,155 0 1 1 299.9,60" fill="none" stroke="#5fe3bd" strokeWidth="2.6" strokeLinecap="round" strokeDasharray="150 824" style={{ filter: 'drop-shadow(0 0 6px rgba(95,227,189,0.75))' }} />
+        </svg>
+
+        {/* center caption */}
+        <div style={{ position: 'absolute', left: '50%', top: '45.7%', transform: 'translate(-50%,-50%)', width: '188px', textAlign: 'center', fontFamily: '\'JetBrains Mono\',monospace' }}>
+          <div style={{ fontSize: '10.5px', letterSpacing: '.14em', color: '#5fe3bd' }}>↻ THE LOOP NEVER CLOSES</div>
+          <div style={{ fontSize: '10.5px', color: '#71717a', marginTop: '5px', lineHeight: '1.5' }}>while the idea is still alive</div>
+        </div>
+
+        {/* nodes */}
+        {/* Spark (top) */}
+        <div style={{ position: 'absolute', left: '50%', top: '12.8%', transform: 'translate(-50%,-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px' }}>
+          <span style={{ width: '54px', height: '54px', borderRadius: '50%', background: '#0c0c11', border: '1px solid rgba(255,255,255,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a8a8b0" strokeWidth="1.6"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M18 6l-2.5 2.5M8.5 15.5L6 18" /></svg></span>
+          <span style={{ fontSize: '13.5px', fontWeight: '600', color: '#e4e4e7' }}>Spark</span>
+        </div>
+        {/* Explore (upper right) */}
+        <div style={{ position: 'absolute', left: '72.4%', top: '29.3%', transform: 'translate(-50%,-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px' }}>
+          <span style={{ width: '54px', height: '54px', borderRadius: '50%', background: '#0c0c12', border: '1px solid rgba(122,162,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 18px rgba(122,162,255,0.12)' }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8aa9f7" strokeWidth="1.6"><circle cx="12" cy="12" r="9" /><polygon points="15.6,8.4 10.8,10.8 8.4,15.6 13.2,13.2" /></svg></span>
+          <span style={{ fontSize: '13.5px', fontWeight: '600', color: '#cdd6f5' }}>Explore</span>
+        </div>
+        {/* Deep (lower right) */}
+        <div style={{ position: 'absolute', left: '72.4%', top: '62.2%', transform: 'translate(-50%,-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px' }}>
+          <span style={{ width: '54px', height: '54px', borderRadius: '50%', background: '#0d0c12', border: '1px solid rgba(138,130,194,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b3a3f5" strokeWidth="1.6"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.4" fill="#b3a3f5" /></svg></span>
+          <span style={{ fontSize: '13.5px', fontWeight: '600', color: '#d7d0f3' }}>Deep</span>
+        </div>
+        {/* Decide (bottom) */}
+        <div style={{ position: 'absolute', left: '50%', top: '78.7%', transform: 'translate(-50%,-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px' }}>
+          <span style={{ width: '58px', height: '58px', borderRadius: '50%', background: '#0a1310', border: '1.5px solid rgba(52,216,168,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 30px rgba(52,216,168,0.28)' }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5fe3bd" strokeWidth="1.9"><path d="M5 12.5l4 4L19 7.5" /></svg></span>
+          <span style={{ fontSize: '13.5px', fontWeight: '700', color: '#5fe3bd' }}>Decide</span>
+        </div>
+        {/* Re-evaluate (lower left) */}
+        <div style={{ position: 'absolute', left: '27.6%', top: '62.2%', transform: 'translate(-50%,-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px' }}>
+          <span style={{ width: '54px', height: '54px', borderRadius: '50%', background: '#0a0f0d', border: '1px solid rgba(52,216,168,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#5fe3bd" strokeWidth="1.6"><path d="M3.5 12a8.5 8.5 0 0 1 14.3-6.2L21 8" /><path d="M21 4v4h-4" /><path d="M20.5 12a8.5 8.5 0 0 1-14.3 6.2L3 16" /><path d="M3 20v-4h4" /></svg></span>
+          <span style={{ fontSize: '13.5px', fontWeight: '600', color: '#bfeede' }}>Re-evaluate</span>
+        </div>
+        {/* Compare (upper left) */}
+        <div style={{ position: 'absolute', left: '27.6%', top: '29.3%', transform: 'translate(-50%,-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px' }}>
+          <span style={{ width: '54px', height: '54px', borderRadius: '50%', background: '#0c0d12', border: '1px solid rgba(166,182,245,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a6b6f5" strokeWidth="1.6"><path d="M4 9h13l-3.2-3.2" /><path d="M20 15H7l3.2 3.2" /></svg></span>
+          <span style={{ fontSize: '13.5px', fontWeight: '600', color: '#cdd5f5' }}>Compare</span>
+        </div>
       </div>
-      </>)}
-      <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', color: '#9a9aa3', marginTop: '16px' }}>Paste a rough idea — one sentence is enough.</div>
-      <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11.5px', color: '#71717a', margin: '7px auto 0', maxWidth: '600px', lineHeight: '1.5' }}>The read stops where your judgment starts — we surface directions and the evidence, never the verdict.</div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', marginTop: '26px' }}>
+
+      <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11.5px', color: '#71717a', margin: '8px auto 0', maxWidth: '600px', lineHeight: '1.5' }}>The read stops where your judgment starts — we surface directions and the evidence, never the verdict.</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', marginTop: '24px' }}>
         <span onClick={onStartLoop} style={{ fontSize: '15.5px', fontWeight: '600', color: '#fff', background: '#8b7ff0', padding: '14px 28px', borderRadius: '12px', cursor: 'pointer', boxShadow: '0 8px 30px rgba(139,127,240,0.3)' }}>Start an idea loop →</span>
-        {showSample && (<span onClick={onViewSampleFn} style={{ fontSize: '15.5px', fontWeight: '500', color: '#d4d4d8', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', padding: '14px 24px', borderRadius: '12px', cursor: 'pointer' }}>View a sample loop</span>)}
+        {showSample && (<span style={{ fontSize: '15.5px', fontWeight: '500', color: '#d4d4d8', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', padding: '14px 24px', borderRadius: '12px', cursor: 'pointer' }} onClick={onViewSampleFn}>View a sample loop</span>)}
       </div>
       <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', color: '#52525b', marginTop: '18px' }}>NO CARD TO START · FREE CREDITS ON SIGN-UP</div>
     </div>
   </section>
 
-  
-  <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '118px 24px 0' }}>
-    <div style={{ textAlign: 'center' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', letterSpacing: '.18em', color: '#ee8a8a' }}>TWO PROBLEMS, ONE ANSWER</div><h2 style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '40px', lineHeight: '1.12', letterSpacing: '-0.01em', margin: '14px auto 0', maxWidth: '760px', color: '#fafafa' }}>Ideas are cheap. Grounded ones, kept on record, are not.</h2></div>
+  {/* 2 THE GAP */}
+  <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '122px 24px 0' }}>
+    <div style={{ textAlign: 'center' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', letterSpacing: '.18em', color: '#ee8a8a' }}>THE GAP · TWO PROBLEMS, ONE ANSWER</div><h2 style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '40px', lineHeight: '1.12', letterSpacing: '-0.01em', margin: '14px auto 0', maxWidth: '760px', color: '#fafafa' }}>The idea is not the scarce part. The loop around it is.</h2></div>
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px', marginTop: '46px', alignItems: 'start' }}>
-      
+      {/* problem 1 */}
       <div style={{ background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '28px 28px 24px' }}>
         <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', letterSpacing: '.14em', color: '#71717a' }}>PROBLEM ONE</div>
         <div style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '23px', lineHeight: '1.25', color: '#f0f0f1', marginTop: '12px' }}>Your thinking gets scattered — and nothing remembers.</div>
@@ -169,10 +215,10 @@ export default function LandingView({
           <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '11px', padding: '11px 15px', transform: 'rotate(-1.5deg)' }}><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', color: '#71717a', letterSpacing: '.1em' }}>YOUR HEAD</span><div style={{ fontSize: '13px', color: '#9a9aa3', marginTop: '4px' }}>“wait, why did I drop that?”</div></div>
         </div>
       </div>
-      
+      {/* problem 2 */}
       <div style={{ background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '28px 28px 24px' }}>
         <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', letterSpacing: '.14em', color: '#71717a' }}>PROBLEM TWO</div>
-        <div style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '23px', lineHeight: '1.25', color: '#f0f0f1', marginTop: '12px' }}>Everyone hands you sparks — none with footing under them.</div>
+        <div style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '23px', lineHeight: '1.25', color: '#f0f0f1', marginTop: '12px' }}>Sparks are everywhere — footing under them isn’t.</div>
         <p style={{ fontSize: '14.5px', lineHeight: '1.6', color: '#9a9aa3', margin: '12px 0 0' }}>Exciting directions are free and infinite. The hard part is one that holds — backed by evidence, not enthusiasm. Hype evaporates on contact with reality.</p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '20px' }}>
           <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '11px', padding: '11px 15px', transform: 'rotate(-2deg)' }}><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', color: '#5fe3bd', letterSpacing: '.1em' }}>CHATGPT</span><div style={{ fontSize: '13px', color: '#9a9aa3', marginTop: '4px' }}>“Totally build this!”</div></div>
@@ -181,18 +227,74 @@ export default function LandingView({
         </div>
       </div>
     </div>
-    <div style={{ textAlign: 'center', marginTop: '32px' }}><p style={{ fontSize: '17px', lineHeight: '1.6', color: '#cdcdd4', maxWidth: '680px', margin: '0 auto' }}><span style={{ color: '#5fe3bd' }}>One answer to both:</span> <span style={{ fontFamily: '\'Spectral\',serif', fontStyle: 'italic' }}>grounded inspiration</span> — directions worth shaping, kept on the record, each one backed by evidence you can open and disagree with.</p></div>
+    <div style={{ textAlign: 'center', marginTop: '34px' }}>
+      <p style={{ fontFamily: '\'Spectral\',serif', fontStyle: 'italic', fontSize: '19px', color: '#cdcdd4', margin: '0 auto', maxWidth: '600px' }}>The loop is real. It just never had anywhere to live.</p>
+      <p style={{ fontSize: '16.5px', lineHeight: '1.6', color: '#9a9aa3', maxWidth: '680px', margin: '14px auto 0' }}><span style={{ color: '#5fe3bd' }}>One answer to both:</span> <span style={{ fontFamily: '\'Spectral\',serif', fontStyle: 'italic', color: '#cdcdd4' }}>grounded inspiration</span> — directions worth shaping, kept on the record, each one backed by evidence you can open and disagree with.</p>
+    </div>
   </section>
 
-  
-  <section id="explore" style={{ maxWidth: '1180px', margin: '0 auto', padding: '120px 24px 0' }}>
-    <div style={{ textAlign: 'center' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', letterSpacing: '.18em', color: '#8aa9f7' }}>EXPLORE · GROUNDED INSPIRATION, LITERALLY</div><h2 style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '42px', lineHeight: '1.1', margin: '14px auto 0', maxWidth: '720px', color: '#fafafa' }}>One spark in. Directions worth shaping out — with the receipts.</h2><p style={{ fontSize: '17px', lineHeight: '1.6', color: '#b4b4bd', margin: '16px auto 0', maxWidth: '640px' }}>Explore doesn’t hand you a finished idea — no tool honestly can. It surfaces angles that hold, each one a spark plus the wall, the bet, and the sources underneath. The shaping is yours.</p></div>
+  {/* 3 THE LOOP, WALKED AS COGNITION */}
+  <section id="the-loop" style={{ maxWidth: '860px', margin: '0 auto', padding: '140px 24px 0', scrollMarginTop: '88px' }}>
+    <div style={{ textAlign: 'center' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', letterSpacing: '.18em', color: '#34d8a8' }}>∞ THE LOOP, WALKED</div><h2 style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '40px', lineHeight: '1.12', margin: '14px auto 0', maxWidth: '680px', color: '#fafafa' }}>The same motion — now with evidence, memory, and return.</h2><p style={{ fontSize: '17px', lineHeight: '1.6', color: '#b4b4bd', margin: '16px auto 0', maxWidth: '600px' }}>No screens here — just the motion. Six beats you already run, finally with somewhere to land.</p></div>
+
+    <div style={{ position: 'relative', margin: '54px auto 0', maxWidth: '640px' }}>
+      <div style={{ position: 'absolute', left: '7px', top: '14px', bottom: '14px', width: '2px', background: 'linear-gradient(180deg,#8a8a93,#8aa9f7 22%,#b3a3f5 42%,#34d8a8 60%,#5fe3bd 78%,#a6b6f5)', opacity: '.6' }}></div>
+
+      {/* beat 1 */}
+      <div style={{ position: 'relative', padding: '0 0 36px 42px' }}>
+        <span style={{ position: 'absolute', left: '0', top: '5px', width: '16px', height: '16px', borderRadius: '50%', background: '#0c0c11', border: '2px solid #9a9aa3' }}></span>
+        <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', letterSpacing: '.14em', color: '#9a9aa3' }}>ROUGH</div>
+        <div style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '27px', lineHeight: '1.2', color: '#fafafa', marginTop: '7px' }}>A spark arrives.</div>
+        <div style={{ fontSize: '15.5px', color: '#9a9aa3', lineHeight: '1.55', marginTop: '6px' }}>You catch it before it’s gone.</div>
+      </div>
+      {/* beat 2 */}
+      <div style={{ position: 'relative', padding: '0 0 36px 42px' }}>
+        <span style={{ position: 'absolute', left: '0', top: '5px', width: '16px', height: '16px', borderRadius: '50%', background: '#0c0c12', border: '2px solid #8aa9f7', boxShadow: '0 0 14px rgba(122,162,255,0.3)' }}></span>
+        <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', letterSpacing: '.14em', color: '#8aa9f7' }}>EXPLORE</div>
+        <div style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '27px', lineHeight: '1.2', color: '#fafafa', marginTop: '7px' }}>You turn it over.</div>
+        <div style={{ fontSize: '15.5px', color: '#9a9aa3', lineHeight: '1.55', marginTop: '6px' }}>What if it’s this angle, what if that — fanned into directions worth shaping.</div>
+      </div>
+      {/* beat 3 */}
+      <div style={{ position: 'relative', padding: '0 0 36px 42px' }}>
+        <span style={{ position: 'absolute', left: '0', top: '5px', width: '16px', height: '16px', borderRadius: '50%', background: '#0d0c12', border: '2px solid #b3a3f5', boxShadow: '0 0 14px rgba(138,130,194,0.3)' }}></span>
+        <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', letterSpacing: '.14em', color: '#b3a3f5' }}>DEEP</div>
+        <div style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '27px', lineHeight: '1.2', color: '#fafafa', marginTop: '7px' }}>You get serious about one.</div>
+        <div style={{ fontSize: '15.5px', color: '#9a9aa3', lineHeight: '1.55', marginTop: '6px' }}>You pressure it against the real world — scores, risks, the binding constraint.</div>
+      </div>
+      {/* beat 4 */}
+      <div style={{ position: 'relative', padding: '0 0 36px 42px' }}>
+        <span style={{ position: 'absolute', left: '-1px', top: '4px', width: '18px', height: '18px', borderRadius: '50%', background: '#0a1310', border: '2px solid #34d8a8', boxShadow: '0 0 18px rgba(52,216,168,0.45)' }}></span>
+        <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', letterSpacing: '.14em', color: '#5fe3bd' }}>VERDICT</div>
+        <div style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '27px', lineHeight: '1.2', color: '#fafafa', marginTop: '7px' }}>You reach a read you can stand on.</div>
+        <div style={{ fontSize: '15.5px', color: '#9a9aa3', lineHeight: '1.55', marginTop: '6px' }}>Not a grade. The shape of the decision, left to you to make.</div>
+      </div>
+      {/* beat 5 */}
+      <div style={{ position: 'relative', padding: '0 0 36px 42px' }}>
+        <span style={{ position: 'absolute', left: '0', top: '5px', width: '16px', height: '16px', borderRadius: '50%', background: '#0a0f0d', border: '2px solid #5fe3bd' }}></span>
+        <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', letterSpacing: '.14em', color: '#5fe3bd' }}>RE-EVALUATE</div>
+        <div style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '27px', lineHeight: '1.2', color: '#fafafa', marginTop: '7px' }}>The idea shifts. You run it again.</div>
+        <div style={{ fontSize: '15.5px', color: '#9a9aa3', lineHeight: '1.55', marginTop: '6px' }}>Not because the world changed. Because the thought did.</div>
+      </div>
+      {/* beat 6 */}
+      <div style={{ position: 'relative', padding: '0 0 4px 42px' }}>
+        <span style={{ position: 'absolute', left: '0', top: '5px', width: '16px', height: '16px', borderRadius: '50%', background: '#0c0d12', border: '2px solid #a6b6f5' }}></span>
+        <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', letterSpacing: '.14em', color: '#a6b6f5' }}>COMPARE</div>
+        <div style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '27px', lineHeight: '1.2', color: '#fafafa', marginTop: '7px' }}>You hold two up against each other.</div>
+        <div style={{ fontSize: '15.5px', color: '#9a9aa3', lineHeight: '1.55', marginTop: '6px' }}>Side by side, where the call actually lives.</div>
+      </div>
+    </div>
+
+    <div style={{ textAlign: 'center', marginTop: '46px' }}><div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px' }}><span style={{ width: '40px', height: '1px', background: 'rgba(255,255,255,0.14)' }}></span><span style={{ fontFamily: '\'Spectral\',serif', fontStyle: 'italic', fontSize: '23px', color: '#f0f0f1' }}>Once an idea, always in the loop.</span><span style={{ width: '40px', height: '1px', background: 'rgba(255,255,255,0.14)' }}></span></div></div>
+  </section>
+
+  {/* 4 INSIDE ONE MOTION: EXPLORE (DIFFERENTIATOR) */}
+  <section id="explore" style={{ maxWidth: '1180px', margin: '0 auto', padding: '128px 24px 0', scrollMarginTop: '88px' }}>
+    <div style={{ textAlign: 'center' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', letterSpacing: '.18em', color: '#8aa9f7' }}>INSIDE ONE MOTION · EXPLORE</div><h2 style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '42px', lineHeight: '1.1', margin: '14px auto 0', maxWidth: '720px', color: '#fafafa' }}>One spark in. Directions worth shaping — with the receipts underneath.</h2><p style={{ fontSize: '17px', lineHeight: '1.6', color: '#b4b4bd', margin: '16px auto 0', maxWidth: '640px' }}>This is the beat that earns the claim. Explore surfaces angles that hold — each one a spark plus the wall, the bet, and the sources underneath. The shaping is yours.</p></div>
 
     <div style={{ marginTop: '42px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.09)', background: '#0b0b0f', boxShadow: '0 40px 120px rgba(0,0,0,0.6)', overflow: 'hidden', textAlign: 'left' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '13px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}><span style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#ef6a6a', opacity: '.7' }}></span><span style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#e0a857', opacity: '.7' }}></span><span style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#34d8a8', opacity: '.7' }}></span><span style={{ marginLeft: '14px', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', color: '#5b5b64' }}>idealoop.core / explore — AI procurement RFP analyzer</span></div>
 
       <div style={{ padding: '24px 28px 28px' }}>
-        
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '11px' }}>
             <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(107,147,245,0.12)', border: '1px solid rgba(107,147,245,0.4)', color: '#8aa9f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px' }}>2</span>
@@ -202,7 +304,7 @@ export default function LandingView({
           <span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', letterSpacing: '.1em', color: '#52525b' }}>fan order · not ranked</span>
         </div>
 
-        
+        {/* rough idea node */}
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: '22px' }}>
           <div style={{ width: '340px', background: 'linear-gradient(150deg,rgba(20,22,34,0.85),rgba(12,13,20,0.6))', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '14px', padding: '15px 18px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', letterSpacing: '.14em', color: '#8aa9f7' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8aa9f7" strokeWidth="1.7"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" /></svg>YOUR ROUGH IDEA</div>
@@ -210,24 +312,22 @@ export default function LandingView({
           </div>
         </div>
 
-        
+        {/* fan connectors (3) */}
         <div style={{ position: 'relative', height: '62px' }}>
           <span style={{ position: 'absolute', left: '50%', top: '-1px', transform: 'translateX(-50%)', width: '9px', height: '9px', borderRadius: '50%', background: '#f1719b', boxShadow: '0 0 14px rgba(241,113,155,0.7)' }}></span>
           <svg viewBox="0 0 1000 62" preserveAspectRatio="none" style={{ position: 'absolute', inset: '0', width: '100%', height: '100%', overflow: 'visible' }}>
-            <path d="M500,4 C500,40 150,26 125,58" stroke="rgba(107,147,245,0.4)" strokeWidth="1.3" fill="none" />
-            <path d="M500,4 C500,40 378,32 375,58" stroke="rgba(107,147,245,0.4)" strokeWidth="1.3" fill="none" />
-            <path d="M500,4 C500,40 622,32 625,58" stroke="rgba(107,147,245,0.4)" strokeWidth="1.3" fill="none" />
-            <path d="M500,4 C500,40 850,26 875,58" stroke="rgba(224,168,87,0.32)" strokeWidth="1.3" fill="none" />
+            <path d="M500,4 C500,40 175,28 167,58" stroke="rgba(107,147,245,0.4)" strokeWidth="1.3" fill="none" />
+            <path d="M500,4 C500,40 500,30 500,58" stroke="rgba(107,147,245,0.4)" strokeWidth="1.3" fill="none" />
+            <path d="M500,4 C500,40 825,28 833,58" stroke="rgba(224,168,87,0.32)" strokeWidth="1.3" fill="none" />
           </svg>
-          <span style={{ position: 'absolute', left: '12.5%', bottom: '0', transform: 'translateX(-50%)', width: '7px', height: '7px', borderRadius: '50%', background: '#6b93f5' }}></span>
-          <span style={{ position: 'absolute', left: '37.5%', bottom: '0', transform: 'translateX(-50%)', width: '7px', height: '7px', borderRadius: '50%', background: '#6b93f5' }}></span>
-          <span style={{ position: 'absolute', left: '62.5%', bottom: '0', transform: 'translateX(-50%)', width: '7px', height: '7px', borderRadius: '50%', background: '#6b93f5' }}></span>
-          <span style={{ position: 'absolute', left: '87.5%', bottom: '0', transform: 'translateX(-50%)', width: '7px', height: '7px', borderRadius: '50%', background: '#e0a857' }}></span>
+          <span style={{ position: 'absolute', left: '16.67%', bottom: '0', transform: 'translateX(-50%)', width: '7px', height: '7px', borderRadius: '50%', background: '#6b93f5' }}></span>
+          <span style={{ position: 'absolute', left: '50%', bottom: '0', transform: 'translateX(-50%)', width: '7px', height: '7px', borderRadius: '50%', background: '#6b93f5' }}></span>
+          <span style={{ position: 'absolute', left: '83.33%', bottom: '0', transform: 'translateX(-50%)', width: '7px', height: '7px', borderRadius: '50%', background: '#e0a857' }}></span>
         </div>
 
-        
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '13px' }}>
-          
+        {/* fan of angle cards (3) */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '14px' }}>
+          {/* card 1 */}
           <div style={{ background: '#0b0b10', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '16px 15px', display: 'flex', flexDirection: 'column' }}>
             <span style={{ alignSelf: 'flex-start', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9.5px', letterSpacing: '.12em', color: '#71717a', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px', padding: '4px 8px' }}>TARGET SHIFT</span>
             <span style={{ alignSelf: 'flex-start', marginTop: '11px', display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9.5px', letterSpacing: '.1em', color: '#8aa9f7', background: 'rgba(107,147,245,0.1)', border: '1px solid rgba(107,147,245,0.3)', borderRadius: '6px', padding: '4px 9px' }}><span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#6b93f5' }}></span>WORTH SHAPING</span>
@@ -238,7 +338,7 @@ export default function LandingView({
             <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', marginTop: '13px' }}></div>
             <div style={{ textAlign: 'right', marginTop: '11px', fontSize: '12.5px', color: '#8aa9f7', cursor: 'pointer' }}>look closer ›</div>
           </div>
-          
+          {/* card 2 */}
           <div style={{ background: '#0b0b10', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '16px 15px', display: 'flex', flexDirection: 'column' }}>
             <span style={{ alignSelf: 'flex-start', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9.5px', letterSpacing: '.12em', color: '#71717a', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px', padding: '4px 8px' }}>MECHANISM SHIFT</span>
             <span style={{ alignSelf: 'flex-start', marginTop: '11px', display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9.5px', letterSpacing: '.1em', color: '#8aa9f7', background: 'rgba(107,147,245,0.1)', border: '1px solid rgba(107,147,245,0.3)', borderRadius: '6px', padding: '4px 9px' }}><span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#6b93f5' }}></span>WORTH SHAPING</span>
@@ -249,18 +349,7 @@ export default function LandingView({
             <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', marginTop: '13px' }}></div>
             <div style={{ textAlign: 'right', marginTop: '11px', fontSize: '12.5px', color: '#8aa9f7', cursor: 'pointer' }}>look closer ›</div>
           </div>
-          
-          <div style={{ background: '#0b0b10', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '16px 15px', display: 'flex', flexDirection: 'column' }}>
-            <span style={{ alignSelf: 'flex-start', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9.5px', letterSpacing: '.12em', color: '#71717a', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px', padding: '4px 8px' }}>USE-CASE SHIFT</span>
-            <span style={{ alignSelf: 'flex-start', marginTop: '11px', display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9.5px', letterSpacing: '.1em', color: '#8aa9f7', background: 'rgba(107,147,245,0.1)', border: '1px solid rgba(107,147,245,0.3)', borderRadius: '6px', padding: '4px 9px' }}><span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#6b93f5' }}></span>WORTH SHAPING</span>
-            <div style={{ fontSize: '15.5px', color: '#f0f0f1', fontWeight: '600', lineHeight: '1.3', marginTop: '13px' }}>County & municipal entry wedge</div>
-            <div style={{ marginTop: '14px' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9px', letterSpacing: '.12em', color: '#6b7280' }}>THE OPENING</div><div style={{ display: 'flex', gap: '7px', marginTop: '6px' }}><span style={{ color: '#8aa9f7', flexShrink: '0' }}>→</span><span style={{ fontSize: '12px', color: '#b4b4bd', lineHeight: '1.45' }}>Local agencies are underserved by enterprise GovCon tools…</span></div></div>
-            <div style={{ marginTop: '11px' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9px', letterSpacing: '.12em', color: '#6b7280' }}>THE WALL</div><div style={{ display: 'flex', gap: '7px', marginTop: '6px' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e7bd7a" strokeWidth="1.7" style={{ flexShrink: '0', marginTop: '2px' }}><circle cx="12" cy="12" r="9" /><path d="M6.3 6.3l11.4 11.4" /></svg><span style={{ fontSize: '12px', color: '#9a9aa3', lineHeight: '1.45' }}>Smaller contract sizes compress willingness to pay…</span></div></div>
-            <span style={{ alignSelf: 'flex-start', marginTop: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9px', letterSpacing: '.08em', color: '#e7bd7a' }}><span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#e0a857' }}></span>DEMAND UNPROVEN</span>
-            <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', marginTop: '13px' }}></div>
-            <div style={{ textAlign: 'right', marginTop: '11px', fontSize: '12.5px', color: '#8aa9f7', cursor: 'pointer' }}>look closer ›</div>
-          </div>
-          
+          {/* card 3 (lightly grounded) */}
           <div style={{ background: '#0b0b10', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '16px 15px', display: 'flex', flexDirection: 'column' }}>
             <span style={{ alignSelf: 'flex-start', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9.5px', letterSpacing: '.12em', color: '#71717a', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px', padding: '4px 8px' }}>USE-CASE SHIFT</span>
             <span style={{ alignSelf: 'flex-start', marginTop: '11px', display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9.5px', letterSpacing: '.1em', color: '#e7bd7a', background: 'rgba(224,168,87,0.1)', border: '1px solid rgba(224,168,87,0.3)', borderRadius: '6px', padding: '4px 9px' }}><span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#e0a857' }}></span>LIGHTLY GROUNDED</span>
@@ -273,7 +362,7 @@ export default function LandingView({
           </div>
         </div>
 
-        
+        {/* retrieved evidence strip */}
         <div style={{ marginTop: '18px', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '11px', padding: '13px 16px', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', background: 'rgba(255,255,255,0.015)' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', letterSpacing: '.12em', color: '#9a9aa3' }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5fe3bd" strokeWidth="1.7"><path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="9" /></svg>EVERY ANGLE CITES ITS SOURCES</span>
           <span style={{ width: '1px', height: '14px', background: 'rgba(255,255,255,0.12)' }}></span>
@@ -292,137 +381,12 @@ export default function LandingView({
     <div style={{ marginTop: '14px', textAlign: 'center', fontSize: '13px', color: '#71717a' }}>Their inspiration is asserted. <span style={{ color: '#9a9aa3' }}>Ours is cited — and still yours to shape.</span></div>
   </section>
 
-  
-  <section style={{ maxWidth: '1180px', margin: '0 auto', padding: '130px 24px 0' }}>
-    <div style={{ textAlign: 'center' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', letterSpacing: '.18em', color: '#5fe3bd' }}>LINEAGE · THE IDEA’S MEMORY</div><h2 style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '40px', lineHeight: '1.12', margin: '14px auto 0', maxWidth: '700px', color: '#fafafa' }}>Every version, branch, and killed path stays on record.</h2><p style={{ fontSize: '17px', lineHeight: '1.6', color: '#b4b4bd', margin: '16px auto 0', maxWidth: '640px' }}>A founder loops an idea several times and walks out with a direction they can defend — and the whole genealogy of how they got there. Answers fade. Decisions compound.</p></div>
-
-    <div style={{ position: 'relative', marginTop: '42px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.09)', background: '#0b0b0f', boxShadow: '0 40px 120px rgba(0,0,0,0.6)', overflow: 'hidden', textAlign: 'left' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '13px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}><span style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#ef6a6a', opacity: '.7' }}></span><span style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#e0a857', opacity: '.7' }}></span><span style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#34d8a8', opacity: '.7' }}></span><span style={{ marginLeft: '14px', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', color: '#5b5b64' }}>idealoop.core / lineage — AI procurement RFP analyzer</span></div>
-      <div style={{ padding: '14px' }}><div style={{ background: 'radial-gradient(120% 90% at 30% -10%, #141326 0%, #0c0c14 50%, #08080d 100%)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '24px 14px 22px', fontFamily: '-apple-system,BlinkMacSystemFont,\'Segoe UI\',Helvetica,sans-serif', overflow: 'hidden' }}>
-
-  
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-    <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', letterSpacing: '.16em', color: '#71717a' }}>IDEA EVOLUTION · ONE SPARK, FIVE GENERATIONS</div>
-    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '11.5px', color: '#9a9aa3' }}>
-      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#8a8a93' }}></span>Rough</span>
-      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#6b93f5' }}></span>Explore</span>
-      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#9d86f0' }}></span>Deep</span>
-      <span style={{ width: '1px', height: '12px', background: 'rgba(255,255,255,0.12)' }}></span>
-      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#34d8a8' }}></span>Active</span>
-      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#e0a857' }}></span>Parked</span>
-      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef6a6a' }}></span>Killed</span>
-    </div>
-  </div>
-
-  
-  <div ref={boardRef} style={{ position: 'relative', width: '100%', height: '560px', overflow: 'hidden' }}>
-  <div style={{ position: 'absolute', left: '0', top: '0', width: '1240px', height: '560px', transformOrigin: 'top left' }}>
-
-    
-    <div style={{ position: 'absolute', left: '20px', top: '6px', width: '200px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '19px', height: '19px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', color: '#c8c8cc' }}>1</span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', letterSpacing: '.12em', color: '#8a8a93' }}>SPARK</span></div><div style={{ fontSize: '11.5px', color: '#5b5b64', marginTop: '6px' }}>where it began</div></div>
-    <div style={{ position: 'absolute', left: '262px', top: '6px', width: '170px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '19px', height: '19px', borderRadius: '50%', border: '1px solid rgba(107,147,245,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', color: '#8aa9f7' }}>2</span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', letterSpacing: '.12em', color: '#8aa9f7' }}>EXPLORE</span></div><div style={{ fontSize: '11.5px', color: '#5b5b64', marginTop: '6px' }}>widened into angles</div></div>
-    <div style={{ position: 'absolute', left: '532px', top: '6px', width: '200px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '19px', height: '19px', borderRadius: '50%', border: '1px solid rgba(157,134,240,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', color: '#b3a3f5' }}>3</span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', letterSpacing: '.12em', color: '#b3a3f5' }}>DEEP</span></div><div style={{ fontSize: '11.5px', color: '#5b5b64', marginTop: '6px' }}>put under pressure</div></div>
-    <div style={{ position: 'absolute', left: '812px', top: '6px', width: '200px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '19px', height: '19px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', color: '#c8c8cc' }}>4</span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', letterSpacing: '.12em', color: '#c8c8cc' }}>EVOLVE</span></div><div style={{ fontSize: '11.5px', color: '#5b5b64', marginTop: '6px' }}>reshaped & forked</div></div>
-    <div style={{ position: 'absolute', left: '1035px', top: '6px', width: '205px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '19px', height: '19px', borderRadius: '50%', border: '1px solid rgba(52,216,168,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', color: '#5fe3bd' }}>5</span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', letterSpacing: '.12em', color: '#5fe3bd' }}>TODAY</span></div><div style={{ fontSize: '11.5px', color: '#5b5b64', marginTop: '6px' }}>the one you’re backing</div></div>
-
-    
-    <svg viewBox="0 0 1240 560" width="1240" height="560" style={{ position: 'absolute', inset: '0', overflow: 'visible' }}>
-      <defs>
-        <linearGradient id="spine" x1="0" y1="0" x2="1240" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#8a8a93" /><stop offset="22%" stopColor="#6b93f5" /><stop offset="52%" stopColor="#9d86f0" /><stop offset="80%" stopColor="#6b93f5" /><stop offset="100%" stopColor="#34d8a8" /></linearGradient>
-        <filter id="sglow" x="-30%" y="-60%" width="160%" height="220%"><feGaussianBlur stdDeviation="5" /></filter>
-      </defs>
-      
-      <path d="M210,300 C238,250 248,150 270,128" stroke="rgba(255,255,255,0.1)" strokeWidth="1.3" fill="none" strokeDasharray="3 5" />
-      <path d="M210,300 C238,308 248,320 270,322" stroke="rgba(255,255,255,0.1)" strokeWidth="1.3" fill="none" strokeDasharray="3 5" />
-      <path d="M210,300 C238,345 248,408 270,414" stroke="rgba(255,255,255,0.1)" strokeWidth="1.3" fill="none" strokeDasharray="3 5" />
-      <path d="M418,414 C470,420 500,424 540,424" stroke="rgba(239,106,106,0.28)" strokeWidth="1.3" fill="none" strokeDasharray="3 5" />
-      <path d="M912,272 C912,312 912,332 912,360" stroke="rgba(224,168,87,0.3)" strokeWidth="1.3" fill="none" strokeDasharray="3 5" />
-      
-      <path d="M210,300 C238,272 250,238 270,232 M418,232 C470,236 500,242 540,242 M745,242 C775,238 795,228 820,226 M1020,226 C1027,232 1030,242 1035,248" stroke="url(#spine)" strokeWidth="7" fill="none" opacity="0.18" filter="url(#sglow)" />
-      
-      <path d="M210,300 C238,272 250,238 270,232" stroke="url(#spine)" strokeWidth="2.4" fill="none" />
-      <path d="M418,232 C470,236 500,242 540,242" stroke="url(#spine)" strokeWidth="2.4" fill="none" />
-      <path d="M745,242 C775,238 795,228 820,226" stroke="url(#spine)" strokeWidth="2.4" fill="none" />
-      <path d="M1020,226 C1027,232 1030,242 1035,248" stroke="url(#spine)" strokeWidth="2.4" fill="none" />
-    </svg>
-
-    
-    <div style={{ position: 'absolute', left: '20px', top: '252px', width: '192px', background: 'rgba(255,255,255,0.028)', border: '1px solid rgba(255,255,255,0.11)', borderRadius: '14px', padding: '14px 15px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '22px', height: '22px', borderRadius: '7px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9a9aa3" strokeWidth="1.7"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M18 6l-2.5 2.5M8.5 15.5L6 18" /></svg></span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9px', letterSpacing: '.14em', color: '#8a8a93' }}>ROUGH</span></div>
-      <div style={{ fontSize: '13.5px', color: '#e4e4e7', fontWeight: '500', marginTop: '11px' }}>The rough spark</div>
-      <div style={{ fontSize: '12px', color: '#8a8a93', marginTop: '6px', lineHeight: '1.45' }}>“An AI that reads RFP responses for government procurement teams.”</div>
-    </div>
-
-    
-    <div style={{ position: 'absolute', left: '270px', top: '106px', width: '150px', background: 'rgba(255,255,255,0.018)', border: '1px solid rgba(107,147,245,0.16)', borderRadius: '11px', padding: '10px 13px', opacity: '0.5' }}>
-      <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '8.5px', letterSpacing: '.12em', color: '#8aa9f7' }}>ANGLE</div>
-      <div style={{ fontSize: '12.5px', color: '#bdbdc4', marginTop: '5px' }}>Positioning shift</div>
-      <div style={{ fontSize: '10.5px', color: '#5b5b64', marginTop: '3px' }}>faded — not pursued</div>
-    </div>
-    <div style={{ position: 'absolute', left: '270px', top: '210px', width: '158px', background: 'linear-gradient(150deg,rgba(22,28,44,0.95),rgba(13,15,23,0.95))', border: '1px solid rgba(107,147,245,0.4)', borderRadius: '11px', padding: '10px 13px', boxShadow: '0 0 24px rgba(107,147,245,0.1)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '8.5px', letterSpacing: '.12em', color: '#8aa9f7' }}>ANGLE · PURSUED</span><svg width="34" height="13" viewBox="0 0 34 13" fill="none"><polyline points="2,9 9,4 16,7 24,3 32,6" stroke="#6b7c9e" strokeWidth="1.1" /></svg></div>
-      <div style={{ fontSize: '12.5px', color: '#e4e4e7', fontWeight: '500', marginTop: '6px' }}>Target wedge</div>
-      <div style={{ fontSize: '10.5px', color: '#8aa9f7', marginTop: '3px' }}>municipal & county entry</div>
-    </div>
-    <div style={{ position: 'absolute', left: '270px', top: '300px', width: '150px', background: 'rgba(255,255,255,0.018)', border: '1px solid rgba(107,147,245,0.16)', borderRadius: '11px', padding: '10px 13px', opacity: '0.5' }}>
-      <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '8.5px', letterSpacing: '.12em', color: '#8aa9f7' }}>ANGLE</div>
-      <div style={{ fontSize: '12.5px', color: '#bdbdc4', marginTop: '5px' }}>Distribution shift</div>
-      <div style={{ fontSize: '10.5px', color: '#5b5b64', marginTop: '3px' }}>faded — not pursued</div>
-    </div>
-    <div style={{ position: 'absolute', left: '270px', top: '392px', width: '150px', background: 'rgba(255,255,255,0.018)', border: '1px solid rgba(107,147,245,0.16)', borderRadius: '11px', padding: '10px 13px', opacity: '0.62' }}>
-      <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '8.5px', letterSpacing: '.12em', color: '#8aa9f7' }}>ANGLE</div>
-      <div style={{ fontSize: '12.5px', color: '#cdcdd4', marginTop: '5px' }}>Use-case shift</div>
-      <div style={{ fontSize: '10.5px', color: '#5b5b64', marginTop: '3px' }}>led to a dead end ↓</div>
-    </div>
-
-    
-    <div style={{ position: 'absolute', left: '540px', top: '200px', width: '205px', background: 'linear-gradient(150deg,rgba(26,21,40,0.95),rgba(14,12,20,0.95))', border: '1px solid rgba(157,134,240,0.4)', borderRadius: '14px', padding: '14px 16px', boxShadow: '0 0 26px rgba(157,134,240,0.1)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '22px', height: '22px', borderRadius: '7px', background: 'rgba(157,134,240,0.16)', border: '1px solid rgba(157,134,240,0.36)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#b3a3f5" strokeWidth="1.7"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" /></svg></span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9px', letterSpacing: '.14em', color: '#b3a3f5' }}>DEEP</span></div><span style={{ fontFamily: '\'Spectral\',serif', fontSize: '19px', color: '#e4e4e7' }}>4.7</span></div>
-      <div style={{ fontSize: '13.5px', color: '#e8e8ea', fontWeight: '500', marginTop: '11px' }}>First read</div>
-      <div style={{ fontSize: '12px', color: '#9a9aa3', marginTop: '5px', lineHeight: '1.45' }}>Real pain, unbuilt moat, high compliance cost.</div>
-    </div>
-    
-    <div style={{ position: 'absolute', left: '540px', top: '382px', width: '205px', background: 'rgba(255,255,255,0.014)', border: '1px solid rgba(239,106,106,0.22)', borderRadius: '14px', padding: '14px 16px', opacity: '0.82' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '22px', height: '22px', borderRadius: '7px', background: 'rgba(157,134,240,0.08)', border: '1px solid rgba(157,134,240,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9d86f0" strokeWidth="1.7"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" /></svg></span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9px', letterSpacing: '.14em', color: '#9d86f0' }}>DEEP</span></div><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9px', letterSpacing: '.1em', color: '#ee8a8a', background: 'rgba(239,106,106,0.12)', border: '1px solid rgba(239,106,106,0.32)', padding: '2px 8px', borderRadius: '5px' }}>KILLED</span></div>
-      <div style={{ fontSize: '13.5px', color: '#b8b8bd', fontWeight: '500', marginTop: '11px' }}>Resale data module</div>
-      <div style={{ fontSize: '12px', color: '#8a8a93', marginTop: '5px', lineHeight: '1.45' }}>Public procurement data is a free substitute.</div>
-    </div>
-
-    
-    <div style={{ position: 'absolute', left: '812px', top: '184px', width: '200px', background: 'linear-gradient(150deg,rgba(22,28,44,0.95),rgba(13,15,23,0.95))', border: '1px solid rgba(107,147,245,0.4)', borderRadius: '14px', padding: '14px 16px', boxShadow: '0 0 24px rgba(107,147,245,0.09)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '22px', height: '22px', borderRadius: '7px', background: 'rgba(107,147,245,0.16)', border: '1px solid rgba(107,147,245,0.36)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8aa9f7" strokeWidth="1.7"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" /></svg></span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9px', letterSpacing: '.14em', color: '#8aa9f7' }}>EXPLORE</span></div><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '8.5px', letterSpacing: '.1em', color: '#5b5b64' }}>FORKED</span></div>
-      <div style={{ fontSize: '13.5px', color: '#e8e8ea', fontWeight: '500', marginTop: '11px' }}>Tyler Munis native wedge</div>
-      <div style={{ fontSize: '12px', color: '#9a9aa3', marginTop: '5px', lineHeight: '1.45' }}>A positioning shift — v1 stays intact beside it.</div>
-    </div>
-    
-    <div style={{ position: 'absolute', left: '812px', top: '360px', width: '200px', background: 'rgba(255,255,255,0.014)', border: '1px solid rgba(224,168,87,0.24)', borderRadius: '14px', padding: '14px 16px', opacity: '0.88' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '22px', height: '22px', borderRadius: '7px', background: 'rgba(157,134,240,0.1)', border: '1px solid rgba(157,134,240,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9d86f0" strokeWidth="1.7"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" /></svg></span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9px', letterSpacing: '.14em', color: '#9d86f0' }}>DEEP</span></div><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9px', letterSpacing: '.1em', color: '#e7bd7a', background: 'rgba(224,168,87,0.12)', border: '1px solid rgba(224,168,87,0.32)', padding: '2px 8px', borderRadius: '5px' }}>PARKED 3.6</span></div>
-      <div style={{ fontSize: '13.5px', color: '#c8c8cc', fontWeight: '500', marginTop: '11px' }}>Protest-defense layer</div>
-      <div style={{ fontSize: '12px', color: '#8a8a93', marginTop: '5px', lineHeight: '1.45' }}>Set aside — structural wall. Kept revivable.</div>
-    </div>
-
-    
-    <div style={{ position: 'absolute', left: '1035px', top: '196px', width: '205px', background: 'linear-gradient(150deg,rgba(14,32,28,0.95),rgba(11,18,20,0.95))', border: '1px solid rgba(52,216,168,0.5)', borderRadius: '14px', padding: '15px 16px', boxShadow: '0 0 46px rgba(52,216,168,0.16)' }}>
-      <div style={{ position: 'absolute', right: '14px', top: '-12px', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9px', letterSpacing: '.12em', color: '#06120e', background: '#5fe3bd', padding: '3px 9px', borderRadius: '5px', fontWeight: '500' }}>LEAD</div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '22px', height: '22px', borderRadius: '7px', background: 'rgba(107,147,245,0.16)', border: '1px solid rgba(107,147,245,0.36)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8aa9f7" strokeWidth="1.7"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" /></svg></span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9px', letterSpacing: '.14em', color: '#8aa9f7' }}>EXPLORE</span></div><span style={{ fontFamily: '\'Spectral\',serif', fontSize: '19px', color: '#f0f0f1' }}>5.9</span></div>
-      <div style={{ fontSize: '14px', color: '#f4f4f5', fontWeight: '600', marginTop: '11px' }}>Munis-native integration moat</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginTop: '9px' }}><span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#34d8a8' }}></span><span style={{ fontSize: '11.5px', color: '#5fe3bd', fontFamily: '\'JetBrains Mono\',monospace', letterSpacing: '.04em' }}>ACTIVE · G5 · YOU ARE HERE</span></div>
-    </div>
-  </div>
-  </div>
-
-  
-  <div style={{ marginTop: '8px', textAlign: 'center', fontSize: '13px', color: '#71717a' }}>From one rough sentence to a backed bet — <span style={{ color: '#9a9aa3' }}>five generations, every angle and dead end kept on the record.</span></div>
-</div></div>
-    </div>
-  </section>
-
-  
+  {/* 5 THE FOOTING */}
   {showFooting && (<>
   <section style={{ maxWidth: '1180px', margin: '0 auto', padding: '130px 24px 0' }}>
-    <div style={{ textAlign: 'center' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', letterSpacing: '.18em', color: '#8b7ff0' }}>WHY THE DIRECTION HOLDS</div><h2 style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '40px', lineHeight: '1.12', margin: '14px auto 0', maxWidth: '700px', color: '#fafafa' }}>The footing under the spark.</h2><p style={{ fontSize: '17px', lineHeight: '1.6', color: '#b4b4bd', margin: '16px auto 0', maxWidth: '640px' }}>An exciting angle is only worth shaping if it survives pressure. These are the modes that earn it — the rigor that makes the inspiration trustworthy, not the headline.</p></div>
+    <div style={{ textAlign: 'center' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', letterSpacing: '.18em', color: '#8b7ff0' }}>THE FOOTING · THE RIGOR UNDER THE SPARK</div><h2 style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '40px', lineHeight: '1.12', margin: '14px auto 0', maxWidth: '700px', color: '#fafafa' }}>The footing under the spark.</h2><p style={{ fontSize: '17px', lineHeight: '1.6', color: '#b4b4bd', margin: '16px auto 0', maxWidth: '640px' }}>An angle is only worth shaping if it survives pressure. Deep, Re-evaluate, and Compare give the spark its footing — scores, deltas, tradeoffs, and sources you can inspect.</p></div>
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '16px', marginTop: '48px' }}>
-      
+      {/* deep shot */}
       <div style={{ background: '#0b0b0f', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', overflow: 'hidden' }}>
         <div style={{ padding: '18px 18px 0' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', letterSpacing: '.12em', color: '#b3a3f5' }}>DEEP ANALYSIS</div><div style={{ fontSize: '16px', color: '#f0f0f1', fontWeight: '500', marginTop: '8px' }}>The pressure read</div></div>
         <div style={{ padding: '16px 18px 20px' }}>
@@ -436,7 +400,7 @@ export default function LandingView({
           <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', color: '#52525b', marginTop: '14px' }}>EVERY SCORE OPENS ITS SOURCES</div>
         </div>
       </div>
-      
+      {/* re-evaluate shot */}
       <div style={{ background: '#0b0b0f', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', overflow: 'hidden' }}>
         <div style={{ padding: '18px 18px 0' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', letterSpacing: '.12em', color: '#5fe3bd' }}>RE-EVALUATE</div><div style={{ fontSize: '16px', color: '#f0f0f1', fontWeight: '500', marginTop: '8px' }}>The measured delta</div></div>
         <div style={{ padding: '16px 18px 20px' }}>
@@ -449,7 +413,7 @@ export default function LandingView({
           <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', color: '#52525b', marginTop: '14px' }}>THE CHANGE IS MEASURED, NOT ASSERTED</div>
         </div>
       </div>
-      
+      {/* compare shot */}
       <div style={{ background: '#0b0b0f', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', overflow: 'hidden' }}>
         <div style={{ padding: '18px 18px 0' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', letterSpacing: '.12em', color: '#a6b6f5' }}>COMPARE</div><div style={{ fontSize: '16px', color: '#f0f0f1', fontWeight: '500', marginTop: '8px' }}>Two bets, side by side</div></div>
         <div style={{ padding: '16px 18px 20px', display: 'flex', gap: '12px' }}>
@@ -462,86 +426,147 @@ export default function LandingView({
   </section>
   </>)}
 
-  
-  <section id="the-loop" style={{ maxWidth: '1180px', margin: '0 auto', padding: '130px 24px 0', textAlign: 'center' }}>
-    <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', letterSpacing: '.18em', color: '#34d8a8' }}>THE WHOLE LOOP</div>
-    <h2 style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '40px', lineHeight: '1.12', margin: '14px auto 0', maxWidth: '680px', color: '#fafafa' }}>You just saw the parts. Together, they’re one loop.</h2>
-    <p style={{ fontSize: '17px', lineHeight: '1.6', color: '#b4b4bd', margin: '16px auto 0', maxWidth: '660px' }}>Explore, Deep Analysis, Re-evaluate, Compare, Lineage — each surface you’ve just seen is one move in a single loop you run as evidence changes, even after you ship.</p>
-    <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginTop: '54px', flexWrap: 'nowrap' }}>
-      <div style={{ position: 'absolute', left: '7%', right: '7%', top: '27px', height: '2px', background: 'linear-gradient(90deg,#6b93f5,#9d86f0,#34d8a8,#8ea2f0,#f1719b,#34d8a8)', opacity: '.4' }}></div>
-      <div style={{ position: 'relative', flex: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}><div style={{ width: '54px', height: '54px', borderRadius: '50%', background: '#0c0c11', border: '1px solid rgba(107,147,245,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 22px rgba(107,147,245,0.18)' }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8aa9f7" strokeWidth="1.6"><circle cx="12" cy="12" r="9" /><polygon points="15.6,8.4 10.8,10.8 8.4,15.6 13.2,13.2" /></svg></div><div style={{ fontSize: '14.5px', fontWeight: '600', color: '#f0f0f1' }}>Explore</div><div style={{ fontSize: '13.5px', color: '#a8a8b0', lineHeight: '1.45', maxWidth: '158px' }}>Surface directions worth shaping — grounded, not asserted.</div></div>
-      <div style={{ position: 'relative', flex: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}><div style={{ width: '54px', height: '54px', borderRadius: '50%', background: '#0d0c12', border: '1px solid rgba(157,134,240,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b3a3f5" strokeWidth="1.6"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.4" fill="#b3a3f5" /></svg></div><div style={{ fontSize: '14.5px', fontWeight: '500', color: '#e8e8ea' }}>Deep Analysis</div><div style={{ fontSize: '13.5px', color: '#a8a8b0', lineHeight: '1.45', maxWidth: '158px' }}>Pressure the claims, score the risks.</div></div>
-      <div style={{ position: 'relative', flex: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}><div style={{ width: '54px', height: '54px', borderRadius: '50%', background: '#0a0f0d', border: '1px solid rgba(52,216,168,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#5fe3bd" strokeWidth="1.6"><path d="M3.5 12a8.5 8.5 0 0 1 14.3-6.2L21 8" /><path d="M21 4v4h-4" /><path d="M20.5 12a8.5 8.5 0 0 1-14.3 6.2L3 16" /><path d="M3 20v-4h4" /></svg></div><div style={{ fontSize: '14.5px', fontWeight: '500', color: '#e8e8ea' }}>Re-evaluate</div><div style={{ fontSize: '13.5px', color: '#a8a8b0', lineHeight: '1.45', maxWidth: '158px' }}>Reshape it, measure the delta.</div></div>
-      <div style={{ position: 'relative', flex: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}><div style={{ width: '54px', height: '54px', borderRadius: '50%', background: '#0c0d12', border: '1px solid rgba(142,162,240,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a6b6f5" strokeWidth="1.6"><path d="M4 9h13l-3.2-3.2" /><path d="M20 15H7l3.2 3.2" /></svg></div><div style={{ fontSize: '14.5px', fontWeight: '500', color: '#e8e8ea' }}>Compare</div><div style={{ fontSize: '13.5px', color: '#a8a8b0', lineHeight: '1.45', maxWidth: '158px' }}>Weigh versions side by side.</div></div>
-      <div style={{ position: 'relative', flex: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}><div style={{ width: '54px', height: '54px', borderRadius: '50%', background: '#120c0f', border: '1px solid rgba(241,113,155,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f590b1" strokeWidth="1.6"><circle cx="6" cy="6" r="2.4" /><circle cx="6" cy="18" r="2.4" /><circle cx="18" cy="8" r="2.4" /><path d="M6 8.4v7.2" /><path d="M18 10.4c0 3.4-4.4 2.2-4.4 5.6" /></svg></div><div style={{ fontSize: '14.5px', fontWeight: '500', color: '#e8e8ea' }}>Lineage</div><div style={{ fontSize: '13.5px', color: '#a8a8b0', lineHeight: '1.45', maxWidth: '158px' }}>Every version, branched and kept.</div></div>
-      <div style={{ position: 'relative', flex: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}><div style={{ width: '54px', height: '54px', borderRadius: '50%', background: '#0a0f0d', border: '1px solid rgba(52,216,168,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 22px rgba(52,216,168,0.2)' }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5fe3bd" strokeWidth="1.7"><path d="M5 12h11" /><path d="M13 8l4 4-4 4" /><path d="M5 6v12" /></svg></div><div style={{ fontSize: '14.5px', fontWeight: '600', color: '#f0f0f1' }}>Hand off</div><div style={{ fontSize: '13.5px', color: '#a8a8b0', lineHeight: '1.45', maxWidth: '158px' }}>The read stops; your first move begins.</div></div>
-    </div>
-    <div style={{ position: 'relative', height: '66px', maxWidth: '1180px', margin: '2px auto 0' }}>
-      <svg viewBox="0 0 1000 66" preserveAspectRatio="none" style={{ position: 'absolute', inset: '0', width: '100%', height: '100%', overflow: 'visible' }}>
-        <defs><marker id="loopret" markerWidth="9" markerHeight="9" refX="4.5" refY="4.5" orient="auto"><path d="M6.5,1.5 L3,4.5 L6.5,7.5" fill="none" stroke="#5fe3bd" strokeWidth="1.2" /></marker></defs>
-        <path d="M930,2 C930,46 902,58 762,58 L238,58 C98,58 70,46 70,4" fill="none" stroke="rgba(52,216,168,0.4)" strokeWidth="1.4" strokeDasharray="2 7" markerEnd="url(#loopret)" />
-      </svg>
-      <div style={{ position: 'absolute', left: '50%', top: '58px', transform: 'translate(-50%,-50%)', background: '#09090b', padding: '0 14px', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', letterSpacing: '.05em', color: '#5fe3bd', whiteSpace: 'nowrap' }}>↻  re-evaluate as evidence changes — even after you ship, the loop stays open</div>
-    </div>
-  </section>
-
-  
+  {/* 6 THE TRACE — LINEAGE (compact, ghosted) */}
   <section style={{ maxWidth: '1180px', margin: '0 auto', padding: '130px 24px 0' }}>
-    <div style={{ textAlign: 'center' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', letterSpacing: '.18em', color: '#8b7ff0' }}>EXECUTION BRIEF · THE HANDOFF</div><h2 style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '40px', lineHeight: '1.12', margin: '14px auto 0', maxWidth: '720px', color: '#fafafa' }}>Where our read stops — your first move begins.</h2><p style={{ fontSize: '17px', lineHeight: '1.6', color: '#b4b4bd', margin: '16px auto 0', maxWidth: '640px' }}>Most tools end at a verdict. IdeaLoop Core ends at a handoff: the one wall to clear first, the order it forces, and the gates that tell you to revise or stop. From your idea, across the evidence, toward execution.</p></div>
+    <div style={{ textAlign: 'center' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', letterSpacing: '.18em', color: '#5fe3bd' }}>THE TRACE · THE IDEA’S MEMORY</div><h2 style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '40px', lineHeight: '1.12', margin: '14px auto 0', maxWidth: '700px', color: '#fafafa' }}>Every version, branch, and killed path stays on record.</h2><p style={{ fontSize: '17px', lineHeight: '1.6', color: '#b4b4bd', margin: '16px auto 0', maxWidth: '640px' }}>This is the one thing your head cannot do. You can turn an idea over ten times and still lose the genealogy of how you got there. IdeaLoop Core keeps the path.</p></div>
 
-    <div style={{ marginTop: '44px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.09)', background: '#0b0b0f', boxShadow: '0 30px 80px rgba(0,0,0,0.5)', overflow: 'hidden', textAlign: 'left' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '13px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}><span style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#ef6a6a', opacity: '.7' }}></span><span style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#e0a857', opacity: '.7' }}></span><span style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#34d8a8', opacity: '.7' }}></span><span style={{ marginLeft: '14px', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', color: '#5b5b64' }}>idealoop.core / handoff — execution brief</span></div>
+    <div style={{ position: 'relative', marginTop: '42px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.09)', background: '#0b0b0f', boxShadow: '0 40px 120px rgba(0,0,0,0.6)', overflow: 'hidden', textAlign: 'left' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '13px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}><span style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#ef6a6a', opacity: '.7' }}></span><span style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#e0a857', opacity: '.7' }}></span><span style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#34d8a8', opacity: '.7' }}></span><span style={{ marginLeft: '14px', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', color: '#5b5b64' }}>idealoop.core / lineage — AI procurement RFP analyzer</span></div>
+      <div style={{ padding: '14px' }}><div style={{ background: 'radial-gradient(120% 90% at 30% -10%, #141326 0%, #0c0c14 50%, #08080d 100%)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '18px 14px 16px', fontFamily: '-apple-system,BlinkMacSystemFont,\'Segoe UI\',Helvetica,sans-serif', overflow: 'hidden' }}>
 
-      <div style={{ padding: '26px 30px 30px' }}>
-        
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0', flexWrap: 'wrap', marginBottom: '30px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}><span style={{ width: '22px', height: '22px', borderRadius: '50%', border: '1px solid rgba(52,216,168,0.6)', color: '#5fe3bd', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>✓</span><span style={{ fontSize: '13px', color: '#9a9aa3' }}>Idea</span></div>
-          <span style={{ width: '34px', height: '1px', background: 'rgba(255,255,255,0.12)', margin: '0 12px' }}></span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}><span style={{ width: '22px', height: '22px', borderRadius: '50%', border: '1px solid rgba(52,216,168,0.6)', color: '#5fe3bd', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>✓</span><span style={{ fontSize: '13px', color: '#9a9aa3' }}>Deep Analysis</span></div>
-          <span style={{ width: '34px', height: '1px', background: 'rgba(255,255,255,0.12)', margin: '0 12px' }}></span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}><span style={{ width: '22px', height: '22px', borderRadius: '50%', border: '1px solid rgba(52,216,168,0.6)', color: '#5fe3bd', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>✓</span><span style={{ fontSize: '13px', color: '#9a9aa3' }}>Evidence & Reality</span></div>
-          <span style={{ width: '34px', height: '1px', background: 'rgba(139,127,240,0.5)', margin: '0 12px' }}></span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}><span style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#8b7ff0', color: '#0b0b0d', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700' }}>4</span><span style={{ fontSize: '13px', color: '#f0f0f1', fontWeight: '600' }}>Handoff</span></div>
-          <span style={{ width: '34px', height: '1px', background: 'rgba(255,255,255,0.1)', margin: '0 12px' }}></span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}><span style={{ width: '22px', height: '22px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.18)', color: '#71717a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>5</span><span style={{ fontSize: '13px', color: '#71717a' }}>Evolve</span></div>
-        </div>
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+    <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', letterSpacing: '.16em', color: '#71717a' }}>IDEA EVOLUTION · ONE SPARK, FIVE GENERATIONS</div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '11px', color: '#9a9aa3' }}>
+      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#8a8a93' }}></span>Rough</span>
+      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#6b93f5' }}></span>Explore</span>
+      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#9d86f0' }}></span>Deep</span>
+      <span style={{ width: '1px', height: '12px', background: 'rgba(255,255,255,0.12)' }}></span>
+      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#34d8a8' }}></span>Active</span>
+      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#e0a857' }}></span>Parked</span>
+      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef6a6a' }}></span>Killed</span>
+    </div>
+  </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px', alignItems: 'start' }}>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ borderLeft: '2px solid #34d8a8', background: 'rgba(52,216,168,0.04)', borderRadius: '0 12px 12px 0', padding: '16px 20px' }}>
-              <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10.5px', letterSpacing: '.14em', color: '#5fe3bd' }}>IDEA · THE BET</div>
-              <div style={{ fontFamily: '\'Spectral\',serif', fontStyle: 'italic', fontSize: '16.5px', lineHeight: '1.5', color: '#e8e8ea', marginTop: '10px' }}>The wall here is the build — the ERP integration and audit-trail infrastructure that give the product its only defensible position. The first move is whether that build can be owned, not whether agencies want it.</div>
-            </div>
-            <div style={{ border: '1px solid rgba(107,147,245,0.22)', borderRadius: '12px', padding: '18px 20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}><span style={{ width: '24px', height: '24px', borderRadius: '7px', background: 'rgba(107,147,245,0.14)', border: '1px solid rgba(107,147,245,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8aa9f7', fontSize: '13px' }}>⚗</span><span style={{ fontSize: '15px', color: '#f0f0f1', fontWeight: '600' }}>What you have to prove next</span></div>
-              <div style={{ fontSize: '13.5px', lineHeight: '1.55', color: '#b4b4bd', marginTop: '11px' }}>Whether the regulated-infrastructure engineering to build and certify live PeopleSoft and Tyler Munis integrations can be secured — via a technical co-founder, lead, or vendor partnership — before any other workstream is meaningful.</div>
-              <div style={{ marginTop: '14px', background: 'rgba(255,255,255,0.025)', borderRadius: '9px', padding: '12px 14px' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9.5px', letterSpacing: '.12em', color: '#71717a' }}>WHAT COUNTS AS ENOUGH</div><div style={{ fontSize: '12.5px', lineHeight: '1.5', color: '#9a9aa3', marginTop: '6px' }}>A credentialed technical owner committed to the project — not a contractor scoped for one sprint, not an LLM-assisted prototype of the surrounding logic.</div></div>
-            </div>
-          </div>
+  <div ref={boardRef} style={{ position: 'relative', width: '100%', height: '360px', overflow: 'hidden' }}>
+  <div style={{ position: 'absolute', left: '0', top: '0', width: '1240px', height: '360px', transformOrigin: 'top left' }}>
 
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '18px 20px' }}>
-              <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10.5px', letterSpacing: '.14em', color: '#a6b6f5' }}>THE ORDER THIS FORCES</div>
-              <div style={{ display: 'flex', gap: '12px', marginTop: '14px' }}><span style={{ width: '22px', height: '22px', flexShrink: '0', borderRadius: '50%', border: '1px solid rgba(139,127,240,0.4)', color: '#b3a3f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>1</span><div><div style={{ fontSize: '13.5px', color: '#e4e4e7', lineHeight: '1.45' }}>Secure a technical co-founder or lead with government ERP integration experience — before any build begins.</div></div></div>
-              <div style={{ display: 'flex', gap: '12px', marginTop: '14px' }}><span style={{ width: '22px', height: '22px', flexShrink: '0', borderRadius: '50%', border: '1px solid rgba(139,127,240,0.4)', color: '#b3a3f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>2</span><div><div style={{ fontSize: '13.5px', color: '#e4e4e7', lineHeight: '1.45' }}>Build the leaner first version: a standalone, protest-defensible scoring rationale generator from manually uploaded PDFs — no ERP connectivity yet.</div></div></div>
-              <div style={{ display: 'flex', gap: '12px', marginTop: '14px' }}><span style={{ width: '22px', height: '22px', flexShrink: '0', borderRadius: '50%', border: '1px solid rgba(139,127,240,0.4)', color: '#b3a3f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>3</span><div><div style={{ fontSize: '13.5px', color: '#e4e4e7', lineHeight: '1.45' }}>Gated behind a working prototype: open a certified integration pathway at one named agency willing to pilot the connected version.</div></div></div>
-            </div>
-            <div style={{ border: '1px solid rgba(224,168,87,0.22)', borderRadius: '12px', padding: '18px 20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}><span style={{ width: '24px', height: '24px', borderRadius: '7px', background: 'rgba(224,168,87,0.12)', border: '1px solid rgba(224,168,87,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e7bd7a', fontSize: '13px' }}>⎆</span><span style={{ fontSize: '15px', color: '#f0f0f1', fontWeight: '600' }}>Decision gates</span></div>
-              <div style={{ marginTop: '13px' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', letterSpacing: '.1em', color: '#e7bd7a' }}>REVISE IF</div><div style={{ fontSize: '12.5px', lineHeight: '1.5', color: '#9a9aa3', marginTop: '5px' }}>After six months of outreach, no technical co-founder commits — the path re-cuts toward a vendor or systems-integrator arrangement.</div></div>
-              <div style={{ marginTop: '13px' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', letterSpacing: '.1em', color: '#ef6a6a' }}>STOP IF</div><div style={{ fontSize: '12.5px', lineHeight: '1.5', color: '#9a9aa3', marginTop: '5px' }}>Eighteen months in, the ERP layer is unbuilt and no certified pathway is active at a named account — the build wall has not moved despite a genuine attempt.</div></div>
-            </div>
-          </div>
-        </div>
+    {/* stage headers */}
+    <div style={{ position: 'absolute', left: '20px', top: '4px', width: '200px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '19px', height: '19px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', color: '#c8c8cc' }}>1</span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', letterSpacing: '.12em', color: '#8a8a93' }}>SPARK</span></div></div>
+    <div style={{ position: 'absolute', left: '270px', top: '4px', width: '170px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '19px', height: '19px', borderRadius: '50%', border: '1px solid rgba(107,147,245,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', color: '#8aa9f7' }}>2</span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', letterSpacing: '.12em', color: '#8aa9f7' }}>EXPLORE</span></div></div>
+    <div style={{ position: 'absolute', left: '540px', top: '4px', width: '200px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '19px', height: '19px', borderRadius: '50%', border: '1px solid rgba(157,134,240,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', color: '#b3a3f5' }}>3</span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', letterSpacing: '.12em', color: '#b3a3f5' }}>DEEP</span></div></div>
+    <div style={{ position: 'absolute', left: '812px', top: '4px', width: '200px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '19px', height: '19px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', color: '#c8c8cc' }}>4</span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', letterSpacing: '.12em', color: '#c8c8cc' }}>EVOLVE</span></div></div>
+    <div style={{ position: 'absolute', left: '1035px', top: '4px', width: '205px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '19px', height: '19px', borderRadius: '50%', border: '1px solid rgba(52,216,168,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', color: '#5fe3bd' }}>5</span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', letterSpacing: '.12em', color: '#5fe3bd' }}>TODAY</span></div></div>
 
-        <div style={{ marginTop: '22px', paddingTop: '18px', borderTop: '1px solid rgba(255,255,255,0.06)', fontFamily: '\'Spectral\',serif', fontStyle: 'italic', fontSize: '15px', color: '#8b7ff0' }}>The read ends here — the build is the first move, and what happens next belongs to you.</div>
-      </div>
+    {/* connectors */}
+    <svg viewBox="0 0 1240 360" width="1240" height="360" style={{ position: 'absolute', inset: '0', overflow: 'visible' }}>
+      <defs>
+        <linearGradient id="spine" x1="0" y1="0" x2="1240" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#8a8a93" /><stop offset="22%" stopColor="#6b93f5" /><stop offset="52%" stopColor="#9d86f0" /><stop offset="80%" stopColor="#6b93f5" /><stop offset="100%" stopColor="#34d8a8" /></linearGradient>
+        <filter id="sglow" x="-30%" y="-60%" width="160%" height="220%"><feGaussianBlur stdDeviation="5" /></filter>
+      </defs>
+      {/* ghost side paths */}
+      <path d="M212,196 C238,150 250,96 270,90" stroke="rgba(255,255,255,0.07)" strokeWidth="1.2" fill="none" strokeDasharray="3 5" />
+      <path d="M212,196 C238,244 250,288 270,292" stroke="rgba(255,255,255,0.07)" strokeWidth="1.2" fill="none" strokeDasharray="3 5" />
+      <path d="M620,200 C660,240 660,270 660,288" stroke="rgba(239,106,106,0.25)" strokeWidth="1.2" fill="none" strokeDasharray="3 5" />
+      <path d="M912,196 C912,240 912,262 912,284" stroke="rgba(224,168,87,0.26)" strokeWidth="1.2" fill="none" strokeDasharray="3 5" />
+      {/* bright spine glow */}
+      <path d="M212,196 C238,190 250,186 270,184 M428,184 C480,188 500,192 540,190 M745,190 C775,188 795,186 812,186 M1012,186 C1020,188 1028,190 1035,190" stroke="url(#spine)" strokeWidth="7" fill="none" opacity="0.16" filter="url(#sglow)" />
+      {/* spine */}
+      <path d="M212,196 C238,190 250,186 270,184" stroke="url(#spine)" strokeWidth="2.4" fill="none" />
+      <path d="M428,184 C480,188 500,192 540,190" stroke="url(#spine)" strokeWidth="2.4" fill="none" />
+      <path d="M745,190 C775,188 795,186 812,186" stroke="url(#spine)" strokeWidth="2.4" fill="none" />
+      <path d="M1012,186 C1020,188 1028,190 1035,190" stroke="url(#spine)" strokeWidth="2.4" fill="none" />
+    </svg>
+
+    {/* SPARK rough (spine) */}
+    <div style={{ position: 'absolute', left: '20px', top: '150px', width: '188px', background: 'rgba(255,255,255,0.028)', border: '1px solid rgba(255,255,255,0.11)', borderRadius: '13px', padding: '13px 14px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '20px', height: '20px', borderRadius: '6px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9a9aa3" strokeWidth="1.7"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M18 6l-2.5 2.5M8.5 15.5L6 18" /></svg></span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9px', letterSpacing: '.14em', color: '#8a8a93' }}>ROUGH</span></div>
+      <div style={{ fontSize: '13px', color: '#e4e4e7', fontWeight: '500', marginTop: '9px' }}>The rough spark</div>
+      <div style={{ fontSize: '11.5px', color: '#8a8a93', marginTop: '5px', lineHeight: '1.45' }}>“An AI that reads RFP responses for government procurement teams.”</div>
+    </div>
+
+    {/* ghost angles */}
+    <div style={{ position: 'absolute', left: '270px', top: '62px', width: '150px', background: 'rgba(255,255,255,0.014)', border: '1px solid rgba(107,147,245,0.14)', borderRadius: '10px', padding: '8px 12px', opacity: '0.38' }}>
+      <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '8.5px', letterSpacing: '.12em', color: '#8aa9f7' }}>ANGLE</div>
+      <div style={{ fontSize: '11.5px', color: '#bdbdc4', marginTop: '3px' }}>Positioning shift</div>
+    </div>
+    <div style={{ position: 'absolute', left: '270px', top: '262px', width: '150px', background: 'rgba(255,255,255,0.014)', border: '1px solid rgba(107,147,245,0.14)', borderRadius: '10px', padding: '8px 12px', opacity: '0.42' }}>
+      <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '8.5px', letterSpacing: '.12em', color: '#8aa9f7' }}>ANGLE</div>
+      <div style={{ fontSize: '11.5px', color: '#cdcdd4', marginTop: '3px' }}>Use-case shift — dead end</div>
+    </div>
+    {/* EXPLORE pursued (spine) */}
+    <div style={{ position: 'absolute', left: '270px', top: '152px', width: '158px', background: 'linear-gradient(150deg,rgba(22,28,44,0.95),rgba(13,15,23,0.95))', border: '1px solid rgba(107,147,245,0.4)', borderRadius: '11px', padding: '10px 13px', boxShadow: '0 0 24px rgba(107,147,245,0.1)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '8.5px', letterSpacing: '.12em', color: '#8aa9f7' }}>ANGLE · PURSUED</span><svg width="34" height="13" viewBox="0 0 34 13" fill="none"><polyline points="2,9 9,4 16,7 24,3 32,6" stroke="#6b7c9e" strokeWidth="1.1" /></svg></div>
+      <div style={{ fontSize: '12.5px', color: '#e4e4e7', fontWeight: '500', marginTop: '6px' }}>Target wedge</div>
+      <div style={{ fontSize: '10.5px', color: '#8aa9f7', marginTop: '3px' }}>municipal & county entry</div>
+    </div>
+
+    {/* DEEP verdict (spine) */}
+    <div style={{ position: 'absolute', left: '540px', top: '148px', width: '205px', background: 'linear-gradient(150deg,rgba(26,21,40,0.95),rgba(14,12,20,0.95))', border: '1px solid rgba(157,134,240,0.4)', borderRadius: '13px', padding: '12px 15px', boxShadow: '0 0 26px rgba(157,134,240,0.1)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '20px', height: '20px', borderRadius: '6px', background: 'rgba(157,134,240,0.16)', border: '1px solid rgba(157,134,240,0.36)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#b3a3f5" strokeWidth="1.7"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" /></svg></span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9px', letterSpacing: '.14em', color: '#b3a3f5' }}>DEEP</span></div><span style={{ fontFamily: '\'Spectral\',serif', fontSize: '18px', color: '#e4e4e7' }}>4.7</span></div>
+      <div style={{ fontSize: '13px', color: '#e8e8ea', fontWeight: '500', marginTop: '9px' }}>First read</div>
+      <div style={{ fontSize: '11.5px', color: '#9a9aa3', marginTop: '4px', lineHeight: '1.45' }}>Real pain, unbuilt moat, high compliance cost.</div>
+    </div>
+    {/* ghost DEEP killed */}
+    <div style={{ position: 'absolute', left: '540px', top: '288px', width: '205px', background: 'rgba(255,255,255,0.012)', border: '1px solid rgba(239,106,106,0.18)', borderRadius: '11px', padding: '8px 13px', opacity: '0.5' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '8.5px', letterSpacing: '.14em', color: '#9d86f0' }}>DEEP</span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '8px', letterSpacing: '.1em', color: '#ee8a8a', background: 'rgba(239,106,106,0.1)', border: '1px solid rgba(239,106,106,0.28)', padding: '1px 6px', borderRadius: '4px' }}>KILLED</span></div>
+      <div style={{ fontSize: '11.5px', color: '#b8b8bd', marginTop: '4px' }}>Resale data module</div>
+    </div>
+
+    {/* EVOLVE explore (spine) */}
+    <div style={{ position: 'absolute', left: '812px', top: '148px', width: '200px', background: 'linear-gradient(150deg,rgba(22,28,44,0.95),rgba(13,15,23,0.95))', border: '1px solid rgba(107,147,245,0.4)', borderRadius: '13px', padding: '12px 15px', boxShadow: '0 0 24px rgba(107,147,245,0.09)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '20px', height: '20px', borderRadius: '6px', background: 'rgba(107,147,245,0.16)', border: '1px solid rgba(107,147,245,0.36)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8aa9f7" strokeWidth="1.7"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" /></svg></span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9px', letterSpacing: '.14em', color: '#8aa9f7' }}>EXPLORE</span></div><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '8.5px', letterSpacing: '.1em', color: '#5b5b64' }}>FORKED</span></div>
+      <div style={{ fontSize: '13px', color: '#e8e8ea', fontWeight: '500', marginTop: '9px' }}>Tyler Munis native wedge</div>
+      <div style={{ fontSize: '11.5px', color: '#9a9aa3', marginTop: '4px', lineHeight: '1.45' }}>A positioning shift — v1 stays intact beside it.</div>
+    </div>
+    {/* ghost EVOLVE parked */}
+    <div style={{ position: 'absolute', left: '812px', top: '288px', width: '200px', background: 'rgba(255,255,255,0.012)', border: '1px solid rgba(224,168,87,0.2)', borderRadius: '11px', padding: '8px 13px', opacity: '0.52' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '8.5px', letterSpacing: '.14em', color: '#9d86f0' }}>DEEP</span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '8px', letterSpacing: '.1em', color: '#e7bd7a', background: 'rgba(224,168,87,0.1)', border: '1px solid rgba(224,168,87,0.28)', padding: '1px 6px', borderRadius: '4px' }}>PARKED 3.6</span></div>
+      <div style={{ fontSize: '11.5px', color: '#c8c8cc', marginTop: '4px' }}>Protest-defense layer</div>
+    </div>
+
+    {/* TODAY lead */}
+    <div style={{ position: 'absolute', left: '1035px', top: '144px', width: '205px', background: 'linear-gradient(150deg,rgba(14,32,28,0.95),rgba(11,18,20,0.95))', border: '1px solid rgba(52,216,168,0.5)', borderRadius: '13px', padding: '14px 15px', boxShadow: '0 0 46px rgba(52,216,168,0.16)' }}>
+      <div style={{ position: 'absolute', right: '14px', top: '-12px', fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9px', letterSpacing: '.12em', color: '#06120e', background: '#5fe3bd', padding: '3px 9px', borderRadius: '5px', fontWeight: '500' }}>LEAD</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '20px', height: '20px', borderRadius: '6px', background: 'rgba(107,147,245,0.16)', border: '1px solid rgba(107,147,245,0.36)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8aa9f7" strokeWidth="1.7"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" /></svg></span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '9px', letterSpacing: '.14em', color: '#8aa9f7' }}>EXPLORE</span></div><span style={{ fontFamily: '\'Spectral\',serif', fontSize: '18px', color: '#f0f0f1' }}>5.9</span></div>
+      <div style={{ fontSize: '13.5px', color: '#f4f4f5', fontWeight: '600', marginTop: '9px' }}>Munis-native integration moat</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginTop: '8px' }}><span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#34d8a8' }}></span><span style={{ fontSize: '11px', color: '#5fe3bd', fontFamily: '\'JetBrains Mono\',monospace', letterSpacing: '.04em' }}>ACTIVE · G5 · YOU ARE HERE</span></div>
+    </div>
+  </div>
+  </div>
+
+  <div style={{ marginTop: '6px', textAlign: 'center', fontSize: '13px', color: '#71717a' }}>From one rough sentence to a backed bet — <span style={{ color: '#9a9aa3' }}>five generations, every angle and dead end kept on the record.</span></div>
+</div></div>
     </div>
   </section>
 
-  
+  {/* 7 THE HANDOFF — gates-forward compact */}
+  <section style={{ maxWidth: '1000px', margin: '0 auto', padding: '130px 24px 0' }}>
+    <div style={{ textAlign: 'center' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', letterSpacing: '.18em', color: '#8b7ff0' }}>THE HANDOFF · EXECUTION BRIEF</div><h2 style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '40px', lineHeight: '1.12', margin: '14px auto 0', maxWidth: '720px', color: '#fafafa' }}>Where the read stops — your first move begins.</h2><p style={{ fontSize: '17px', lineHeight: '1.6', color: '#b4b4bd', margin: '16px auto 0', maxWidth: '600px' }}>Most tools end at a verdict. IdeaLoop Core ends at a handoff: the first wall to clear, and the gates that tell you when to revise or stop.</p></div>
+
+    <div style={{ marginTop: '44px', border: '1px solid rgba(255,255,255,0.09)', borderRadius: '18px', background: '#0b0b0f', boxShadow: '0 30px 80px rgba(0,0,0,0.5)', padding: '30px 32px 32px', textAlign: 'left' }}>
+      {/* the bet */}
+      <div style={{ borderLeft: '2px solid #8b7ff0', background: 'rgba(139,127,240,0.05)', borderRadius: '0 12px 12px 0', padding: '18px 22px' }}>
+        <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10.5px', letterSpacing: '.14em', color: '#b3a3f5' }}>THE BET</div>
+        <div style={{ fontFamily: '\'Spectral\',serif', fontStyle: 'italic', fontSize: '19px', lineHeight: '1.5', color: '#ececf0', marginTop: '9px' }}>The wall here is the build — the integration and audit-trail infrastructure that give the product its only defensible position.</div>
+      </div>
+
+      {/* decision gates, front and center */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '22px' }}>
+        <div style={{ border: '1px solid rgba(224,168,87,0.3)', borderRadius: '13px', padding: '20px 22px', background: 'rgba(224,168,87,0.03)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><span style={{ width: '26px', height: '26px', borderRadius: '7px', background: 'rgba(224,168,87,0.12)', border: '1px solid rgba(224,168,87,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e7bd7a', fontSize: '14px' }}>⎆</span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', letterSpacing: '.12em', color: '#e7bd7a' }}>REVISE IF</span></div>
+          <div style={{ fontSize: '14px', lineHeight: '1.55', color: '#b4b4bd', marginTop: '12px' }}>After six months of outreach, no technical co-founder commits — the path re-cuts toward a vendor or systems-integrator arrangement.</div>
+        </div>
+        <div style={{ border: '1px solid rgba(239,106,106,0.32)', borderRadius: '13px', padding: '20px 22px', background: 'rgba(239,106,106,0.03)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><span style={{ width: '26px', height: '26px', borderRadius: '7px', background: 'rgba(239,106,106,0.12)', border: '1px solid rgba(239,106,106,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef6a6a', fontSize: '15px' }}>✕</span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', letterSpacing: '.12em', color: '#ef8a8a' }}>STOP IF</span></div>
+          <div style={{ fontSize: '14px', lineHeight: '1.55', color: '#b4b4bd', marginTop: '12px' }}>Eighteen months in, the ERP layer is unbuilt and no certified pathway is active at a named account — the build wall has not moved despite a genuine attempt.</div>
+        </div>
+      </div>
+
+      <div style={{ marginTop: '24px', paddingTop: '18px', borderTop: '1px solid rgba(255,255,255,0.06)', fontFamily: '\'Spectral\',serif', fontStyle: 'italic', fontSize: '16px', color: '#8b7ff0' }}>The read ends here — your first move belongs to you.</div>
+    </div>
+  </section>
+
+  {/* 8 WHY NOT */}
   <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '130px 24px 0' }}>
     <div style={{ textAlign: 'center' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', letterSpacing: '.18em', color: '#6b7280' }}>WHY NOT JUST CHATGPT?</div><h2 style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '40px', lineHeight: '1.12', margin: '14px auto 0', maxWidth: '640px', color: '#fafafa' }}>Two tools grade your idea. One widens it.</h2></div>
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '18px', marginTop: '48px' }}>
@@ -551,58 +576,54 @@ export default function LandingView({
     </div>
   </section>
 
-  
-  <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '130px 24px 0' }}>
-    <div style={{ textAlign: 'center' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', letterSpacing: '.18em', color: '#34d8a8' }}>WHEN TO OPEN A LOOP</div><h2 style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '40px', lineHeight: '1.12', margin: '14px auto 0', maxWidth: '640px', color: '#fafafa' }}>Whenever the next move needs footing.</h2></div>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '16px', marginTop: '48px' }}>
-      <div style={{ background: 'rgba(255,255,255,0.018)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '14px', padding: '22px' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', color: '#5fe3bd' }}>01</div><div style={{ fontSize: '17px', color: '#f0f0f1', fontWeight: '500', marginTop: '10px' }}>A new idea worth a look</div><div style={{ fontSize: '13.5px', color: '#9a9aa3', marginTop: '7px', lineHeight: '1.5' }}>Widen it into angles before you fall for the first one.</div></div>
-      <div style={{ background: 'rgba(255,255,255,0.018)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '14px', padding: '22px' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', color: '#8aa9f7' }}>02</div><div style={{ fontSize: '17px', color: '#f0f0f1', fontWeight: '500', marginTop: '10px' }}>A pivot on the table</div><div style={{ fontSize: '13.5px', color: '#9a9aa3', marginTop: '7px', lineHeight: '1.5' }}>Fork the idea, re-judge it, measure the delta before you turn.</div></div>
-      <div style={{ background: 'rgba(255,255,255,0.018)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '14px', padding: '22px' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', color: '#b3a3f5' }}>03</div><div style={{ fontSize: '17px', color: '#f0f0f1', fontWeight: '500', marginTop: '10px' }}>Before you write code</div><div style={{ fontSize: '13.5px', color: '#9a9aa3', marginTop: '7px', lineHeight: '1.5' }}>See whether the pain, buyer, and route hold — before momentum turns into sunk cost.</div></div>
-      <div style={{ background: 'rgba(255,255,255,0.018)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '14px', padding: '22px' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', color: '#8ea2f0' }}>04</div><div style={{ fontSize: '17px', color: '#f0f0f1', fontWeight: '500', marginTop: '10px' }}>Before you hire</div><div style={{ fontSize: '13.5px', color: '#9a9aa3', marginTop: '7px', lineHeight: '1.5' }}>Know the binding constraint before you staff against it.</div></div>
-      <div style={{ background: 'rgba(255,255,255,0.018)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '14px', padding: '22px' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', color: '#e7bd7a' }}>05</div><div style={{ fontSize: '17px', color: '#f0f0f1', fontWeight: '500', marginTop: '10px' }}>Before you launch</div><div style={{ fontSize: '13.5px', color: '#a8a8b0', marginTop: '7px', lineHeight: '1.5' }}>Check whether the market, wedge, and risks still hold before you expose it.</div></div>
-      <div style={{ background: 'rgba(255,255,255,0.018)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '14px', padding: '22px' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11px', color: '#ee8a8a' }}>06</div><div style={{ fontSize: '17px', color: '#f0f0f1', fontWeight: '500', marginTop: '10px' }}>Setting an idea down</div><div style={{ fontSize: '13.5px', color: '#9a9aa3', marginTop: '7px', lineHeight: '1.5' }}>Park it with a reason on record — and keep it revivable.</div></div>
+  {/* 9 WHEN TO OPEN A LOOP — compressed strip */}
+  <section style={{ maxWidth: '1000px', margin: '0 auto', padding: '120px 24px 0', textAlign: 'center' }}>
+    <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', letterSpacing: '.18em', color: '#34d8a8' }}>WHEN TO OPEN A LOOP</div>
+    <h2 style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '30px', lineHeight: '1.18', margin: '12px auto 0', maxWidth: '600px', color: '#f0f0f1' }}>Whenever the next move needs footing.</h2>
+    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '10px', marginTop: '26px' }}>
+      <span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12.5px', color: '#c2c2c8', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '999px', padding: '9px 16px' }}>a new idea</span>
+      <span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12.5px', color: '#c2c2c8', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '999px', padding: '9px 16px' }}>a pivot on the table</span>
+      <span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12.5px', color: '#c2c2c8', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '999px', padding: '9px 16px' }}>before you write code</span>
+      <span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12.5px', color: '#c2c2c8', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '999px', padding: '9px 16px' }}>before you hire</span>
+      <span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12.5px', color: '#c2c2c8', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '999px', padding: '9px 16px' }}>before you launch</span>
+      <span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12.5px', color: '#c2c2c8', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '999px', padding: '9px 16px' }}>setting an idea down</span>
     </div>
   </section>
 
-  
-  <section id="pricing" style={{ maxWidth: '1000px', margin: '0 auto', padding: '130px 24px 0' }}>
-    <div style={{ textAlign: 'center' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', letterSpacing: '.18em', color: '#6b7280' }}>PRICING</div><h2 style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '40px', lineHeight: '1.12', margin: '14px auto 0', color: '#fafafa' }}>Pay as you think.</h2><p style={{ fontSize: '16.5px', color: '#a1a1aa', margin: '14px auto 0', maxWidth: '560px', lineHeight: '1.6' }}>Every Explore, Deep Analysis, and Re-evaluation spends credits. Start free, top up only when you’re actually moving.</p></div>
+  {/* 10 PRICING */}
+  <section id="pricing" style={{ maxWidth: '1000px', margin: '0 auto', padding: '128px 24px 0', scrollMarginTop: '88px' }}>
+    <div style={{ textAlign: 'center' }}><div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', letterSpacing: '.18em', color: '#6b7280' }}>PRICING</div><h2 style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '40px', lineHeight: '1.12', margin: '14px auto 0', color: '#fafafa' }}>Pay as you think.</h2><p style={{ fontSize: '16.5px', color: '#a1a1aa', margin: '14px auto 0', maxWidth: '560px', lineHeight: '1.6' }}>Every Explore, Deep Analysis, and Re-evaluation spends credits. Start free, spend credits only when you run the loop.</p></div>
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px', marginTop: '44px' }}>
-      <div style={{ background: 'rgba(255,255,255,0.018)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '30px' }}><div style={{ fontSize: '15px', color: '#d4d4d8', fontWeight: '600' }}>Free</div><div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '14px' }}><span style={{ fontFamily: '\'Spectral\',serif', fontSize: '42px', color: '#fafafa' }}>{PRICING.free.price}</span></div><div style={{ fontSize: '13.5px', color: '#9a9aa3', marginTop: '4px' }}>{PRICING.free.meta}</div><div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px', fontSize: '13.5px', color: '#9a9aa3' }}><div>✓  Your first idea loop</div><div>✓  Explore + one Deep Analysis</div><div>✓  Full lineage & memory</div></div><div style={{ marginTop: '24px', textAlign: 'center', fontSize: '14px', fontWeight: '600', color: '#e8e8ea', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '11px', padding: '12px', cursor: 'pointer' }} onClick={onStartFreeFn}>Start free</div></div>
-      <div style={{ background: 'linear-gradient(180deg,rgba(139,127,240,0.08),rgba(255,255,255,0.012))', border: '1px solid rgba(139,127,240,0.32)', borderRadius: '18px', padding: '30px', boxShadow: '0 0 50px rgba(139,127,240,0.08)' }}><div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><span style={{ fontSize: '15px', color: '#f4f4f5', fontWeight: '600' }}>Credits</span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', color: '#bdb4f0', background: 'rgba(139,127,240,0.16)', border: '1px solid rgba(139,127,240,0.3)', padding: '3px 9px', borderRadius: '5px' }}>PAY AS YOU GO</span></div><div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '14px' }}><span style={{ fontFamily: '\'Spectral\',serif', fontSize: '42px', color: '#fafafa' }}>{PRICING.credits.price}</span><span style={{ fontSize: '14px', color: '#71717a' }}>{PRICING.credits.per}</span></div><div style={{ fontSize: '13.5px', color: '#9a9aa3', marginTop: '4px' }}>{PRICING.credits.meta}</div><div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px', fontSize: '13.5px', color: '#c8c8cc' }}><div style={{ color: '#bdb4f0' }}>✓  Unlimited saved ideas & branches</div><div style={{ color: '#bdb4f0' }}>✓  Credits only spent when you run analysis</div><div style={{ color: '#bdb4f0' }}>✓  Deep Analysis with verified sources</div></div><div style={{ marginTop: '24px', textAlign: 'center', fontSize: '14px', fontWeight: '600', color: '#fff', background: '#8b7ff0', borderRadius: '11px', padding: '12px', cursor: 'pointer' }} onClick={onGetCreditsFn}>Get credits</div></div>
+      <div style={{ background: 'rgba(255,255,255,0.018)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '30px' }}><div style={{ fontSize: '15px', color: '#d4d4d8', fontWeight: '600' }}>Free</div><div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '14px' }}><span style={{ fontFamily: '\'Spectral\',serif', fontSize: '42px', color: '#fafafa' }}>$0</span></div><div style={{ fontSize: '13.5px', color: '#9a9aa3', marginTop: '4px' }}>to start · 150 credits on sign-up</div><div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px', fontSize: '13.5px', color: '#9a9aa3' }}><div>✓  Your first idea loop</div><div>✓  Explore + one Deep Analysis</div><div>✓  Full lineage & memory</div></div><div style={{ marginTop: '24px', textAlign: 'center', fontSize: '14px', fontWeight: '600', color: '#e8e8ea', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '11px', padding: '12px', cursor: 'pointer' }} onClick={onStartFreeFn}>Start free</div></div>
+      <div style={{ background: 'linear-gradient(180deg,rgba(139,127,240,0.08),rgba(255,255,255,0.012))', border: '1px solid rgba(139,127,240,0.32)', borderRadius: '18px', padding: '30px', boxShadow: '0 0 50px rgba(139,127,240,0.08)' }}><div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><span style={{ fontSize: '15px', color: '#f4f4f5', fontWeight: '600' }}>Credits</span><span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '10px', color: '#bdb4f0', background: 'rgba(139,127,240,0.16)', border: '1px solid rgba(139,127,240,0.3)', padding: '3px 9px', borderRadius: '5px' }}>PAY AS YOU GO</span></div><div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '14px' }}><span style={{ fontFamily: '\'Spectral\',serif', fontSize: '42px', color: '#fafafa' }}>$19</span><span style={{ fontSize: '14px', color: '#71717a' }}>/ 1,000 credits</span></div><div style={{ fontSize: '13.5px', color: '#9a9aa3', marginTop: '4px' }}>no subscription · never expires</div><div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px', fontSize: '13.5px', color: '#c8c8cc' }}><div style={{ color: '#bdb4f0' }}>✓  Unlimited saved ideas & branches</div><div style={{ color: '#bdb4f0' }}>✓  Credits only spent when you run analysis</div><div style={{ color: '#bdb4f0' }}>✓  Deep Analysis with verified sources</div></div><div style={{ marginTop: '24px', textAlign: 'center', fontSize: '14px', fontWeight: '600', color: '#fff', background: '#8b7ff0', borderRadius: '11px', padding: '12px', cursor: 'pointer' }} onClick={onGetCreditsFn}>Get credits</div></div>
     </div>
     <div style={{ marginTop: '24px', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '10px' }}>
-      <span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', color: '#a1a1aa', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '8px 13px' }}>Explore  <span style={{ color: '#8aa9f7' }}>{PRICING.rates.explore}</span></span>
-      <span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', color: '#a1a1aa', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '8px 13px' }}>Deep Analysis  <span style={{ color: '#b3a3f5' }}>{PRICING.rates.deep}</span></span>
-      <span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', color: '#a1a1aa', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '8px 13px' }}>Re-evaluate  <span style={{ color: '#5fe3bd' }}>{PRICING.rates.reeval}</span></span>
+      <span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', color: '#a1a1aa', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '8px 13px' }}>Explore  <span style={{ color: '#8aa9f7' }}>≈ 20 credits</span></span>
+      <span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', color: '#a1a1aa', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '8px 13px' }}>Deep Analysis  <span style={{ color: '#b3a3f5' }}>≈ 120 credits</span></span>
+      <span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', color: '#a1a1aa', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '8px 13px' }}>Re-evaluate  <span style={{ color: '#5fe3bd' }}>≈ 80 credits</span></span>
       <span style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', color: '#a1a1aa', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '8px 13px' }}>Compare  <span style={{ color: '#a6b6f5' }}>included</span></span>
     </div>
   </section>
 
-  
+  {/* 11 FINAL CTA — recognition close */}
   <section style={{ maxWidth: '900px', margin: '0 auto', padding: '140px 24px 0', textAlign: 'center' }}>
     <div style={{ position: 'relative', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', padding: '64px 40px', overflow: 'hidden', background: 'radial-gradient(120% 140% at 50% 0%, rgba(52,216,168,0.08), rgba(139,127,240,0.05) 40%, transparent 70%)' }}>
-      <h2 style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '46px', lineHeight: '1.1', letterSpacing: '-0.01em', color: '#fafafa' }}>Find a direction you can believe in.</h2>
-      <p style={{ fontSize: '17px', color: '#a1a1aa', margin: '16px auto 0', maxWidth: '520px', lineHeight: '1.6' }}>Bring one rough idea. Leave with a direction worth shaping — and the evidence it’s worth it.</p>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', marginTop: '30px' }}><span onClick={onStartLoop} style={{ fontSize: '16px', fontWeight: '600', color: '#fff', background: '#8b7ff0', padding: '15px 30px', borderRadius: '12px', cursor: 'pointer', boxShadow: '0 8px 30px rgba(139,127,240,0.3)' }}>Start an idea loop →</span>{showSample && (<span onClick={onViewSampleFn} style={{ fontSize: '16px', fontWeight: '500', color: '#d4d4d8', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', padding: '15px 26px', borderRadius: '12px', cursor: 'pointer' }}>View a sample loop</span>)}</div>
+      <h2 style={{ fontFamily: '\'Spectral\',serif', fontWeight: '500', fontSize: '44px', lineHeight: '1.12', letterSpacing: '-0.01em', color: '#fafafa' }}>You already run this loop.<br />Give it somewhere to live.</h2>
+      <p style={{ fontSize: '17px', color: '#a1a1aa', margin: '16px auto 0', maxWidth: '520px', lineHeight: '1.6' }}>Bring one rough idea. Leave with grounded directions, a first read, and a record you can return to.</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', marginTop: '30px' }}><span onClick={onStartLoop} style={{ fontSize: '16px', fontWeight: '600', color: '#fff', background: '#8b7ff0', padding: '15px 30px', borderRadius: '12px', cursor: 'pointer', boxShadow: '0 8px 30px rgba(139,127,240,0.3)' }}>Start an idea loop →</span>{showSample && (<span style={{ fontSize: '16px', fontWeight: '500', color: '#d4d4d8', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', padding: '15px 26px', borderRadius: '12px', cursor: 'pointer' }} onClick={onViewSampleFn}>View a sample loop</span>)}</div>
       <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '12px', color: '#52525b', marginTop: '22px' }}>NO CARD TO START · FREE CREDITS ON SIGN-UP</div>
     </div>
   </section>
 
-  
   {/* FOOTER */}
-      <footer style={{ maxWidth: "1180px", margin: "120px auto 0", padding: "80px 24px 50px", display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <img src="/idealoop-wordmark.png" alt="IdeaLoop Core" style={{ display: "block", height: "30px", width: "auto" }} />
-        </div>
-        <div style={{ display: "flex", gap: "26px", fontSize: "13.5px", color: "#9a9aa3" }}>
-          <span onClick={() => scrollToId("explore")} style={{ cursor: "pointer" }}>Grounded Explore</span>
-          <span onClick={() => scrollToId("the-loop")} style={{ cursor: "pointer" }}>The loop</span>
-          <span onClick={() => scrollToId("pricing")} style={{ cursor: "pointer" }}>Pricing</span>
-          <span onClick={onLogIn} style={{ cursor: "pointer" }}>Log in</span>
-        </div>
-        <div style={{ fontSize: "13px", color: "#52525b" }}>© 2026 IdeaLoop Core</div>
-      </footer>
+  <footer style={{ maxWidth: '1180px', margin: '120px auto 0', padding: '80px 24px 50px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center' }}><img src="/idealoop-wordmark.png" alt="IdeaLoop Core" style={{ display: 'block', height: '26px', width: 'auto' }} /></div>
+      <div style={{ display: 'flex', gap: '26px', fontSize: '13.5px' }}><a className="navlink" href="#the-loop">The loop</a><a className="navlink" href="#explore">Explore</a><a className="navlink" href="#pricing">Pricing</a><span onClick={onLogIn} style={{ color: '#9a9aa3', cursor: 'pointer' }}>Log in</span></div>
+      <div style={{ fontSize: '13px', color: '#52525b' }}>© 2026 IdeaLoop Core</div>
+    </div>
+    <div style={{ fontFamily: '\'JetBrains Mono\',monospace', fontSize: '11.5px', color: '#52525b', marginTop: '26px', lineHeight: '1.5' }}>All analysis is AI-generated. Use as a guide, not a definitive assessment.</div>
+  </footer>
 </div>
   );
 }
