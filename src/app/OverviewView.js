@@ -62,6 +62,17 @@ const SERIF = "'Spectral',serif";
 // regardless of how the user arrived here.
 function useDesignFonts() {
   useEffect(() => {
+    // current-step glow for the resume rail (inline styles can't hold @keyframes).
+    // Guarded independently so it lands even if the fonts were injected elsewhere.
+    if (!document.getElementById("ilc-ov-kf")) {
+      const kf = document.createElement("style");
+      kf.id = "ilc-ov-kf";
+      kf.textContent =
+        "@keyframes ilcResumePulse{0%,100%{opacity:.5}50%{opacity:1}}" +
+        "@media (prefers-reduced-motion:reduce){.ilc-resume-glow{animation:none!important;opacity:1!important}}";
+      document.head.appendChild(kf);
+    }
+
     const id = "ilc-ov-fonts";
     if (document.getElementById(id)) return;
     const pre1 = document.createElement("link");
@@ -143,6 +154,63 @@ function stageColor(s) {
 function boardStage(card) {
   if (card.family_has_brief) return "handoff";
   return card.family_stage || "rough";
+}
+
+// ── resume-card theme ────────────────────────────────────────────────────────
+// The "continue where you left off" card is tri-color by how far the family has
+// travelled: rough → anthracite, explore → dawn blue, deep/brief → deep violet.
+// Each theme also carries the secondary-button label = the honest next move.
+function resumeTheme(card) {
+  const stage = card.family_stage || "rough";
+  if (stage === "deep") {
+    return {
+      key: "deep", accent: C.violet2, eyebrow: C.violet2, tagText: C.violetText,
+      tagBg: "rgba(139,127,240,0.14)", tagBorder: "rgba(139,127,240,0.30)",
+      cardBg: "linear-gradient(180deg,rgba(139,127,240,0.07),rgba(255,255,255,0.012))",
+      cardBorder: "rgba(139,127,240,0.22)", cardGlow: "0 0 50px rgba(139,127,240,0.05)",
+      connectorDone: "rgba(139,127,240,0.5)",
+      tagLabel: "DEEP",
+      secondLabel: "Evolve", secondText: C.violetText, secondBorder: "rgba(139,127,240,0.3)",
+    };
+  }
+  if (stage === "explore") {
+    return {
+      key: "explore", accent: C.blue2, eyebrow: C.blue2, tagText: C.blueLed,
+      tagBg: "rgba(107,147,245,0.14)", tagBorder: "rgba(107,147,245,0.30)",
+      cardBg: "linear-gradient(180deg,rgba(107,147,245,0.07),rgba(255,255,255,0.012))",
+      cardBorder: "rgba(107,147,245,0.24)", cardGlow: "0 0 50px rgba(107,147,245,0.05)",
+      connectorDone: "rgba(107,147,245,0.5)",
+      tagLabel: "EXPLORED",
+      secondLabel: "Take one deep", secondText: C.blueLed, secondBorder: "rgba(107,147,245,0.30)",
+    };
+  }
+  return {
+    key: "rough", accent: C.mut2, eyebrow: C.mut, tagText: C.sec2,
+    tagBg: "rgba(154,154,163,0.12)", tagBorder: "rgba(154,154,163,0.28)",
+    cardBg: "linear-gradient(180deg,rgba(154,154,163,0.055),rgba(255,255,255,0.012))",
+    cardBorder: "rgba(154,154,163,0.20)", cardGlow: "0 0 40px rgba(154,154,163,0.03)",
+    connectorDone: "rgba(154,154,163,0.5)",
+    tagLabel: "ROUGH",
+    secondLabel: "Explore this", secondText: C.sec2, secondBorder: "rgba(154,154,163,0.28)",
+  };
+}
+
+// The five honest loop nodes. done/current are derived from the family's real
+// stage + brief flag — the current node glows, prior nodes get a teal ✓, later
+// nodes stay dim. (An explore-only family stops at node 2 = current, not done.)
+function resumeNodes(card) {
+  const stage = card.family_stage || "rough";
+  const hasBrief = !!card.family_has_brief;
+  const roughDone = stage === "explore" || stage === "deep";
+  const exploreDone = stage === "deep"; // reaching deep implies explore is behind you
+  const deepDone = stage === "deep" && hasBrief;
+  return [
+    { label: "Rough", done: roughDone, current: stage === "rough" },
+    { label: "Explore", done: exploreDone, current: stage === "explore" },
+    { label: "Deep Analysis", done: deepDone, current: stage === "deep" && !hasBrief },
+    { label: "Execution Brief", done: false, current: stage === "deep" && hasBrief },
+    { label: "Evolve", done: false, current: false },
+  ];
 }
 
 const eyebrow = (color = C.faint, size = 12, ls = ".16em") => ({
@@ -238,29 +306,21 @@ function EmptyCard({ mode, onClick }) {
 }
 
 // ── resume card (the focal "continue where you left off") ────────────────────
-function ResumeSteps({ card }) {
-  // Light the loop steps from real flags. The deep family runs the full rail; an
-  // explore/rough family lights fewer steps (honest — it hasn't reached them yet).
-  const isDeep = card.family_stage === "deep";
-  const steps = [
-    { label: "Idea", done: true },
-    { label: isDeep ? "Deep Analysis" : "Explore", done: card.family_stage !== "rough" },
-    { label: "Evidence & Reality", done: isDeep },
-    { label: "Handoff", done: !!card.family_has_brief },
-    { label: "Evolve", done: false },
-  ];
-  const currentIdx = steps.findIndex((s) => !s.done);
+function ResumeSteps({ card, theme }) {
+  // Five honest loop nodes: Rough → Explore → Deep Analysis → Execution Brief →
+  // Evolve. done/current come from the family's real stage; the current node
+  // glows in the stage color, prior nodes carry a teal ✓, later nodes stay dim.
+  const steps = resumeNodes(card);
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 0, marginTop: 15, flexWrap: "wrap" }}>
       {steps.map((s, i) => {
-        const isCurrent = i === currentIdx;
-        const connectorActive = i > 0 && (steps[i].done || isCurrent);
+        const connectorActive = i > 0 && (steps[i].done || steps[i].current);
         return (
           <span key={s.label} style={{ display: "flex", alignItems: "center" }}>
             {i > 0 && (
               <span style={{
                 width: 22, height: 1, margin: "0 9px",
-                background: connectorActive ? "rgba(139,127,240,0.5)" : "rgba(255,255,255,0.1)",
+                background: connectorActive ? theme.connectorDone : "rgba(255,255,255,0.1)",
               }} />
             )}
             <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
@@ -269,11 +329,15 @@ function ResumeSteps({ card }) {
                   width: 18, height: 18, borderRadius: "50%", border: `1px solid rgba(52,216,168,0.55)`,
                   color: C.teal, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9,
                 }}>✓</span>
-              ) : isCurrent ? (
-                <span style={{
-                  width: 20, height: 20, borderRadius: "50%", background: C.violet2, color: "#0b0b0d",
-                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700,
-                }}>{i + 1}</span>
+              ) : s.current ? (
+                <span
+                  className="ilc-resume-glow"
+                  style={{
+                    width: 20, height: 20, borderRadius: "50%", background: theme.accent, color: "#0b0b0d",
+                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700,
+                    animation: "ilcResumePulse 2.4s ease-in-out infinite",
+                  }}
+                >{i + 1}</span>
               ) : (
                 <span style={{
                   width: 18, height: 18, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.18)",
@@ -282,8 +346,8 @@ function ResumeSteps({ card }) {
               )}
               <span style={{
                 fontSize: 12.5,
-                color: s.done ? C.mut : isCurrent ? C.text3 : C.mut2,
-                fontWeight: isCurrent ? 600 : 400,
+                color: s.done ? C.mut : s.current ? C.text3 : C.mut2,
+                fontWeight: s.current ? 600 : 400,
               }}>{s.label}</span>
             </span>
           </span>
@@ -295,20 +359,27 @@ function ResumeSteps({ card }) {
 
 function ResumeCard({ card, bindingConstraint, onContinue }) {
   const [h1, setH1] = useState(false), [h2, setH2] = useState(false);
+  const theme = resumeTheme(card);
   const score = fmtScore(card.family_score);
   const hasBrief = !!card.family_has_brief;
   const detail = [];
   if (score) detail.push(`Verdict ${score}`);
   else if (card.family_stage === "explore") detail.push("Explored — no verdict");
+  else if ((card.family_stage || "rough") === "rough") detail.push("Captured spark");
   return (
     <div style={{
-      marginTop: 34, background: "linear-gradient(180deg,rgba(139,127,240,0.07),rgba(255,255,255,0.012))",
-      border: "1px solid rgba(139,127,240,0.22)", borderRadius: 18, padding: "26px 30px",
-      display: "flex", alignItems: "center", gap: 30, flexWrap: "wrap", boxShadow: "0 0 50px rgba(139,127,240,0.05)",
+      marginTop: 34, background: theme.cardBg,
+      border: `1px solid ${theme.cardBorder}`, borderRadius: 18, padding: "26px 30px",
+      display: "flex", alignItems: "center", gap: 30, flexWrap: "wrap", boxShadow: theme.cardGlow,
     }}>
       <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <span style={{ ...eyebrow(C.violet2, 11, ".14em") }}>CONTINUE WHERE YOU LEFT OFF</span>
+          <span style={{ ...eyebrow(theme.eyebrow, 11, ".14em") }}>CONTINUE WHERE YOU LEFT OFF</span>
+          <span style={{
+            fontFamily: MONO, fontSize: 10, letterSpacing: ".1em", color: theme.tagText,
+            background: theme.tagBg, border: `1px solid ${theme.tagBorder}`,
+            padding: "2px 9px", borderRadius: 999,
+          }}>{theme.tagLabel}</span>
           {hasBrief && (
             <span style={{
               fontFamily: MONO, fontSize: 10.5, letterSpacing: ".06em", color: C.violetText,
@@ -322,7 +393,7 @@ function ResumeCard({ card, bindingConstraint, onContinue }) {
           whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
         }}>{card.title}</div>
 
-        <ResumeSteps card={card} />
+        <ResumeSteps card={card} theme={theme} />
 
         <div style={{ fontSize: 13, color: C.mut2, marginTop: 13 }}>
           {detail.join(" · ")}
@@ -338,7 +409,7 @@ function ResumeCard({ card, bindingConstraint, onContinue }) {
           onClick={() => onContinue(card.id, hasBrief ? "brief" : null)}
           onMouseEnter={() => setH1(true)} onMouseLeave={() => setH1(false)}
           style={{
-            whiteSpace: "nowrap", background: C.violet2, color: "#fff", border: "none", borderRadius: 11,
+            whiteSpace: "nowrap", background: theme.accent, color: "#fff", border: "none", borderRadius: 11,
             padding: "13px 24px", fontSize: 14, fontWeight: 600, cursor: "pointer",
             filter: h1 ? "brightness(1.1)" : "none", transition: "filter .15s",
           }}
@@ -347,11 +418,11 @@ function ResumeCard({ card, bindingConstraint, onContinue }) {
           onClick={() => onContinue(card.id)}
           onMouseEnter={() => setH2(true)} onMouseLeave={() => setH2(false)}
           style={{
-            whiteSpace: "nowrap", background: h2 ? "rgba(139,127,240,0.08)" : "transparent", color: C.violetText,
-            border: "1px solid rgba(139,127,240,0.3)", borderRadius: 11, padding: "11px 24px",
+            whiteSpace: "nowrap", background: h2 ? "rgba(255,255,255,0.04)" : "transparent", color: theme.secondText,
+            border: `1px solid ${theme.secondBorder}`, borderRadius: 11, padding: "11px 24px",
             fontSize: 13.5, fontWeight: 500, cursor: "pointer", transition: "background .15s",
           }}
-        >Re‑evaluate</button>
+        >{theme.secondLabel}</button>
       </div>
     </div>
   );
