@@ -2763,6 +2763,15 @@ export default function Home() {
   // Deep graduates the idea forward in place (no copy). Explore arrives with
   // the explore room. Serves both standalone rough ideas and saved angles.
   if (currentScreen === "roughroom") {
+    // Redesigned capture card (faithful to the approved Rough_Idea_Capture export).
+    // Visuals reproduced exactly; only the seams that have a real persistence path
+    // are wired — title/body render from roughRoomIdea, both doors trigger the same
+    // graduate-in-place handlers as before. Per scope: no tag chips, no editable
+    // fields (no save path here), no fake generation/timestamp stamp. The SAVED pill
+    // and the live word count are truthful, so they stay.
+    const roughWordCount = (roughRoomIdea?.text || "").trim()
+      ? (roughRoomIdea.text || "").trim().split(/\s+/).length
+      : 0;
     return (
       <DashboardShell
         t={t}
@@ -2774,85 +2783,161 @@ export default function Home() {
         onNavigate={railNav}
       >
 
-        <main style={{ flex: 1, paddingBottom: 48, paddingTop: 40 }}>
-          <PageContainer>
-            <button
-              onClick={goToMyIdeas}
-              style={{ background: "none", border: "none", color: t.mut, fontFamily: "monospace", fontSize: 12, cursor: "pointer", padding: 0, marginBottom: 28, letterSpacing: "0.04em" }}
-            >
-              ← My Ideas
-            </button>
+        <main style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+          <div style={{ flex: 1, overflowY: "auto", padding: "40px 48px 64px", display: "flex", justifyContent: "center" }}>
+            <div style={{ width: "100%", maxWidth: 820 }}>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-              <span aria-hidden style={{ fontSize: 13 }}>✏️</span>
-              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: t.mut, fontFamily: "monospace" }}>
-                Rough idea
-              </span>
-            </div>
-
-            <h2 style={{ fontSize: 24, fontWeight: 600, color: t.text, margin: "0 0 18px", lineHeight: 1.25 }}>
-              {roughRoomIdea?.title || "Untitled idea"}
-            </h2>
-
-            <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, padding: "20px 22px", color: t.text, fontSize: 15, lineHeight: 1.6, whiteSpace: "pre-wrap", marginBottom: 32 }}>
-              {roughRoomIdea?.text}
-            </div>
-
-            <p style={{ fontSize: 12, color: t.mut, margin: "0 0 16px", fontFamily: "monospace", letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              Take it forward
-            </p>
-
-            {error && (
-              <p style={{ fontSize: 13, color: "#f87171", margin: "0 0 16px" }}>{error}</p>
-            )}
-
-            <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
+              {/* back */}
               <button
-                onClick={() => {
-                  // Route to the Explore INPUT screen pre-filled — the founder
-                  // reviews/edits the seed before spending a credit (NOT an instant
-                  // run), matching the lineage take-forward (onAdvance). The rough
-                  // node graduates in place when they run: graduatingIdeaId carries
-                  // its id, savedExploreIdeaId is cleared so it wins at the run.
-                  // hubReturnView -> "evaluated" so "← My Ideas" after graduating
-                  // lands where the now-evaluated card lives, not the rough shelf
-                  // it just left (mirrors onAdvance).
-                  if (!roughRoomIdea) return;
-                  setHubReturnView("evaluated");
-                  setSavedExploreIdeaId(null);
-                  setGraduatingIdeaId(roughRoomIdea.id);
-                  goToInput("explore", roughRoomIdea.text || "", true);
-                }}
-                disabled={!roughRoomIdea}
-                style={{ padding: "14px 26px", borderRadius: 12, fontSize: 14, fontWeight: 600, background: "transparent", color: !roughRoomIdea ? t.mut : t.text, border: `1px solid ${t.border}`, cursor: !roughRoomIdea ? "not-allowed" : "pointer", opacity: !roughRoomIdea ? 0.55 : 1 }}
+                onClick={goToMyIdeas}
+                style={{ background: "none", border: "none", padding: 0, fontFamily: "'JetBrains Mono',monospace", fontSize: 13, letterSpacing: "0.02em", color: "#71717a", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8 }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#a1a1aa")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#71717a")}
               >
-                Explore
+                ← My ideas
               </button>
 
-              <button
-                onClick={() => {
-                  // Route to the Deep INPUT screen pre-filled — review/edit before
-                  // spending a credit (NOT an instant run), as the lineage
-                  // take-forward (onAdvance) does. The rough node graduates in place
-                  // on run via graduatingIdeaId. hubReturnView -> "evaluated" so back
-                  // lands on the shelf the now-deep card moved to.
-                  if (!roughRoomIdea) return;
-                  setHubReturnView("evaluated");
-                  setSavedExploreIdeaId(null);
-                  setGraduatingIdeaId(roughRoomIdea.id);
-                  goToInput("deep", roughRoomIdea.text || "", true);
-                }}
-                disabled={!roughRoomIdea}
-                style={{ padding: "14px 34px", borderRadius: 12, fontSize: 14, fontWeight: 600, border: "none", cursor: !roughRoomIdea ? "not-allowed" : "pointer", background: !roughRoomIdea ? t.surfAlt : t.ctaBg, color: !roughRoomIdea ? t.mut : t.ctaText }}
-              >
-                Deep evaluate
-              </button>
-            </div>
+              {/* THE CAPTURE CARD */}
+              <div style={{ marginTop: 22, background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "26px 30px 24px" }}>
 
-            <p style={{ fontSize: 12, color: t.mut, margin: "18px 0 0", lineHeight: 1.5, maxWidth: 520 }}>
-              Explore widens this idea; Deep scores it. Either way it stays the same idea and moves into Ideas — no copy left behind.
-            </p>
-          </PageContainer>
+                {/* stamp row */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 9, fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: "0.22em", color: "#8a8a93" }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9a9aa3" strokeWidth="1.6">
+                      <path d="M12 20h9" />
+                      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+                    </svg>
+                    ROUGH IDEA
+                  </div>
+                  <span style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: "0.1em", color: "#5fe3bd" }}>
+                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#34d8a8" }} />
+                    SAVED
+                  </span>
+                </div>
+
+                {/* title */}
+                <h1 style={{ fontFamily: "'Spectral',serif", fontWeight: 500, fontSize: 29, lineHeight: 1.18, letterSpacing: "-0.01em", margin: "16px 0 0", color: "#fafafa" }}>
+                  {roughRoomIdea?.title || "Untitled idea"}
+                </h1>
+
+                {/* body */}
+                <p style={{ margin: "16px 0 0", paddingLeft: 15, borderLeft: "2px solid rgba(255,255,255,0.1)", fontSize: 14.5, lineHeight: 1.65, color: "#b4b4bd", whiteSpace: "pre-wrap" }}>
+                  {roughRoomIdea?.text}
+                </p>
+
+                {/* word count */}
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 20 }}>
+                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: "#52525b" }}>
+                    {roughWordCount} {roughWordCount === 1 ? "word" : "words"}
+                  </span>
+                </div>
+              </div>
+
+              {/* TAKE IT FORWARD */}
+              <div style={{ marginTop: 30, display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: "0.22em", color: "#6b7280" }}>TAKE IT FORWARD</div>
+                <span style={{ fontSize: 12.5, color: "#52525b" }}>Same idea, written back to your hub — no copy left behind.</span>
+              </div>
+
+              {error && (
+                <p style={{ fontSize: 13, color: "#f87171", margin: "14px 0 0" }}>{error}</p>
+              )}
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 14 }}>
+
+                {/* EXPLORE door */}
+                <div
+                  role="button"
+                  tabIndex={roughRoomIdea ? 0 : -1}
+                  onClick={() => {
+                    // Route to the Explore INPUT screen pre-filled — the founder
+                    // reviews/edits the seed before spending a credit (NOT an instant
+                    // run), matching the lineage take-forward (onAdvance). The rough
+                    // node graduates in place when they run: graduatingIdeaId carries
+                    // its id, savedExploreIdeaId is cleared so it wins at the run.
+                    // hubReturnView -> "evaluated" so "← My ideas" after graduating
+                    // lands where the now-evaluated card lives, not the rough shelf
+                    // it just left (mirrors onAdvance).
+                    if (!roughRoomIdea) return;
+                    setHubReturnView("evaluated");
+                    setSavedExploreIdeaId(null);
+                    setGraduatingIdeaId(roughRoomIdea.id);
+                    goToInput("explore", roughRoomIdea.text || "", true);
+                  }}
+                  onKeyDown={(e) => { if ((e.key === "Enter" || e.key === " ") && roughRoomIdea) { e.preventDefault(); e.currentTarget.click(); } }}
+                  style={{ display: "flex", alignItems: "center", gap: 14, background: "rgba(107,147,245,0.035)", border: "1px solid rgba(107,147,245,0.22)", borderRadius: 10, padding: "14px 16px", cursor: !roughRoomIdea ? "not-allowed" : "pointer", opacity: !roughRoomIdea ? 0.55 : 1, transition: "border-color .15s" }}
+                  onMouseEnter={(e) => { if (roughRoomIdea) e.currentTarget.style.borderColor = "rgba(107,147,245,0.6)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(107,147,245,0.22)"; }}
+                >
+                  <span style={{ width: 34, height: 34, flexShrink: 0, borderRadius: 9, background: "rgba(107,147,245,0.12)", border: "1px solid rgba(107,147,245,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8aa9f7" strokeWidth="1.6">
+                      <circle cx="12" cy="12" r="9" />
+                      <polygon points="15.6,8.4 10.8,10.8 8.4,15.6 13.2,13.2" />
+                    </svg>
+                  </span>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 14.5, color: "#f0f0f1", fontWeight: 600 }}>Explore mode</span>
+                      <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 9, letterSpacing: "0.12em", color: "#8aa9f7" }}>WIDEN</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: "#9a9aa3", marginTop: 2, lineHeight: 1.4 }}>Fan into angles · no verdict yet</div>
+                  </div>
+                  <span style={{ color: "#8aa9f7", fontSize: 16, flexShrink: 0 }}>→</span>
+                </div>
+
+                {/* DEEP door */}
+                <div
+                  role="button"
+                  tabIndex={roughRoomIdea ? 0 : -1}
+                  onClick={() => {
+                    // Route to the Deep INPUT screen pre-filled — review/edit before
+                    // spending a credit (NOT an instant run), as the lineage
+                    // take-forward (onAdvance) does. The rough node graduates in place
+                    // on run via graduatingIdeaId. hubReturnView -> "evaluated" so back
+                    // lands on the shelf the now-deep card moved to.
+                    if (!roughRoomIdea) return;
+                    setHubReturnView("evaluated");
+                    setSavedExploreIdeaId(null);
+                    setGraduatingIdeaId(roughRoomIdea.id);
+                    goToInput("deep", roughRoomIdea.text || "", true);
+                  }}
+                  onKeyDown={(e) => { if ((e.key === "Enter" || e.key === " ") && roughRoomIdea) { e.preventDefault(); e.currentTarget.click(); } }}
+                  style={{ display: "flex", alignItems: "center", gap: 14, background: "rgba(139,127,240,0.05)", border: "1px solid rgba(139,127,240,0.3)", borderRadius: 10, padding: "14px 16px", cursor: !roughRoomIdea ? "not-allowed" : "pointer", opacity: !roughRoomIdea ? 0.55 : 1, position: "relative", transition: "border-color .15s" }}
+                  onMouseEnter={(e) => { if (roughRoomIdea) e.currentTarget.style.borderColor = "rgba(139,127,240,0.7)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(139,127,240,0.3)"; }}
+                >
+                  <span style={{ width: 34, height: 34, flexShrink: 0, borderRadius: 9, background: "rgba(139,127,240,0.14)", border: "1px solid rgba(139,127,240,0.34)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#b3a3f5" strokeWidth="1.6">
+                      <circle cx="12" cy="12" r="9" />
+                      <circle cx="12" cy="12" r="5" />
+                      <circle cx="12" cy="12" r="1.4" fill="#b3a3f5" />
+                    </svg>
+                  </span>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 14.5, color: "#f0f0f1", fontWeight: 600 }}>Deep analysis</span>
+                      <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 9, letterSpacing: "0.12em", color: "#b3a3f5" }}>SCORE</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: "#9a9aa3", marginTop: 2, lineHeight: 1.4 }}>Pressure-test · verdict 0–5</div>
+                  </div>
+                  <span style={{ color: "#b3a3f5", fontSize: 16, flexShrink: 0 }}>→</span>
+                </div>
+              </div>
+
+              {/* keep as rough */}
+              <div style={{ marginTop: 16, fontSize: 12.5, color: "#71717a" }}>
+                Not ready?{" "}
+                <span
+                  onClick={goToMyIdeas}
+                  style={{ color: "#a1a1aa", cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, textDecorationColor: "rgba(255,255,255,0.2)" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = "#e4e4e7")}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = "#a1a1aa")}
+                >Keep it as a rough idea</span>{" "}
+                and come back later.
+              </div>
+
+            </div>
+          </div>
         </main>
       </DashboardShell>
     );
