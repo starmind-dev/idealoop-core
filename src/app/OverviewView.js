@@ -362,6 +362,11 @@ function ResumeCard({ card, bindingConstraint, onContinue }) {
   const theme = resumeTheme(card);
   const score = fmtScore(card.family_score);
   const hasBrief = !!card.family_has_brief;
+  // The hub card's id is the family ROOT (fixed identity). But "continue where you
+  // left off" must open the node the rollup actually describes — the deep/brief
+  // node carried as resume_id by listHub. Falling back to card.id preserves
+  // behavior if the API hasn't shipped resume_id yet.
+  const resumeId = card.resume_id || card.id;
   const detail = [];
   if (score) detail.push(`Verdict ${score}`);
   else if (card.family_stage === "explore") detail.push("Explored — no verdict");
@@ -406,7 +411,7 @@ function ResumeCard({ card, bindingConstraint, onContinue }) {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 9, flexShrink: 0 }}>
         <button
-          onClick={() => onContinue(card.id, hasBrief ? "brief" : null)}
+          onClick={() => onContinue(resumeId, hasBrief ? "brief" : null)}
           onMouseEnter={() => setH1(true)} onMouseLeave={() => setH1(false)}
           style={{
             whiteSpace: "nowrap", background: theme.accent, color: "#fff", border: "none", borderRadius: 11,
@@ -415,7 +420,7 @@ function ResumeCard({ card, bindingConstraint, onContinue }) {
           }}
         >{hasBrief ? "Open execution brief →" : "Continue →"}</button>
         <button
-          onClick={() => onContinue(card.id)}
+          onClick={() => onContinue(resumeId)}
           onMouseEnter={() => setH2(true)} onMouseLeave={() => setH2(false)}
           style={{
             whiteSpace: "nowrap", background: h2 ? "rgba(255,255,255,0.04)" : "transparent", color: theme.secondText,

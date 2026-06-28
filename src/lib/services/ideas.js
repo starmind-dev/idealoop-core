@@ -163,6 +163,30 @@ function familyAggregate(members) {
     .sort((a, b) => new Date(b.eval_at || 0) - new Date(a.eval_at || 0));
   const familyScore = deeps.length ? deeps[0].score : null;
 
+  // RESUME TARGET — the node "Continue where you left off" must actually open.
+  // The hub card's IDENTITY is the family root (fixed, never moves), but the card's
+  // displayed rollup (stage / score / brief) describes the furthest-progressed
+  // descendant. Opening the root would land on the root's own room (e.g. Explore)
+  // and contradict a card that reads "Deep · brief ready". So resume_id points at
+  // the node the rollup actually came from, in display-priority order:
+  //   1. the node that owns a brief (matches "Execution Brief ready")
+  //   2. else the most-recent scored deep (matches the shown verdict)
+  //   3. else the furthest-stage node (deep > explore > rough)
+  //   4. else the root / first member
+  // resume_stage lets the Overview route precisely (brief intent only when deep).
+  const briefNode = nodes.find((n) => n.has_brief) || null;
+  const deepNode = deeps.length ? deeps[0] : null;
+  const rootNodeForResume = nodes.find((n) => n.parent_id == null) || nodes[0] || null;
+  let furthestNode = rootNodeForResume;
+  let furthestRank = -1;
+  nodes.forEach((n) => {
+    const r = rank[n.mode] ?? 0;
+    if (r > furthestRank) { furthestRank = r; furthestNode = n; }
+  });
+  const resumeNode = briefNode || deepNode || furthestNode || rootNodeForResume;
+  const resumeId = resumeNode ? resumeNode.id : null;
+  const resumeStage = resumeNode ? resumeNode.mode : null;
+
   // A kept RE-EVAL grows a SAME-MODE child (deep->deep, explore->explore). Angle
   // branching instead drops rough/explore children under an explore parent (a
   // DIFFERENT kind) — those fall under "branched". This distinguishes the two.
@@ -204,6 +228,8 @@ function familyAggregate(members) {
     family_stage: stage,            // 'rough' | 'explore' | 'deep' (furthest plain stage)
     family_score: familyScore,      // number | null (family's latest deep verdict)
     family_has_brief: hasBrief,     // any node handed off to an execution brief
+    resume_id: resumeId,            // node "Continue where you left off" should open
+    resume_stage: resumeStage,      // that node's mode — route precisely (brief if deep)
     loop_bucket: bucket,            // single lifecycle bucket (strip)
     generation,                     // max tree depth (lineage "G{n}")
     last_activity_at: lastActivity, // newest touch in the family
