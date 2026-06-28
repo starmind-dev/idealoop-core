@@ -515,6 +515,11 @@ export default function HubView({ t, onOpenIdea, onOpenLineage, onBack, compareS
   const [addingFolder, setAddingFolder] = useState(false);
   const [folderName, setFolderName] = useState("");
 
+  // "+ Add a rough idea" inline composer (mirrors the folder-add pattern).
+  const [addingRough, setAddingRough] = useState(false);
+  const [roughText, setRoughText] = useState("");
+  const [savingRough, setSavingRough] = useState(false);
+
   const hoverTimer = useRef(null);
 
   const authedFetch = useCallback(async (url, opts = {}) => {
@@ -662,6 +667,24 @@ export default function HubView({ t, onOpenIdea, onOpenLineage, onBack, compareS
       await load();
     } catch (e) { setError(e.message); }
   };
+  // Create a rough idea (0 evals) via POST /api/ideas -> createIdea, then refresh.
+  // If a folder is active, the capture lands in it. Title is server-derived from text.
+  const commitRough = async () => {
+    const text = roughText.trim();
+    if (!text) { setAddingRough(false); setRoughText(""); return; }
+    setSavingRough(true);
+    try {
+      const res = await authedFetch("/api/ideas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ raw_idea_text: text, ...(activeFolder ? { folder_id: activeFolder } : {}) }),
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || "Could not save idea."); }
+      setRoughText(""); setAddingRough(false);
+      await load();
+    } catch (e) { setError(e.message); }
+    finally { setSavingRough(false); }
+  };
   const deleteFolder = async (id) => {
     setData((d) => ({ ...d, folders: d.folders.filter((f) => f.id !== id) }));
     if (activeFolder === id) setActiveFolder(null);
@@ -764,10 +787,44 @@ export default function HubView({ t, onOpenIdea, onOpenLineage, onBack, compareS
         <SearchBox value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search rough ideas" />
       </div>
       <FolderRail {...railProps} />
-      {roughVisible.length === 0 ? (
-        <div style={{ padding: "70px 0", textAlign: "center", color: "#5B6478", fontSize: 14.5 }}>{q ? "No rough ideas match that search." : "No rough ideas yet."}</div>
+      {q && roughVisible.length === 0 ? (
+        <div style={{ padding: "70px 0", textAlign: "center", color: "#5B6478", fontSize: 14.5 }}>No rough ideas match that search.</div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(232px,1fr))", gap: 13 }}>
+          {!q && (addingRough ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, minHeight: 122, padding: 15, borderRadius: 14, background: "linear-gradient(180deg,#13161d,#0F1218)", border: "1px solid rgba(174,182,200,0.35)" }}>
+              <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#8A93A3" }}>New rough idea</span>
+              <textarea
+                autoFocus
+                value={roughText}
+                onChange={(e) => setRoughText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); commitRough(); }
+                  if (e.key === "Escape") { setAddingRough(false); setRoughText(""); }
+                }}
+                placeholder="Capture the spark — what it does, who it's for…"
+                rows={3}
+                style={{ flex: 1, width: "100%", resize: "none", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 9, padding: "9px 11px", fontSize: 13, lineHeight: 1.5, color: "#E7EBF2", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+              />
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div onClick={savingRough ? undefined : commitRough} style={{ flex: 1, textAlign: "center", padding: "7px 0", borderRadius: 8, fontSize: 12.5, fontWeight: 500, cursor: savingRough ? "default" : "pointer", color: "#0C0E13", background: roughText.trim() ? "#AEB6C8" : "rgba(174,182,200,0.4)", opacity: savingRough ? 0.6 : 1, transition: "background .15s" }}>{savingRough ? "Saving…" : "Save"}</div>
+                <div onClick={() => { setAddingRough(false); setRoughText(""); }} style={{ padding: "7px 12px", borderRadius: 8, fontSize: 12.5, color: "#9AA3B6", cursor: "pointer", border: "1px solid rgba(255,255,255,0.1)" }}>Cancel</div>
+              </div>
+            </div>
+          ) : (
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => setAddingRough(true)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setAddingRough(true); } }}
+              style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 9, minHeight: 122, padding: 15, borderRadius: 14, background: "transparent", border: "1px dashed rgba(255,255,255,0.16)", color: "#AEB6C8", cursor: "pointer", transition: "border-color .18s ease,background .18s ease" }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(174,182,200,0.45)"; e.currentTarget.style.background = "rgba(255,255,255,0.02)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.16)"; e.currentTarget.style.background = "transparent"; }}
+            >
+              <IPlus s={16} />
+              <span style={{ fontSize: 13, color: "#AEB6C8", fontWeight: 500 }}>Add a rough idea</span>
+            </div>
+          ))}
           {roughVisible.map((c) => { const h = cardHandlers(c); return <RoughCard key={c.id} card={c} edit={editFor(c)} onOpen={h.onOpen} onMenu={h.onMenu} />; })}
         </div>
       )}
