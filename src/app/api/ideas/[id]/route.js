@@ -13,8 +13,8 @@
 //          object is byte-identical to the prior route, so applyLoadedIdea ->
 //          results1 is untouched. `?evaluation_id=` selection preserved.
 //
-// PATCH  — delegates to updateIdea(userId, ideaId, { title, folder_id, branch_reason }).
-//          NEW: accepts `folder_id` (move-to-folder) with an ownership guard, and
+// PATCH  — delegates to updateIdea(userId, ideaId, { title, raw_idea_text, folder_id, branch_reason }).
+//          NEW: accepts `raw_idea_text` (rough-idea room body edit, non-empty) and
 //          accepts `branch_reason` (edit branch note). `status_label` is RETIRED —
 //          the label model is gone; its only writers were the removed lineage
 //          status dropdown and this route, so it is no longer validated or written.
@@ -209,6 +209,16 @@ export async function PATCH(request, { params }) {
         return NextResponse.json({ error: "Title cannot be empty." }, { status: 400 });
       }
       patch.title = trimmed;
+    }
+
+    // Editable idea body (rough-idea room). Non-empty when present; stored trimmed
+    // (internal newlines preserved). The service whitelists raw_idea_text too.
+    if (body.raw_idea_text !== undefined) {
+      const txt = (body.raw_idea_text || "").trim();
+      if (!txt) {
+        return NextResponse.json({ error: "Idea text cannot be empty." }, { status: 400 });
+      }
+      patch.raw_idea_text = txt;
     }
 
     if ("branch_reason" in body) {

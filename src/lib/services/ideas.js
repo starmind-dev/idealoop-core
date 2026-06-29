@@ -422,6 +422,9 @@ export async function updateIdea(userId, ideaId, patch = {}) {
 
   const set = {};
   if (typeof patch.title === "string") set.title = patch.title.trim().slice(0, 80);
+  // Editable idea body (rough-idea room). Stored as given; the title stays
+  // independently editable via the title path above.
+  if (typeof patch.raw_idea_text === "string") set.raw_idea_text = patch.raw_idea_text;
   if ("folder_id" in patch) set.folder_id = patch.folder_id || null;
   if ("branch_reason" in patch) set.branch_reason = patch.branch_reason || null;
   if ("is_favorite" in patch) set.is_favorite = !!patch.is_favorite;

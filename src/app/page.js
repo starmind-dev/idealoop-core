@@ -543,6 +543,10 @@ export default function Home() {
   // Declared above the persistence/restore effects below: their dependency arrays reference
   // these, and a dep on a const declared lower in the component hits a TDZ during prerender.
   const [roughRoomIdea, setRoughRoomIdea] = useState(null); // { id, text, title }
+  const [roughEditing, setRoughEditing] = useState(false);     // rough-room edit mode
+  const [roughDraftTitle, setRoughDraftTitle] = useState("");  // edit draft: title
+  const [roughDraftText, setRoughDraftText] = useState("");    // edit draft: body
+  const [roughSaving, setRoughSaving] = useState(false);       // edit save in flight
   const [savedExploreIdeaId, setSavedExploreIdeaId] = useState(null); // explored idea saved this session
   // Jump-back source for the input screens. When a take-to-explore / take-to-deep
   // handoff comes from a SAVED explored idea (or one of its angles), this holds
@@ -1708,6 +1712,7 @@ export default function Home() {
         text: txt,
         title: data.idea?.title || txt.split(/[.!?\n]/)[0].trim().slice(0, 80),
       });
+      setRoughEditing(false);
       setCurrentScreen("roughroom");
       return;
     }
@@ -1998,6 +2003,47 @@ export default function Home() {
     } catch (err) {
       console.error("Failed to update idea:", err);
       setMyIdeasError(err.message || "Failed to update idea.");
+    }
+  };
+
+  // Save edits to a rough idea's title + body from the rough-room edit mode.
+  // PATCHes the (now-editable) raw_idea_text + title, reflects locally on the
+  // room card AND the hub list, then re-fetches so the hub + resume card pick
+  // up the change. Blank title falls back to a derived first-sentence title so
+  // the route's non-empty-title guard never fires.
+  const saveRoughEdits = async () => {
+    if (!roughRoomIdea?.id) return;
+    const text = (roughDraftText || "").trim();
+    if (!text) { setError("Idea text can't be empty."); return; }
+    const title =
+      (roughDraftTitle || "").trim() ||
+      text.split(/[.!?\n]/)[0].trim().slice(0, 80) ||
+      "Untitled idea";
+    setRoughSaving(true);
+    setError("");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setRoughSaving(false); return; }
+      const res = await fetch(`/api/ideas/${roughRoomIdea.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ title, raw_idea_text: text }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save.");
+      setRoughRoomIdea((p) => (p ? { ...p, text, title } : p));
+      setMyIdeas((prev) =>
+        prev.map((i) => (i.id === roughRoomIdea.id ? { ...i, title, raw_idea_text: text } : i))
+      );
+      setRoughEditing(false);
+      fetchMyIdeas();
+    } catch (err) {
+      setError(err.message || "Failed to save.");
+    } finally {
+      setRoughSaving(false);
     }
   };
 
@@ -2816,14 +2862,19 @@ export default function Home() {
   // the explore room. Serves both standalone rough ideas and saved angles.
   if (currentScreen === "roughroom") {
     // Redesigned capture card (faithful to the approved Rough_Idea_Capture export).
-    // Visuals reproduced exactly; only the seams that have a real persistence path
-    // are wired — title/body render from roughRoomIdea, both doors trigger the same
-    // graduate-in-place handlers as before. Per scope: no tag chips, no editable
-    // fields (no save path here), no fake generation/timestamp stamp. The SAVED pill
-    // and the live word count are truthful, so they stay.
-    const roughWordCount = (roughRoomIdea?.text || "").trim()
-      ? (roughRoomIdea.text || "").trim().split(/\s+/).length
+    // Title/body render from roughRoomIdea; both doors trigger the graduate-in-place
+    // handlers. EDIT MODE: the Edit affordance swaps the title + body for inline
+    // inputs bound to roughDraftTitle/roughDraftText, saved via saveRoughEdits ->
+    // PATCH /api/ideas/[id] { title, raw_idea_text } (the route + service now accept
+    // raw_idea_text). The SAVED/EDITING pill and the live word count are truthful.
+    // Per scope: no tag chips, no fake generation/timestamp stamp.
+    const roughBodySource = roughEditing ? roughDraftText : (roughRoomIdea?.text || "");
+    const roughWordCount = roughBodySource.trim()
+      ? roughBodySource.trim().split(/\s+/).length
       : 0;
+    // Doors route to the input screen pre-filled with the SAVED text, so they're
+    // inert while mid-edit (save or cancel first).
+    const roughDoorsLocked = roughEditing;
     return (
       <DashboardShell
         t={t}
@@ -2861,21 +2912,83 @@ export default function Home() {
                     </svg>
                     ROUGH IDEA
                   </div>
-                  <span style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: "0.1em", color: "#5fe3bd" }}>
-                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#34d8a8" }} />
-                    SAVED
-                  </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    {roughRoomIdea?.id && !roughEditing && (
+                      <button
+                        onClick={() => {
+                          setRoughDraftTitle(roughRoomIdea.title || "");
+                          setRoughDraftText(roughRoomIdea.text || "");
+                          setError("");
+                          setRoughEditing(true);
+                        }}
+                        style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 7, padding: "5px 11px", fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: "0.06em", color: "#a1a1aa", cursor: "pointer", transition: "border-color .15s, color .15s" }}
+                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.28)"; e.currentTarget.style.color = "#e4e4e7"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; e.currentTarget.style.color = "#a1a1aa"; }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                          <path d="M12 20h9" />
+                          <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+                        </svg>
+                        Edit
+                      </button>
+                    )}
+                    {roughEditing && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <button
+                          onClick={() => { setRoughEditing(false); setError(""); }}
+                          disabled={roughSaving}
+                          style={{ background: "none", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 7, padding: "5px 12px", fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: "0.06em", color: "#a1a1aa", cursor: roughSaving ? "default" : "pointer", opacity: roughSaving ? 0.5 : 1 }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={saveRoughEdits}
+                          disabled={roughSaving}
+                          style={{ background: "rgba(52,216,168,0.12)", border: "1px solid rgba(52,216,168,0.4)", borderRadius: 7, padding: "5px 14px", fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: "0.06em", color: "#5fe3bd", cursor: roughSaving ? "default" : "pointer", opacity: roughSaving ? 0.6 : 1 }}
+                        >
+                          {roughSaving ? "Saving\u2026" : "Save"}
+                        </button>
+                      </div>
+                    )}
+                    <span style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: "0.1em", color: roughEditing ? "#e0b768" : "#5fe3bd" }}>
+                      <span style={{ width: 5, height: 5, borderRadius: "50%", background: roughEditing ? "#e0a93c" : "#34d8a8" }} />
+                      {roughEditing ? "EDITING" : "SAVED"}
+                    </span>
+                  </div>
                 </div>
 
                 {/* title */}
-                <h1 style={{ fontFamily: "'Spectral',serif", fontWeight: 500, fontSize: 29, lineHeight: 1.18, letterSpacing: "-0.01em", margin: "16px 0 0", color: "#fafafa" }}>
-                  {roughRoomIdea?.title || "Untitled idea"}
-                </h1>
+                {roughEditing ? (
+                  <input
+                    value={roughDraftTitle}
+                    onChange={(e) => setRoughDraftTitle(e.target.value)}
+                    placeholder="Title (optional \u2014 defaults to the first line)"
+                    style={{ width: "100%", boxSizing: "border-box", margin: "16px 0 0", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "10px 13px", fontFamily: "'Spectral',serif", fontWeight: 500, fontSize: 26, lineHeight: 1.2, letterSpacing: "-0.01em", color: "#fafafa", outline: "none" }}
+                    onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(52,216,168,0.45)")}
+                    onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)")}
+                  />
+                ) : (
+                  <h1 style={{ fontFamily: "'Spectral',serif", fontWeight: 500, fontSize: 29, lineHeight: 1.18, letterSpacing: "-0.01em", margin: "16px 0 0", color: "#fafafa" }}>
+                    {roughRoomIdea?.title || "Untitled idea"}
+                  </h1>
+                )}
 
                 {/* body */}
-                <p style={{ margin: "16px 0 0", paddingLeft: 15, borderLeft: "2px solid rgba(255,255,255,0.1)", fontSize: 14.5, lineHeight: 1.65, color: "#b4b4bd", whiteSpace: "pre-wrap" }}>
-                  {roughRoomIdea?.text}
-                </p>
+                {roughEditing ? (
+                  <textarea
+                    value={roughDraftText}
+                    onChange={(e) => setRoughDraftText(e.target.value)}
+                    autoFocus
+                    placeholder="Describe the idea\u2026"
+                    style={{ width: "100%", boxSizing: "border-box", margin: "16px 0 0", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "13px 15px", fontFamily: "inherit", fontSize: 14.5, lineHeight: 1.65, color: "#e4e4e7", outline: "none", resize: "vertical", minHeight: 150 }}
+                    onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(52,216,168,0.45)")}
+                    onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)")}
+                  />
+                ) : (
+                  <p style={{ margin: "16px 0 0", paddingLeft: 15, borderLeft: "2px solid rgba(255,255,255,0.1)", fontSize: 14.5, lineHeight: 1.65, color: "#b4b4bd", whiteSpace: "pre-wrap" }}>
+                    {roughRoomIdea?.text}
+                  </p>
+                )}
 
                 {/* word count */}
                 <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 20 }}>
