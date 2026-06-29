@@ -24,7 +24,10 @@
 // present (newer evals, post evidence_signals_v1), unioned with every competitors_json
 // URL (which is always present and represents the landscape that was actually judged).
 // A union keeps the baseline as COMPLETE as possible so a known entity reappearing
-// never reads as "new".
+// never reads as "new". scanEvidence ALSO folds in the URLs from this idea's already-
+// RESOLVED signals (dismissed or acted) — a competitor the founder has already seen and
+// adjudicated must never re-fire as "new" on the next cadence, even if they never saved
+// a re-eval. That is what makes Dismiss actually dismiss, not snooze for one cycle.
 //
 // v1 SCOPE: competitor-landscape only (kind 'new_competitor'). The schema reserves
 // 'competitor_shift' and the nullable dimension for v2.
@@ -33,7 +36,7 @@
 // component. The deep scoring engine is untouched — this reads stored evals and
 // runs ITS OWN retrieval + a separate Haiku call; it never re-scores.
 
-import { supabaseAdmin } from "./supabase-admin";
+import { supabaseAdmin } from "../supabase-admin";
 import client from "./anthropic-client";
 import { getIdea } from "./ideas";
 import { searchGitHub } from "./github";
@@ -43,6 +46,10 @@ import { searchExa } from "./exa";
 import { EVIDENCE_SCAN_SYSTEM_PROMPT } from "./prompt-evidence-scan";
 
 const CLASSIFIER_MODEL = "claude-haiku-4-5-20251001";
+
+// Per-idea watch cadence -> minimum days between scans. Drives the cron's
+// "what's due" filter (off = never auto-scanned).
+const CADENCE_DAYS = { weekly: 7, biweekly: 14, monthly: 30, quarterly: 90, semiannual: 182, annual: 365 };
 
 // Normalize a URL for set-membership: drop protocol + leading www, lowercase the
 // host+path, strip a trailing slash and any query/hash. Two URLs that point at the
@@ -196,7 +203,36 @@ export async function scanEvidence(userId, ideaId) {
 
   // STAGE 1 — replay + structural diff (no LLM).
   const baseline = baselineUrlSet(evalRow);
+
+  // Fold in URLs the founder has already adjudicated for THIS idea (dismissed or
+  // acted). Without this, Dismiss only snoozes: the same competitor URL is still
+  // absent from the eval baseline next cycle, so it re-fires the identical signal.
+  // The signal row already stores its triggering competitor URLs, so no schema is
+  // needed — we just union them in. Genuinely-new competitors still surface; only
+  // the ones the user already saw are silenced.
+  try {
+    const { data: resolved } = await supabaseAdmin
+      .from("signals")
+      .select("evidence_json")
+      .eq("user_id", userId)
+      .eq("idea_id", ideaId)
+      .in("status", ["dismissed", "acted"]);
+    for (const r of resolved || []) {
+      (r?.evidence_json?.competitors || []).forEach((c) => {
+        const n = normUrl(c?.url);
+        if (n) baseline.add(n);
+      });
+    }
+  } catch (e) {
+    console.error("scanEvidence: resolved-signal baseline union failed (non-fatal):", e?.message || e);
+  }
+
   const fresh = await replay(queries);
+  // A real replay happened — advance the scan clock so cadence due-logic moves
+  // forward whether or not anything was found (manual scans count too).
+  await supabaseAdmin.from("ideas")
+    .update({ last_scanned_at: new Date().toISOString() })
+    .eq("user_id", userId).eq("id", ideaId);
   const candidates = fresh.filter((r) => r._key && !baseline.has(r._key));
 
   if (candidates.length === 0) {
@@ -286,4 +322,50 @@ export async function resolveSignal(userId, signalId, status) {
     .eq("id", signalId);
   if (error) throw error;
   return { ok: true };
+}
+
+// ============================================================================
+// PUBLIC: batch worker for the cron — scan every watched idea that's due
+// ============================================================================
+// Service-role, cross-user (the cron is a system caller). Selects active ideas
+// with a cadence set, keeps the ones whose last_scanned_at is older than their
+// cadence interval (or never scanned), skips any that already carry an OPEN signal
+// (so alerts never pile up), and runs scanEvidence on up to `limit` of them. Each
+// scan is isolated in try/catch so one failure can't abort the batch.
+export async function scanDueIdeas({ limit = 10 } = {}) {
+  const { data: watched, error } = await supabaseAdmin
+    .from("ideas")
+    .select("id, user_id, watch_cadence, last_scanned_at")
+    .eq("status", "active")
+    .neq("watch_cadence", "off");
+  if (error) throw error;
+
+  const now = Date.now();
+  const due = (watched || []).filter((w) => {
+    const days = CADENCE_DAYS[w.watch_cadence];
+    if (!days) return false;
+    if (!w.last_scanned_at) return true;
+    return now - new Date(w.last_scanned_at).getTime() >= days * 86400000;
+  });
+  if (due.length === 0) return { due: 0, scanned: 0, signals: 0, muted: 0 };
+
+  // Don't re-scan an idea that already has an unresolved signal.
+  const dueIds = due.map((d) => d.id);
+  const { data: openSig } = await supabaseAdmin
+    .from("signals").select("idea_id").eq("status", "open").in("idea_id", dueIds);
+  const muted = new Set((openSig || []).map((r) => r.idea_id));
+
+  const targets = due.filter((d) => !muted.has(d.id)).slice(0, limit);
+
+  let scanned = 0, signals = 0;
+  for (const t of targets) {
+    try {
+      const r = await scanEvidence(t.user_id, t.id);
+      scanned += 1;
+      if (r && r.changed) signals += 1;
+    } catch (e) {
+      console.error("scanDueIdeas: idea", t.id, e?.message || e);
+    }
+  }
+  return { due: due.length, scanned, signals, muted: muted.size };
 }

@@ -40,6 +40,7 @@ const FORWARD_RANK = { rough: 0, explore: 1, deep: 2 };
 const IDEA_LIGHT_SELECT = `
   id, title, raw_idea_text, parent_idea_id, branch_reason, changed_dimensions,
   is_main_version, is_favorite, disposition, status, source, folder_id, created_at, updated_at,
+  watch_cadence, last_scanned_at,
   evaluations ( id, mode, evaluation_mode, weighted_overall_score,
     market_demand_score, monetization_score, originality_score, technical_complexity_score,
     execution_brief_json, created_at )
@@ -248,12 +249,20 @@ function familyAggregate(members) {
 // board, loop-strip, and stats. These are additive — existing consumers (HubView)
 // ignore them; the root fields (mode/score/has_brief) are unchanged.
 export async function listHub(userId) {
-  const [ideaRes, folderRes, activity] = await Promise.all([
+  // Open evidence-watch signals ride the same hub payload the Overview already
+  // consumes (the "Needs Your Move" card reads them). Queried inline here rather
+  // than importing the scanner service, which imports back from this module —
+  // inlining keeps the dependency one-directional (no ideas <-> scanner cycle).
+  const [ideaRes, folderRes, activity, signalRes] = await Promise.all([
     supabaseAdmin.from("ideas").select(IDEA_LIGHT_SELECT)
       .eq("user_id", userId).eq("status", "active"),
     supabaseAdmin.from("folders").select("id, name, sort_order")
       .eq("user_id", userId).order("sort_order", { ascending: true }),
     listActivity(userId, 12),
+    supabaseAdmin.from("signals")
+      .select("id, idea_id, evaluation_id, kind, dimension, direction, severity, message, evidence_json, created_at, ideas(title)")
+      .eq("user_id", userId).eq("status", "open")
+      .order("created_at", { ascending: false }).limit(20),
   ]);
   if (ideaRes.error) throw ideaRes.error;
 
@@ -282,6 +291,21 @@ export async function listHub(userId) {
     rough: cards.filter((c) => c.mode === "rough"),
     ideas: cards.filter((c) => c.mode !== "rough"),
     activity: activity || [],
+    // "Needs Your Move" — open evidence-watch signals, newest first, each shaped
+    // with its idea title + triggering competitors for the card + the re-judge seed.
+    signals: (signalRes?.data || []).map((sig) => ({
+      id: sig.id,
+      idea_id: sig.idea_id,
+      evaluation_id: sig.evaluation_id,
+      kind: sig.kind,
+      dimension: sig.dimension,
+      direction: sig.direction,
+      severity: sig.severity,
+      message: sig.message,
+      competitors: sig.evidence_json?.competitors || [],
+      title: sig.ideas?.title || "An idea",
+      created_at: sig.created_at,
+    })),
   };
 }
 
@@ -430,6 +454,13 @@ export async function updateIdea(userId, ideaId, patch = {}) {
   if ("is_favorite" in patch) set.is_favorite = !!patch.is_favorite;
   if ("disposition" in patch)
     set.disposition = patch.disposition === "parked" || patch.disposition === "killed" ? patch.disposition : null;
+  // Evidence-watch cadence (per-idea). The picker writes one of the enum values;
+  // anything else falls back to "off". Setting/changing cadence never touches the
+  // scan clock — last_scanned_at advances only on a real replay (manual or cron).
+  if ("watch_cadence" in patch) {
+    const CAD = ["off", "weekly", "biweekly", "monthly", "quarterly", "semiannual", "annual"];
+    set.watch_cadence = CAD.includes(patch.watch_cadence) ? patch.watch_cadence : "off";
+  }
   if (Object.keys(set).length === 0) return { ok: true };
   set.updated_at = new Date().toISOString();
   const { error } = await supabaseAdmin.from("ideas").update(set)
@@ -613,4 +644,70 @@ export async function saveBranch(userId, parentIdeaId, mode, opts = {}) {
     meta: { mode, new_score: newScore, prev_score: opts.prev_score ?? null },
   });
   return { ok: true, idea_id: childId, mode, main: !!opts.makeMain };
+}
+// ───────────────────────────────────────────────────────────────────────────
+// READ HISTORY — superseded reads of an idea whose TEXT never changed (an
+// evidence re-read replaced the live eval in place; the prior eval was snapshot
+// into read_history by the save route's recheck branch). This is NOT lineage:
+// the idea didn't fork, so a previous read lives ON the idea, not in the tree.
+//
+// buildDeepAnalysis is the SINGLE eval-row → render `analysis` mapper, shared by
+// the idea-open route and the history route so a previous read renders through
+// the exact same shape as the current one (no drift, no field list to maintain).
+// Lifted verbatim from api/ideas/[id]/route.js, which now imports it from here.
+// ───────────────────────────────────────────────────────────────────────────
+export function buildDeepAnalysis(evaluation) {
+  const sj = (evaluation && evaluation.scoring_json) || {};
+  return {
+    evaluation: {
+      ...sj,
+      overall_score: evaluation.weighted_overall_score,
+      market_demand: sj.market_demand || { score: evaluation.market_demand_score, explanation: "" },
+      monetization: sj.monetization || { score: evaluation.monetization_score, explanation: "" },
+      originality: sj.originality || { score: evaluation.originality_score, explanation: "" },
+      technical_complexity: sj.technical_complexity || { score: evaluation.technical_complexity_score, explanation: "" },
+      marketplace_note: sj.marketplace_note || null,
+      failure_risks: sj.failure_risks || [],
+      evidence_strength: sj.evidence_strength || null,
+      summary: evaluation.summary_text || sj.summary || "",
+    },
+    competition: {
+      competitors: evaluation.competitors_json || [],
+      differentiation: evaluation.competition_summary || "",
+      data_source: evaluation.data_source || "llm_generated",
+    },
+    estimates: evaluation.estimates_json || {},
+    classification: evaluation.classification || "commercial",
+    scope_warning: evaluation.scope_warning || false,
+    _meta: evaluation.meta_json || {},
+    execution_brief: evaluation.execution_brief_json || null,
+  };
+}
+
+// Every superseded read for an idea, newest-supersede first. Each item carries
+// BOTH a compact summary (for the "Previous reads" list) and the full mapped
+// `analysis` (so the read-only viewer renders the real read with no second call).
+export async function listReadHistory(userId, ideaId) {
+  const { data, error } = await supabaseAdmin
+    .from("read_history")
+    .select("id, evaluation_snapshot, original_created_at, superseded_at, superseded_reason, signal_id")
+    .eq("user_id", userId)
+    .eq("idea_id", ideaId)
+    .order("superseded_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data || []).map((row) => {
+    const snap = row.evaluation_snapshot || {};
+    const analysis = buildDeepAnalysis(snap);
+    const ev = analysis.evaluation || {};
+    return {
+      id: row.id,
+      superseded_at: row.superseded_at,
+      superseded_reason: row.superseded_reason,
+      original_created_at: row.original_created_at || snap.created_at || null,
+      score: ev.overall_score ?? null,
+      headline: ev.verdict_headline || ev.verdict_lead || null,
+      summary: ev.summary || null,
+      analysis,
+    };
+  });
 }

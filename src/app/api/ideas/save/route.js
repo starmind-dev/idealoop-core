@@ -167,6 +167,10 @@ export async function POST(request) {
       // recognizes a handled angle by id, NOT by matching text — editing the seed
       // before running no longer breaks the link. Null for non-angle saves.
       origin_angle_id,
+      // EVIDENCE RE-READ: set this existing deep idea's CURRENT read to the fresh
+      // analysis (same text, new evidence). Snapshots the old read to history.
+      recheck_idea_id,
+      signal_id, // the triggering Needs-Your-Move signal, linked on the history row
     } = body;
 
     const isExplore = mode === "explore";
@@ -334,6 +338,77 @@ export async function POST(request) {
         idea_id: graduate_idea_id,
         evaluation_id: evalRow.id,
         has_evaluation: true,
+      });
+    }
+
+    // ================================================
+    // SET AS CURRENT READ — an Evidence Watch re-read of an EXISTING deep idea.
+    // The idea TEXT is unchanged; only the evidence moved. This is NOT a new version
+    // (Lineage stays forks-only) and NOT a graduation (the idea is already deep). It
+    // replaces the idea's one live eval with the fresh read, first snapshotting the
+    // superseded read into read_history so it survives as a "previous read". The new
+    // competitor set becomes the watch baseline; the scan clock resets from this read.
+    // ================================================
+    if (recheck_idea_id) {
+      if (!analysis) {
+        return NextResponse.json({ error: "Missing required data (analysis)." }, { status: 400 });
+      }
+      const target = await getIdea(user.id, recheck_idea_id);
+      if (!target || target.status === "archived") {
+        return NextResponse.json({ error: "Idea to re-read not found." }, { status: 404 });
+      }
+      if (target.state !== "deep") {
+        return NextResponse.json({ error: "Only a deep read can be re-read on new evidence." }, { status: 400 });
+      }
+
+      // Snapshot the current live eval(s) into read_history BEFORE replacing them.
+      const prevEvals = Array.isArray(target.evaluations) ? target.evaluations : [];
+      if (prevEvals.length) {
+        const snapshots = prevEvals.map((ev) => ({
+          user_id: user.id,
+          idea_id: recheck_idea_id,
+          evaluation_snapshot: ev,
+          original_created_at: ev.created_at || null,
+          superseded_reason: "evidence_recheck",
+          signal_id: signal_id || null,
+        }));
+        const { error: histError } = await supabaseAdmin.from("read_history").insert(snapshots);
+        if (histError) {
+          console.error("read_history snapshot failed:", histError);
+          return NextResponse.json({ error: `Failed to archive previous read: ${histError.message}` }, { status: 500 });
+        }
+      }
+
+      // Replace the one live eval (delete + insert), same builder as a normal deep save.
+      const { error: delError } = await supabaseAdmin
+        .from("evaluations").delete().eq("user_id", user.id).eq("idea_id", recheck_idea_id);
+      if (delError) {
+        console.error("Re-read eval cleanup failed:", delError);
+        return NextResponse.json({ error: `Failed to set current read: ${delError.message}` }, { status: 500 });
+      }
+      const { data: evalRow, error: evalError } = await supabaseAdmin
+        .from("evaluations")
+        .insert(buildDeepEvalRow(recheck_idea_id, user.id, analysis, execution_brief))
+        .select("id").single();
+      if (evalError) {
+        console.error("Re-read eval insert failed:", evalError);
+        return NextResponse.json({ error: `Failed to set current read: ${evalError.message}` }, { status: 500 });
+      }
+
+      // Idea row stays put; bump updated_at and restart the watch clock from this read.
+      await supabaseAdmin.from("ideas")
+        .update({ updated_at: new Date().toISOString(), last_scanned_at: new Date().toISOString() })
+        .eq("id", recheck_idea_id).eq("user_id", user.id);
+
+      await logActivity(user.id, {
+        kind: "rejudged", idea_id: recheck_idea_id,
+        summary: `${target.title || "An idea"} — re-read on new evidence, now ${Number(analysis?.evaluation?.overall_score ?? 0).toFixed(1)}.`,
+        meta: { score: analysis?.evaluation?.overall_score ?? null, evidence_recheck: true },
+      });
+
+      return NextResponse.json({
+        success: true, mode: "deep", recheck: true,
+        idea_id: recheck_idea_id, evaluation_id: evalRow.id, has_evaluation: true,
       });
     }
 

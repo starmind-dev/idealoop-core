@@ -349,6 +349,9 @@ export default function Home() {
   const [reEvalPrevAnalysis, setReEvalPrevAnalysis] = useState(null); // FULL prior analysis (V_prev) — the change-walkthrough diffs against this
   const [walkthroughData, setWalkthroughData] = useState(null); // change-walkthrough result { markers, anchors } from the re-evaluate-walkthrough route
   const [walkthroughLoading, setWalkthroughLoading] = useState(false); // true while the walkthrough is being computed in the background
+  const [pendingEvidenceReJudge, setPendingEvidenceReJudge] = useState(null); // a signal whose re-judge is queued: load the idea, then run a no-edit, evidence-only re-eval
+  const [evidenceSignal, setEvidenceSignal] = useState(null); // the signal whose evidence drove the CURRENT re-judge result — drives the evidence-first lead banner
+  const [readDecisionBusy, setReadDecisionBusy] = useState(false); // true while a "set as current read" / "keep old read" decision is committing
 
   // Branch creation form state (V4S14)
   const [branchReason, setBranchReason] = useState("");
@@ -539,6 +542,8 @@ export default function Home() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState(null);
+  const [readHistory, setReadHistory] = useState([]); // previous reads of the open deep idea (read_history); [] when never re-read
+  const [historicalRead, setHistoricalRead] = useState(null); // an opened previous read (read-only viewer) or null
   const [exploreAnalysis, setExploreAnalysis] = useState(null); // ll2_explore_v1 payload (Explore mode)
   // Declared above the persistence/restore effects below: their dependency arrays reference
   // these, and a dep on a const declared lower in the component hits a TDZ during prerender.
@@ -1080,6 +1085,7 @@ export default function Home() {
   const handleAnalyze = async (mode = "deep", ideaTextOverride = null, graduateId = null, branchParentArg = null, originAngleArg = null) => {
     const ideaToUse = ideaTextOverride != null ? ideaTextOverride : idea;
     if (!ideaToUse.trim()) return;
+    setEvidenceSignal(null);
 
     // For logged-in users, check DB-based limits; for anon, use localStorage
     if (user) {
@@ -1207,9 +1213,163 @@ export default function Home() {
     }
   };
 
+  // EVIDENCE RE-JUDGE — the "Needs Your Move" re-evaluation. Same deep pipeline as a
+  // normal re-eval, but the founder edited NOTHING: we re-run /api/analyze-pro on the
+  // UNCHANGED idea text so retrieval picks up the world's move, then narrate with an
+  // EMPTY changedFields set. With no edit, every changed anchor resolves to the
+  // walkthrough's "evidence-only" shape — "you changed nothing here; fresh evidence
+  // surfaced and the read followed." Path A: show the evidence delta itself; reshaping
+  // stays the optional follow-on via the normal Evolve entry. prevAnalysis is captured
+  // LOCALLY (not via reEvalPrevAnalysis state) to dodge the set-then-read stale closure.
+  const startEvidenceReJudge = async (signal) => {
+    if (!currentIdeaId || !user) return;
+    const prev = analysis;
+    const ideaText = (loadedIdeaText || idea || "").trim();
+    if (!prev || !ideaText) { setIsReEvaluating(false); return; }
+    if (runningRef.current) return;
+    runningRef.current = true;
+    setIsReEvaluating(true);
+    setError("");
+    setReEvalSource("analysis");
+    setReEvalPrevAnalysis(prev);
+    setReEvalOriginalIdea(ideaText);
+    setEvidenceSignal(signal || null);
+    setWalkthroughData(null);
+    try {
+      const result = await analyzeWithStream(ideaText, profile, "/api/analyze-pro");
+      if (result.specificityInsufficient || result.ethicsBlocked) {
+        setError(result.message || "Re-judge could not complete.");
+        return;
+      }
+      // Record eval usage (a re-judge is a full pipeline run). NOTE: whether a watch
+      // re-judge should consume a credit or ride the watch is a pricing call — kept
+      // consistent with handleReEvaluate for now.
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const usageRes = await fetch("/api/eval-usage", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+          });
+          const usageData = await usageRes.json();
+          if (usageRes.ok) setEvalsRemaining(usageData.remaining);
+        }
+      } catch (err) { console.error("Failed to record eval usage:", err); }
+
+      setReEvalRevisionNotes(null);
+      setReEvalChangedFields(null);
+      setAnalysis(result.analysis);
+      // EMPTY changedFields -> the diff lights only evidence/read paths -> evidence-only.
+      runWalkthrough(prev, result.analysis, []);
+      resetExecutionBrief();
+      setViewingFromSaved(false);
+      setSaveStatus("idle");
+      setSaveError("");
+      setSavedIdeaId(null);
+      setIdeaName("");
+      setCurrentEvaluationId(null);
+      setIsReEvalResult(true);
+      setReEvalMode(false);
+      setCurrentScreen("results1");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsReEvaluating(false);
+      runningRef.current = false;
+    }
+  };
+
+  // Resolve the triggering signal (called on a re-read DECISION, never on click —
+  // so a failed re-read leaves the signal standing).
+  const resolveEvidenceSignal = async (status) => {
+    const sig = evidenceSignal;
+    if (!sig || !sig.id) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      await fetch(`/api/signals/${sig.id}/resolve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ status }),
+      });
+    } catch (e) { /* non-fatal — a refresh reconciles */ }
+  };
+
+  // SET AS CURRENT READ — make the fresh re-read this idea's current evaluation.
+  // The save route snapshots the old read into read_history (it survives as a
+  // "previous read"); the idea text is unchanged, so no new version is forked.
+  const setAsCurrentRead = async () => {
+    if (!currentIdeaId || !analysis || readDecisionBusy) return;
+    setReadDecisionBusy(true);
+    setError("");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setReadDecisionBusy(false); return; }
+      const res = await fetch("/api/ideas/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({
+          recheck_idea_id: currentIdeaId,
+          analysis,
+          idea_text: (loadedIdeaText || reEvalOriginalIdea || idea || "").trim(),
+          execution_brief: briefData || null,
+          profile,
+          signal_id: evidenceSignal?.id || null,
+        }),
+      });
+      if (res.ok) {
+        await resolveEvidenceSignal("acted");
+        setEvidenceSignal(null);
+        setIsReEvalResult(false);
+        loadSavedIdea(currentIdeaId); // reload so the now-current read shows cleanly
+      } else {
+        const d = await res.json().catch(() => ({}));
+        setError(d.error || "Could not set the current read.");
+      }
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setReadDecisionBusy(false);
+    }
+  };
+
+  // KEEP THE OLD READ — discard the fresh re-read; the old read stays current. The
+  // signal still resolves (the resolved-signal baseline union keeps it from re-firing).
+  const keepOldRead = async () => {
+    if (readDecisionBusy) return;
+    setReadDecisionBusy(true);
+    try {
+      await resolveEvidenceSignal("acted");
+      setEvidenceSignal(null);
+      setIsReEvalResult(false);
+      if (currentIdeaId) loadSavedIdea(currentIdeaId); // back to the still-current old read
+    } finally {
+      setReadDecisionBusy(false);
+    }
+  };
+
+  // Set this idea's evidence-watch cadence (the dial on a saved deep result).
+  // PATCHes /api/ideas/[id]/watch; returns true on success so the dial can confirm.
+  const onSetWatch = async (cadence) => {
+    if (!currentIdeaId) return false;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return false;
+      const res = await fetch(`/api/ideas/${currentIdeaId}/watch`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ cadence }),
+      });
+      return res.ok;
+    } catch (e) {
+      return false;
+    }
+  };
+
   // Re-evaluate a saved idea with optional changes
   const handleReEvaluate = async (payload) => {
     if (!currentIdeaId || !user) return;
+    setEvidenceSignal(null);
 
     // Check eval limits (same as handleAnalyze)
     try {
@@ -1626,6 +1786,24 @@ export default function Home() {
   };
 
   // Apply loaded evaluation data to state (shared by cache hit and fetch paths)
+  // Previous reads of a deep idea — evidence re-reads that replaced the live eval
+  // in place (the idea text never changed). Fire-and-forget on open; resolves to
+  // [] for ideas that were never re-read, so the "Previous reads" strip simply
+  // doesn't render.
+  const fetchReadHistory = async (ideaId) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setReadHistory([]); return; }
+      const res = await fetch(`/api/ideas/${ideaId}/history`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const data = await res.json();
+      setReadHistory(res.ok && Array.isArray(data.reads) ? data.reads : []);
+    } catch {
+      setReadHistory([]);
+    }
+  };
+
   const applyLoadedIdea = (data, ideaId, afterLoad) => {
     setIdea(data.idea.raw_idea_text);
     setAnalysis(data.analysis);
@@ -1638,6 +1816,13 @@ export default function Home() {
     setCurrentIdeaId(ideaId);
     setCurrentEvaluationId(data.evaluation_id);
     setViewingFromSaved(true);
+
+    // Read history — a fresh idea-open always lands on the current read, never a
+    // previously-opened snapshot. Reset the viewer, then load previous reads only
+    // for deep ideas (rough/explore have none).
+    setHistoricalRead(null);
+    setReadHistory([]);
+    if (data.analysis) fetchReadHistory(ideaId);
 
     // Seed the execution-brief state from the loaded analysis. The [id] route
     // surfaces a persisted brief as analysis.execution_brief; when present we
@@ -1753,6 +1938,7 @@ export default function Home() {
   const loadSavedIdea = async (ideaId, evaluationId, afterLoad) => {
     if (!user) return;
     setMyIdeasError("");
+    setEvidenceSignal(null);
     setShowAlternativesPopup(false);
 
     const cacheKey = evaluationId ? `${ideaId}-${evaluationId}` : ideaId;
@@ -2057,6 +2243,17 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingReEvalId, currentIdeaId, analysis]);
 
+  // Needs-Your-Move re-judge: once the signal's idea is loaded, run the no-edit,
+  // evidence-only re-eval (mirror of the lineage Re-evaluate deferred-fire).
+  useEffect(() => {
+    if (pendingEvidenceReJudge && currentIdeaId === pendingEvidenceReJudge.idea_id && analysis) {
+      const sig = pendingEvidenceReJudge;
+      setPendingEvidenceReJudge(null);
+      startEvidenceReJudge(sig);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingEvidenceReJudge, currentIdeaId, analysis]);
+
   // Navigate to My Ideas Hub
   const goToMyIdeas = () => {
     // The hub IS the two-shelf HubView now (was the old flat list). Every "My
@@ -2070,6 +2267,8 @@ export default function Home() {
     setCompareSelecting(false);
     setCompareSelected([]);
     setCompareData(null);
+    setHistoricalRead(null);
+    setReadHistory([]);
     fetchMyIdeas();
   };
 
@@ -2197,6 +2396,8 @@ export default function Home() {
     setCurrentEvaluationId(null);
     setCurrentIdeaId(null);
     setViewingFromSaved(false);
+    setHistoricalRead(null);
+    setReadHistory([]);
     resetExecutionBrief();
   };
 
@@ -2331,6 +2532,7 @@ export default function Home() {
                   : undefined;
               loadSavedIdea(id, undefined, afterLoad);
             }}
+            onEvidenceReJudge={(sig) => { setIsReEvaluating(true); setPendingEvidenceReJudge(sig); loadSavedIdea(sig.idea_id); }}
             onOpenIdea={(id) => loadSavedIdea(id)}
             onViewAll={goToMyIdeas}
           />
@@ -3597,10 +3799,16 @@ export default function Home() {
         onNavigate={railNav}
       >
       <EvaluationView
-        screen={currentScreen}
+        screen={historicalRead ? "results1" : currentScreen}
         t={t}
-        analysis={analysis}
-        walkthroughData={walkthroughData}
+        analysis={historicalRead ? historicalRead.analysis : analysis}
+        walkthroughData={historicalRead ? null : walkthroughData}
+        evidenceSignal={historicalRead ? null : evidenceSignal}
+        onSetAsCurrentRead={setAsCurrentRead}
+        onKeepOldRead={keepOldRead}
+        readDecisionBusy={readDecisionBusy}
+        watchCadence={(myIdeas.find((i) => i.id === currentIdeaId) || {}).watch_cadence || "off"}
+        onSetWatch={onSetWatch}
         profile={profile}
         user={user}
         viewingFromSaved={viewingFromSaved}
@@ -3618,7 +3826,7 @@ export default function Home() {
         myIdeas={myIdeas}
         branchReason={branchReason}
         branchDimensions={branchDimensions}
-        isReEvalResult={isReEvalResult}
+        isReEvalResult={historicalRead ? false : isReEvalResult}
         evalsRemaining={evalsRemaining}
         setCurrentScreen={setCurrentScreen}
         setShowAuthModal={setShowAuthModal}
@@ -3642,7 +3850,13 @@ export default function Home() {
         onResetAndNewIdea={onResetAndNewIdea}
         onBackToMyIdeasCleanup={onBackToMyIdeasCleanup}
         onDiscardReEval={onDiscardReEval}
+        readHistory={readHistory}
+        onOpenHistoricalRead={setHistoricalRead}
+        readOnly={!!historicalRead}
+        outdatedMeta={historicalRead ? { superseded_at: historicalRead.superseded_at, superseded_reason: historicalRead.superseded_reason, original_created_at: historicalRead.original_created_at } : undefined}
+        onBackToCurrent={() => setHistoricalRead(null)}
       />
+      {isReEvaluating && <StreamOverlay streamSteps={streamSteps} t={t} mode="reeval" />}
       </DashboardShell>
     );
   }

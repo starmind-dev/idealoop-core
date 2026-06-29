@@ -12,7 +12,7 @@
 // "a blog mentioned a competitor" false alarm and the user mutes the section for
 // good. So the bar is deliberately HIGH and the default is material:false. This
 // mirrors the engine's own discipline — under-flag, never inflate; the signal only
-// CLAIMS movement, and the user's re-judge (the existing evolve screen) is what
+// CLAIMS movement, and the user's evidence re-check (a no-edit re-evaluation) is what
 // PROVES it, so a missed minor change is far cheaper than a cried wolf.
 //
 // v1 SCOPE: competitor-landscape only (a new competitor appeared, or a known one
@@ -36,7 +36,7 @@ When (and only when) something is material, identify:
 - dimension: the single axis most affected — "originality" (a new builder narrows the moat), "market_demand" (validates or crowds demand), or "monetization" (pricing/precedent pressure). Pick the strongest; null if genuinely unclear.
 - direction: "down" if it weakens the idea's position, "up" if it strengthens it (e.g. validates an unproven market), "unclear" if mixed.
 - severity: "material" only if it clears the bar above; otherwise the whole result is material:false.
-- message: ONE sentence, <= 140 characters, plain and specific, naming the entity and the implication. No hype, no "BREAKING", no exclamation. It should read like a calm heads-up a sharp advisor would send.
+- message: ONE sentence, <= 160 characters, framed as an INVITATION TO REVISIT — never a conclusion. Name the new entity and WHICH part of the prior read it may bear on, then leave the verdict to the founder. Use "may affect" or "appears near the wedge this read relied on" — NOT "your edge has narrowed" or "X now does your idea." No hype, no "BREAKING", no exclamation. It reads like a calm heads-up a sharp advisor sends: a new thing that may touch the read, worth a re-check before treating the old read as current.
 - competitors: the subset of candidates that actually matter, each { "name", "url", "why" } — "why" is a short clause on what makes it competitor-grade. Omit the noise.
 
 Output STRICT JSON, nothing else, no markdown fence:

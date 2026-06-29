@@ -519,25 +519,67 @@ function BoardRow({ card, last, onOpenIdea }) {
   );
 }
 
-// NEEDS YOUR MOVE — Tier 3 PARKED. No live-evidence pipeline exists yet, so this is
-// an HONEST empty state (the promise of the feature), never invented signals.
-function NeedsYourMove() {
+// NEEDS YOUR MOVE — LIVE. Reads open evidence-watch signals off the hub payload.
+// Real signals render as amber cards (message + which idea + the moved dimension)
+// with two actions: RE-JUDGE (routes into the existing re-eval screen) and DISMISS.
+// With no open signals it falls back to the honest empty state — never invented.
+function NeedsYourMove({ signals = [], onActOn, onDismiss }) {
+  const has = signals && signals.length > 0;
+  const dirGlyph = (d) => (d === "down" ? "↓" : d === "up" ? "↑" : "");
+  const cap = (x) => (typeof x === "string" && x ? x.replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase()) : null);
   return (
     <div>
       <div style={{ ...eyebrow(C.amber, 12, ".16em"), marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
         <span>⚡</span> NEEDS YOUR MOVE
       </div>
-      <div style={{
-        background: "rgba(255,255,255,0.018)", border: `1px dashed ${C.line}`, borderRadius: 14, padding: "20px 18px",
-      }}>
-        <div style={{ fontSize: 13.5, color: C.sec, fontWeight: 500 }}>No new signals this week.</div>
-        <div style={{ fontSize: 12.5, lineHeight: 1.55, color: C.mut, marginTop: 7 }}>
-          IdeaLoop re‑checks your active ideas' evidence in the background and flags a move here when the world shifts.
+      {has ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {signals.map((sig) => {
+            const dim = cap(sig.dimension);
+            return (
+              <div key={sig.id} style={{
+                background: "rgba(231,189,122,0.05)", border: "1px solid rgba(231,189,122,0.22)",
+                borderRadius: 14, padding: "15px 16px",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 12, color: C.sec, fontWeight: 600 }}>{sig.title}</span>
+                  {dim && (
+                    <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: ".09em", color: C.amber }}>
+                      {dim}{sig.direction ? ` ${dirGlyph(sig.direction)}` : ""}
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 13.5, lineHeight: 1.5, color: C.text, fontWeight: 500 }}>{sig.message}</div>
+                <div style={{ display: "flex", gap: 9, marginTop: 13 }}>
+                  <button onClick={() => onActOn && onActOn(sig)} style={{
+                    fontFamily: MONO, fontSize: 11, letterSpacing: ".06em", color: C.violet,
+                    background: "rgba(179,163,245,0.10)", border: "1px solid rgba(179,163,245,0.30)",
+                    borderRadius: 9, padding: "8px 13px", cursor: "pointer",
+                  }}>RE-EVALUATE →</button>
+                  <button onClick={() => onDismiss && onDismiss(sig)} style={{
+                    fontFamily: MONO, fontSize: 11, letterSpacing: ".06em", color: C.mut,
+                    background: "transparent", border: `1px solid ${C.line}`,
+                    borderRadius: 9, padding: "8px 13px", cursor: "pointer",
+                  }}>DISMISS</button>
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </div>
+      ) : (
+        <div style={{
+          background: "rgba(255,255,255,0.018)", border: `1px dashed ${C.line}`, borderRadius: 14, padding: "20px 18px",
+        }}>
+          <div style={{ fontSize: 13.5, color: C.sec, fontWeight: 500 }}>No new signals right now.</div>
+          <div style={{ fontSize: 12.5, lineHeight: 1.55, color: C.mut, marginTop: 7 }}>
+            Open a saved deep read and switch on Evidence Watch — IdeaLoop periodically re-checks the evidence landscape behind it and surfaces a move here only when something material appears.
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
 // THE LEDGER — real events from the activity table (preferred), else DERIVED-LITE.
 // kind → display label + colour.
@@ -658,7 +700,7 @@ function derive(all, activity) {
 }
 
 // ── main ─────────────────────────────────────────────────────────────────────
-export default function OverviewView({ t, onStartExplore, onStartDeep, onStartRough, onContinue, onOpenIdea, onViewAll }) {
+export default function OverviewView({ t, onStartExplore, onStartDeep, onStartRough, onContinue, onEvidenceReJudge, onOpenIdea, onViewAll }) {
   useDesignFonts();
   const startRough = onStartRough || onViewAll;
   const handlers = { explore: onStartExplore, deep: onStartDeep, rough: startRough };
@@ -666,6 +708,7 @@ export default function OverviewView({ t, onStartExplore, onStartDeep, onStartRo
   const [rough, setRough] = useState([]);
   const [ideas, setIdeas] = useState([]);
   const [activity, setActivity] = useState([]);
+  const [signals, setSignals] = useState([]);
   const [status, setStatus] = useState("idle"); // idle | loading | ready
   const [lastId, setLastId] = useState(null);
   const [binding, setBinding] = useState(null); // resume card's binding constraint (lazy)
@@ -688,7 +731,7 @@ export default function OverviewView({ t, onStartExplore, onStartDeep, onStartRo
         if (!alive) return;
         if (!res.ok) throw new Error(d.error || "load failed");
         const r = d.rough || [], i = d.ideas || [];
-        setRough(r); setIdeas(i); setActivity(d.activity || []); writeHubCache(uid, r, i);
+        setRough(r); setIdeas(i); setActivity(d.activity || []); setSignals(d.signals || []); writeHubCache(uid, r, i);
       } catch { /* keep cache */ }
       finally { if (alive) setStatus("ready"); }
     })();
@@ -696,6 +739,30 @@ export default function OverviewView({ t, onStartExplore, onStartDeep, onStartRo
   }, []);
 
   useEffect(() => { const s = getLastIdea(); setLastId(s && s.id ? s.id : null); }, []);
+
+  // Evidence-watch signal actions. RE-JUDGE reuses the existing "evolve" intent —
+  // onContinue(idea_id, "evolve") routes a deep idea into the re-eval screen that
+  // already exists — and marks the signal acted; DISMISS records it as noise (the
+  // calibration feedback that matters). Both POST the resolve route and optimistically
+  // drop the card; a refresh reconciles. Token read per-call, matching the hub fetch.
+  const resolveSig = async (signalId, statusVal) => {
+    setSignals((prev) => prev.filter((s) => s.id !== signalId));
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      await fetch(`/api/signals/${signalId}/resolve`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ status: statusVal }),
+      });
+    } catch { /* already gone locally; a refresh reconciles */ }
+  };
+  // Path A: a signal re-judge runs the evidence-only re-eval (NOT the edit canvas) —
+  // re-run on unchanged text, show what the world's move did to the verdict.
+  // Resolve happens on the re-read DECISION (page.js), not here — so a failed or
+  // abandoned re-read leaves the card standing. Just hand off to the re-read flow.
+  const actSignal = (sig) => { if (onEvidenceReJudge) onEvidenceReJudge(sig); };
+  const dismissSignal = (sig) => resolveSig(sig.id, "dismissed");
 
   const all = [...rough, ...ideas];
   const hasIdeas = all.length > 0;
@@ -805,7 +872,7 @@ export default function OverviewView({ t, onStartExplore, onStartDeep, onStartRo
                   <BoardRow key={c.id} card={c} last={i === d.board.length - 1} onOpenIdea={onOpenIdea} />
                 ))}
               </div>
-              <NeedsYourMove />
+              <NeedsYourMove signals={signals} onActOn={actSignal} onDismiss={dismissSignal} />
             </div>
           </div>
 

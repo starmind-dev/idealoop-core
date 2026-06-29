@@ -16,6 +16,69 @@ import { ProvenanceStrip, PressureRead, DeepMetricCard, DeepTcCard, ExecutionRea
 import { ChangeWalkthrough, ChangeMarker } from "./ChangeWalkthrough";
 import { DirectionCard, DirectionRow } from "./DirectionCard";
 
+const WATCH_OPTS = [
+  ["off", "Off"],
+  ["monthly", "Monthly"],
+  ["quarterly", "Quarterly"],
+  ["semiannual", "Every 6 months"],
+];
+
+// EVIDENCE WATCH dial — sets this idea's re-check cadence (PATCH /api/ideas/[id]/watch
+// via onSet). On a material competitive move the watch writes a "Needs Your Move"
+// signal to the Overview; acting on it runs the evidence-only re-judge. Amber ties it
+// to the signal cards. Local optimistic state; the status line reflects the saved value.
+function WatchDial({ t, value = "off", onSet }) {
+  const [cad, setCad] = useState(value || "off");
+  const [saving, setSaving] = useState(false);
+  const AMBER = "#c99a3a";
+  const on = cad !== "off";
+  const change = async (e) => {
+    const next = e.target.value;
+    setCad(next);
+    if (!onSet) return;
+    setSaving(true);
+    try { await onSet(next); } finally { setSaving(false); }
+  };
+  const label = (WATCH_OPTS.find((o) => o[0] === cad) || ["off", "Off"])[1];
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+      padding: "12px 14px", marginBottom: 10, borderRadius: 12,
+      border: `1px solid ${on ? "rgba(201,154,58,0.40)" : t.border}`,
+      background: on ? "rgba(201,154,58,0.07)" : t.surface,
+    }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.6, color: on ? AMBER : t.mut }}>
+          EVIDENCE WATCH
+        </div>
+        <div style={{ fontSize: 12, color: t.sec, marginTop: 2 }}>
+          {saving
+            ? "Saving…"
+            : on
+            ? `Re-checking the evidence landscape behind this read ${label.toLowerCase()} — you'll get a card if something material appears.`
+            : "Off — turn on to periodically re-check the evidence landscape behind this read."}
+        </div>
+      </div>
+      <select
+        value={cad}
+        onChange={change}
+        disabled={saving}
+        style={{
+          flexShrink: 0, fontSize: 13, fontWeight: 600, padding: "8px 10px", borderRadius: 8,
+          cursor: saving ? "wait" : "pointer",
+          color: on ? AMBER : t.text,
+          background: t.surfAlt,
+          border: `1px solid ${on ? "rgba(201,154,58,0.40)" : t.border}`,
+        }}
+      >
+        {WATCH_OPTS.map((o) => (
+          <option key={o[0]} value={o[0]} style={{ color: "#111", background: "#fff" }}>{o[1]}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 export default function EvaluationView({
   // Screen
   screen,
@@ -24,6 +87,12 @@ export default function EvaluationView({
   // Core data
   analysis,
   walkthroughData,
+  evidenceSignal,
+  onSetAsCurrentRead,
+  onKeepOldRead,
+  readDecisionBusy,
+  watchCadence,
+  onSetWatch,
   profile,
   user,
   // Navigation context
@@ -74,6 +143,13 @@ export default function EvaluationView({
   onBackToMyIdeasCleanup,
   onDiscardReEval,
   onStartStandalone,
+  // Read history — previous reads of an idea whose TEXT never changed
+  // (an evidence re-read replaced the live eval in place).
+  readHistory = [],
+  onOpenHistoricalRead,
+  readOnly = false,
+  outdatedMeta,
+  onBackToCurrent,
 }) {
 
   // V4S23 entitlement system removed. Content gating retired — all content is full.
@@ -81,6 +157,12 @@ export default function EvaluationView({
   const isGated = false;
   const isPreviewUser = false;
   const [openWT, setOpenWT] = useState(null);
+  const [histOpen, setHistOpen] = useState(false);
+  const fmtHistDate = (iso) => {
+    if (!iso) return "";
+    try { return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); }
+    catch { return ""; }
+  };
   const wt = walkthroughData && walkthroughData.anchors;
 
   // Deep provenance (V6 lineage strip). Today cold-open is the only live path,
@@ -103,6 +185,7 @@ export default function EvaluationView({
         <PageContainer wide>
           <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", padding: "4px 0 0" }}>
             <button onClick={() => {
+              if (readOnly) { onBackToCurrent && onBackToCurrent(); return; }
               if (viewingFromSaved) {
                 setViewingFromSaved(false);
                 goToMyIdeas();
@@ -110,7 +193,7 @@ export default function EvaluationView({
                 setCurrentScreen("input");
               }
             }} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
-              {viewingFromSaved ? "← Back to My Ideas" : "← Back to idea"}
+              {readOnly ? "← Back to current read" : (viewingFromSaved ? "← Back to My Ideas" : "← Back to idea")}
             </button>
           </div>
         </PageContainer>
@@ -123,7 +206,7 @@ export default function EvaluationView({
           />
         )}
 
-        <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} branchMode={viewingFromSaved && isBranchIdea} t={t} />
+        {!readOnly && <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} branchMode={viewingFromSaved && isBranchIdea} t={t} />}
 
         <main style={{ flex: 1, paddingBottom: 64 }}>
           <PageContainer wide>
@@ -133,6 +216,76 @@ export default function EvaluationView({
 
             {/* Provenance — where this idea came from (Explore branch / cold / re-eval) */}
             <ProvenanceStrip provenance={deepProvenance} t={t} />
+
+            {!readOnly && readHistory && readHistory.length > 0 && (
+              <div style={{ marginTop: 4, marginBottom: 18 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 12.5, color: t.mut, lineHeight: 1.5 }}>
+                    The current read replaced {readHistory.length === 1 ? "an earlier read" : `${readHistory.length} earlier reads`} as the evidence moved.
+                  </span>
+                  <button onClick={() => setHistOpen((v) => !v)} style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "transparent", border: `1px solid ${t.border}`, color: t.sec, fontSize: 12, fontWeight: 600, padding: "6px 12px", borderRadius: 9, cursor: "pointer", whiteSpace: "nowrap" }}>
+                    Previous reads ({readHistory.length})
+                    <span style={{ display: "inline-block", fontSize: 10, transition: "transform .2s", transform: histOpen ? "rotate(180deg)" : "none" }}>▾</span>
+                  </button>
+                </div>
+                {histOpen && (
+                  <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+                    {readHistory.map((r) => (
+                      <div key={r.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, background: t.surfAlt || "rgba(255,255,255,.03)", border: `1px solid ${t.border}`, borderRadius: 12, padding: "13px 15px" }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 12.5, color: t.text, fontWeight: 600, marginBottom: 3 }}>
+                            {fmtHistDate(r.original_created_at)}
+                            {r.score != null && <span style={{ color: "#e7bd7a" }}>{` · score ${Number(r.score).toFixed(1)}`}</span>}
+                          </div>
+                          {r.headline && (
+                            <div style={{ fontSize: 13, color: t.sec, lineHeight: 1.45, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" }}>
+                              {r.headline}
+                            </div>
+                          )}
+                          <div style={{ fontSize: 11, color: t.mut, marginTop: 5 }}>
+                            {`Superseded ${fmtHistDate(r.superseded_at)} · ${r.superseded_reason === "evidence_recheck" ? "evidence recheck" : (r.superseded_reason || "replaced")}`}
+                          </div>
+                        </div>
+                        <button onClick={() => onOpenHistoricalRead && onOpenHistoricalRead(r)} style={{ flexShrink: 0, background: "rgba(138,130,194,.14)", border: "none", color: "#b3acdf", fontSize: 12.5, fontWeight: 600, padding: "9px 14px", borderRadius: 9, cursor: "pointer", whiteSpace: "nowrap" }}>
+                          View this read →
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {readOnly && outdatedMeta && (
+              <div style={{ display: "flex", alignItems: "center", gap: 11, background: "rgba(231,189,122,.06)", border: "1px solid rgba(231,189,122,.35)", borderRadius: 12, padding: "13px 16px", marginBottom: 16 }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#e7bd7a", flexShrink: 0 }} />
+                <span style={{ fontSize: 12.5, color: "#e7bd7a", fontWeight: 600 }}>
+                  Outdated read
+                  <span style={{ color: t.sec, fontWeight: 400 }}>{` — superseded ${fmtHistDate(outdatedMeta.superseded_at)}, when newer evidence replaced it.`}</span>
+                </span>
+              </div>
+            )}
+
+            {/* Evidence-watch re-judge — lead with what the world's move did (no marker hunt). */}
+            {evidenceSignal && (
+              <div style={{
+                border: "1px solid rgba(201,154,58,0.35)",
+                background: "rgba(201,154,58,0.07)",
+                borderRadius: 12, padding: "14px 16px", marginBottom: 16,
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.6, color: "#c99a3a", marginBottom: 6 }}>
+                  RE-EVALUATED WITH NEW EVIDENCE
+                </div>
+                {evidenceSignal.message && (
+                  <div style={{ fontSize: 15, fontWeight: 600, color: t.text, lineHeight: 1.4, marginBottom: 6 }}>
+                    {evidenceSignal.message}
+                  </div>
+                )}
+                <div style={{ fontSize: 13, color: t.sec, lineHeight: 1.5 }}>
+                  You changed nothing — the evidence moved, and the read followed. Here's what shifted.
+                </div>
+              </div>
+            )}
 
             {/* Scope Warning */}
             {analysis.scope_warning && (
@@ -386,6 +539,7 @@ export default function EvaluationView({
               </p>
             </section>
 
+            {!readOnly && (
             <button
               onClick={() => setCurrentScreen("results2")}
               style={{
@@ -402,6 +556,7 @@ export default function EvaluationView({
             >
               {viewingFromSaved ? "View Evidence & Reality" : "Continue to Evidence & Reality"}
             </button>
+            )}
           </PageContainer>
         </main>
       </>
@@ -431,7 +586,7 @@ export default function EvaluationView({
           />
         )}
 
-        <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} branchMode={viewingFromSaved && isBranchIdea} t={t} />
+        {!readOnly && <StepProgress currentStep={getStepNumber()} savedMode={viewingFromSaved} branchMode={viewingFromSaved && isBranchIdea} t={t} />}
 
         <main style={{ flex: 1, paddingBottom: 64 }}>
           <PageContainer wide>
@@ -625,6 +780,22 @@ export default function EvaluationView({
               ) : (
               <div style={{ marginBottom: 16 }}>
                 {isReEvalResult ? (
+                  evidenceSignal ? (
+                  /* EVIDENCE RE-READ DECISION — idea text unchanged, evidence moved. Two options only. */
+                  <div style={{
+                    padding: "20px 24px",
+                    borderRadius: 16,
+                    background: "rgba(231,189,122,0.05)",
+                    border: "1px solid rgba(231,189,122,0.35)",
+                  }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "#c99a3a", marginBottom: 8 }}>Use this read going forward?</div>
+                    <div style={{ fontSize: 13, color: t.sec, lineHeight: 1.55, marginBottom: 16 }}>The idea text hasn't changed — the evidence has. Set this as the current read (the previous read moves to history, viewable anytime), or keep the old one.</div>
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <button onClick={onSetAsCurrentRead} disabled={readDecisionBusy} style={{ flex: 1, padding: "13px 0", borderRadius: 10, fontSize: 13.5, fontWeight: 600, border: "none", cursor: readDecisionBusy ? "wait" : "pointer", background: "rgba(231,189,122,.16)", color: "#e7bd7a" }}>{readDecisionBusy ? "Saving…" : "Set as current read"}</button>
+                      <button onClick={onKeepOldRead} disabled={readDecisionBusy} style={{ flex: 1, padding: "13px 0", borderRadius: 10, fontSize: 13.5, fontWeight: 600, border: `1px solid ${t.border}`, background: "transparent", color: t.sec, cursor: readDecisionBusy ? "wait" : "pointer" }}>Keep the old read</button>
+                    </div>
+                  </div>
+                  ) : (
                   /* POST-EVALUATION DECISION BLOCK — shown for re-eval results */
                   <div style={{
                     padding: "20px 24px",
@@ -900,6 +1071,7 @@ export default function EvaluationView({
                       </>
                     )}
                   </div>
+                  )
                 ) : (
                   /* NORMAL SAVE FLOW — for first-time evaluations */
                   user ? (
@@ -1036,6 +1208,7 @@ export default function EvaluationView({
 
             {viewingFromSaved ? (
               <>
+                <WatchDial key={currentIdeaId} t={t} value={watchCadence} onSet={onSetWatch} />
                 {/* Branch ideas: Evolve entry — result-screen markers replace the old delta screen */}
                 {isBranchIdea ? (
                   <>
