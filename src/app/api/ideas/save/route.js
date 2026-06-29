@@ -51,7 +51,14 @@ function buildDeepEvalRow(ideaId, userId, analysis, execution_brief) {
     search_strategy_version: "v2_multi_query",
     score_formula_version: "v2_weighted",
     keywords_used: analysis._meta?.keywords_used || [],
-    evidence_json: analysis._meta || {},
+    // evidence_json = run metadata PLUS the raw retrieval set (URLs by source).
+    // Server-only (never shipped to the client — buildDeepAnalysis reads meta_json,
+    // not this) and the diff baseline a future evidence-watch replays the stored
+    // queries against. meta_json stays LEAN (no raw_results) since it rides the hot
+    // idea-open payload. Engine untouched: these arrays are already gathered for the
+    // competitor context above — this only persists them. null until the analyze
+    // route emits analysis.raw_results (forward-safe no-op before then).
+    evidence_json: { ...(analysis._meta || {}), raw_results: analysis.raw_results || null },
     meta_json: analysis._meta || {},
     competitors_json: analysis.competition?.competitors || [],
     competition_summary: analysis.competition?.differentiation || null,

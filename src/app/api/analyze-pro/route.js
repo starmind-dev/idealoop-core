@@ -1193,6 +1193,19 @@ ${JSON.stringify({ evaluation: ev })}`;
           // diagnosis + binding-limit + direction). Each scorer's own internal
           // self-check enforces score/prose coherence.
 
+          // Raw retrieval set — persisted into evidence_json (server-only) as the
+          // diff baseline a future evidence-watch replays the stored queries against.
+          // These arrays are already gathered above for the competitor context; this
+          // only captures their {source, url, name}. Deliberately NOT added to _meta
+          // (that rides the hot idea-open payload and stays lean). Engine untouched:
+          // nothing new is gathered or scored — existing results are merely persisted.
+          const rawResults = {};
+          for (const [k, arr] of Object.entries({
+            github: githubResults, tavily: tavilyResults, exa: exaResults, serper: serperResults,
+          })) {
+            rawResults[k] = (arr || []).map((r) => ({ source: r.source, url: r.url, name: r.name || r.title || null }));
+          }
+
           // Assemble final analysis in the same schema as free tier
           const analysis = {
             classification: stage1Result.classification,
@@ -1215,6 +1228,9 @@ ${JSON.stringify({ evaluation: ev })}`;
               domain_flags: stage2aResult.domain_flags,
               tc_isolated: true,
             },
+            // Raw retrieval URL set — server-only, lands in evidence_json (the save
+            // route maps this; meta_json stays lean). The diff baseline for the watch.
+            raw_results: rawResults,
             _meta: {
               github_results: githubResults.length,
               tavily_results: tavilyResults.length,
