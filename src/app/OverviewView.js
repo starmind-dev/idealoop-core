@@ -700,11 +700,18 @@ export default function OverviewView({ t, onStartExplore, onStartDeep, onStartRo
   const all = [...rough, ...ideas];
   const hasIdeas = all.length > 0;
 
-  // resume target: the last-opened family card, else the most recently active one.
-  let resume = lastId ? all.find((c) => c.id === lastId) : null;
-  if (!resume && all.length) {
-    resume = [...all].sort((a, b) => new Date(b.last_activity_at || b.created_at || 0) - new Date(a.last_activity_at || a.created_at || 0))[0];
-  }
+  // resume target: the most recently active family. The last-OPENED pin (lastId,
+  // set only when an idea is opened) is honored ONLY when that family is also the
+  // most recent — otherwise a newer activity (e.g. a just-saved rough idea, which
+  // never sets the open-pin) would be wrongly blocked by a stale pin. "Where you
+  // left off" tracks activity, not just opens.
+  const byRecency = all.length
+    ? [...all].sort((a, b) => new Date(b.last_activity_at || b.created_at || 0) - new Date(a.last_activity_at || a.created_at || 0))
+    : [];
+  const mostRecent = byRecency[0] || null;
+  const pinned = lastId ? all.find((c) => c.id === lastId) : null;
+  const ts = (c) => (c ? new Date(c.last_activity_at || c.created_at || 0).getTime() : -1);
+  let resume = pinned && ts(pinned) >= ts(mostRecent) ? pinned : mostRecent;
 
   // lazily enrich the resume card with its binding constraint (the one field the
   // light hub payload omits). Non-fatal; the clause is simply absent if missing.
