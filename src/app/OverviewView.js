@@ -182,7 +182,7 @@ function resumeTheme(card) {
       cardBorder: "rgba(107,147,245,0.24)", cardGlow: "0 0 50px rgba(107,147,245,0.05)",
       connectorDone: "rgba(107,147,245,0.5)",
       tagLabel: "EXPLORED",
-      secondLabel: "Take one deep", secondText: C.blueLed, secondBorder: "rgba(107,147,245,0.30)",
+      secondLabel: "Take it to deep", secondText: C.blueLed, secondBorder: "rgba(107,147,245,0.30)",
       secondIntent: "graduate-deep",
     };
   }
@@ -193,7 +193,7 @@ function resumeTheme(card) {
     cardBorder: "rgba(154,154,163,0.20)", cardGlow: "0 0 40px rgba(154,154,163,0.03)",
     connectorDone: "rgba(154,154,163,0.5)",
     tagLabel: "ROUGH",
-    secondLabel: "Explore this", secondText: C.sec2, secondBorder: "rgba(154,154,163,0.28)",
+    secondLabel: "Take it to explore", secondText: C.sec2, secondBorder: "rgba(154,154,163,0.28)",
     secondIntent: "graduate-explore",
   };
 }
@@ -480,7 +480,8 @@ function BoardRow({ card, last, onOpenIdea }) {
   const [hover, setHover] = useState(false);
   const st = stateOf(card);
   const stage = boardStage(card);
-  const score = fmtScore(card.family_score);
+  const reachedDeep = (card.family_stage || card.mode) === "deep";
+  const score = reachedDeep ? fmtScore(card.family_score) : null;
   const dotColor = card.disposition === "killed" ? C.red : card.disposition === "parked" ? C.amber : C.teal;
   const gen = `G${card.generation || 1}${card.family_size > 1 ? ` · ${card.family_size}☉` : ""}`;
   return (
@@ -511,7 +512,7 @@ function BoardRow({ card, last, onOpenIdea }) {
       }}>{st.label}</span>
       <span style={{ fontFamily: MONO, fontSize: 11, color: stageColor(stage) }}>{stageLabel(stage)}</span>
       <span style={{ fontSize: 14, color: score ? C.text2 : C.sec }}>
-        {score || (card.family_size > 1 ? card.family_size : "—")}
+        {score || "—"}
       </span>
       <span style={{ fontFamily: MONO, fontSize: 11, color: C.greyState }}>{gen}</span>
     </div>
@@ -791,7 +792,7 @@ export default function OverviewView({ t, onStartExplore, onStartDeep, onStartRo
                   display: "grid", gridTemplateColumns: BOARD_COLS, gap: 12, padding: "13px 20px",
                   borderBottom: `1px solid ${C.line}`, fontFamily: MONO, fontSize: 10, letterSpacing: ".1em", color: C.faint2,
                 }}>
-                  <span>IDEA</span><span>STATE</span><span>STAGE</span><span>VERDICT/ANGLES</span><span>LINEAGE</span>
+                  <span>IDEA</span><span>STATE</span><span>STAGE</span><span>VERDICT</span><span>LINEAGE</span>
                 </div>
                 {d.board.map((c, i) => (
                   <BoardRow key={c.id} card={c} last={i === d.board.length - 1} onOpenIdea={onOpenIdea} />
