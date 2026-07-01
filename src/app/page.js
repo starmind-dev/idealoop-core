@@ -11,6 +11,8 @@ import ExploreView from "./ExploreView.js";
 import ExploreInputView from "./ExploreInputView";
 import DeepInputView from "./DeepInputView";
 import MyPlanView from "./MyPlanView";
+import SettingsView from "./SettingsView";
+import GetHelpView from "./GetHelpView";
 import DeepEvolveView from "./DeepEvolveView";
 import HubView from "./HubView";
 import OverviewView from "./OverviewView";
@@ -2277,6 +2279,36 @@ export default function Home() {
   // Shared rail navigation for the Dashboard shell. Every screen rendered inside
   // the shell wires its rail to this, so navigation behaves identically whether
   // you're on the Overview, the Hub, or a flow screen.
+  // Persist the builder-context profile from Settings through the same path the
+  // Deep-input profile step uses (/api/profile). Updates local state so the rest
+  // of the app (Deep calibration, greetings) sees the change immediately.
+  const saveProfileFields = async ({ coding, ai, education }) => {
+    const toSave = { coding, ai, education };
+    setProfile(toSave);
+    try { localStorage.setItem("iv_profile", JSON.stringify(toSave)); } catch {}
+    if (!user) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    await fetch("/api/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ coding_level: coding, ai_experience: ai, education }),
+    });
+  };
+
+  // Get Help "Send feedback" → public.feedback via /api/feedback. Optional auth:
+  // attaches the bearer token when signed in, sends anonymously otherwise.
+  const submitFeedback = async ({ message, category, replyEmail }) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
+      body: JSON.stringify({ message, category, reply_email: replyEmail }),
+    });
+    if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || "Couldn't send your feedback."); }
+    return true;
+  };
+
   const railNav = (key) => {
     // Any rail destination means leaving an open sub-view (a lineage tree or a
     // comparison). Clear those modes first so the outer hub/compare/lineage
@@ -2293,7 +2325,8 @@ export default function Home() {
     else if (key === "explore") { setExploreSourceIdea(null); setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setPendingOriginAngle(null); setOriginAngleId(null); setInputMode("explore"); setCurrentScreen("input"); }
     else if (key === "deep") { setExploreSourceIdea(null); setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setPendingOriginAngle(null); setOriginAngleId(null); setInputMode("deep"); setCurrentScreen("input"); }
     else if (key === "plan") { setCurrentScreen("dashboard"); setDashView("plan"); }
-    // settings / help: not wired yet
+    else if (key === "settings") { setCurrentScreen("dashboard"); setDashView("settings"); }
+    else if (key === "help") { setCurrentScreen("dashboard"); setDashView("help"); }
   };
 
   // Toggle idea/evaluation selection for comparison
@@ -2562,6 +2595,21 @@ export default function Home() {
             isAnon={!user}
             onSignUp={() => setShowAuthModal(true)}
             onRunLoop={() => railNav("explore")}
+          />
+        ) : dashView === "settings" ? (
+          <SettingsView
+            t={t}
+            isAnon={!user}
+            onSignUp={() => setShowAuthModal(true)}
+            email={user?.email}
+            profile={profile}
+            onSaveProfile={saveProfileFields}
+            onSignOut={handleLogout}
+          />
+        ) : dashView === "help" ? (
+          <GetHelpView
+            t={t}
+            onSubmit={submitFeedback}
           />
         ) : (
           <OverviewView
