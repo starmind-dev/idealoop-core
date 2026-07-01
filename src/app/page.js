@@ -1552,7 +1552,8 @@ export default function Home() {
 
   // Save evaluation to database — two-step: first show name input, then save
   const handleSaveIdea = async () => {
-    if (!user || !analysis || saveStatus === "saving" || saveStatus === "saved") return;
+    if (!user) { setShowAuthModal(true); return; }
+    if (!analysis || saveStatus === "saving" || saveStatus === "saved") return;
 
     // First click: show the naming input
     if (saveStatus !== "naming") {

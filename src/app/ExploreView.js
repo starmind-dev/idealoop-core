@@ -189,11 +189,23 @@ function Eyebrow({ num, icon, title, sub, t, right }) {
 // 1 · Our read
 // ============================================================================
 // first N sentences of the idea, so the seed card stays a glance not a wall of text
-function firstSentences(text, n) {
+function firstSentences(text, n, maxChars = 320) {
   const t = String(text || "").trim();
   const parts = t.match(/[^.!?]+[.!?]+/g);
-  if (!parts || parts.length <= n) return { preview: t, truncated: false };
-  return { preview: parts.slice(0, n).join("").trim(), truncated: true };
+  if (parts && parts.length > n) {
+    return { preview: parts.slice(0, n).join("").trim(), truncated: true };
+  }
+  // No usable sentence boundaries (a bulleted / punctuation-light paste, or one
+  // giant run-on) — the sentence split can't shorten these, so hard-cap by
+  // length. Keeps the seed card a glance; the full text stays behind "View full
+  // idea". The prose path above is untouched.
+  if (t.length > maxChars) {
+    let cut = t.slice(0, maxChars);
+    const sp = cut.lastIndexOf(" ");
+    if (sp > maxChars * 0.6) cut = cut.slice(0, sp);
+    return { preview: cut.trim() + "…", truncated: true };
+  }
+  return { preview: t, truncated: false };
 }
 
 function SeedSurface({ idea, t }) {
