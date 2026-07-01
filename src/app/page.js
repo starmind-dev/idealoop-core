@@ -10,6 +10,7 @@ import ExecutionBriefView from "./ExecutionBriefView";
 import ExploreView from "./ExploreView.js";
 import ExploreInputView from "./ExploreInputView";
 import DeepInputView from "./DeepInputView";
+import MyPlanView from "./MyPlanView";
 import DeepEvolveView from "./DeepEvolveView";
 import HubView from "./HubView";
 import OverviewView from "./OverviewView";
@@ -2291,7 +2292,8 @@ export default function Home() {
     else if (key === "hub") goToMyIdeas();
     else if (key === "explore") { setExploreSourceIdea(null); setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setPendingOriginAngle(null); setOriginAngleId(null); setInputMode("explore"); setCurrentScreen("input"); }
     else if (key === "deep") { setExploreSourceIdea(null); setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setPendingOriginAngle(null); setOriginAngleId(null); setInputMode("deep"); setCurrentScreen("input"); }
-    // settings / plan / help: not wired yet
+    else if (key === "plan") { setCurrentScreen("dashboard"); setDashView("plan"); }
+    // settings / help: not wired yet
   };
 
   // Toggle idea/evaluation selection for comparison
@@ -2553,6 +2555,13 @@ export default function Home() {
             onOpenLineage={(id) => { if (!user) { setShowAuthModal(true); return; } setLineageTargetId(id); setLineageMode(true); }}
             compareSelected={compareSelected}
             onAddToCompare={(id, evalId, meta) => toggleCompareSelect(id, evalId, meta)}
+          />
+        ) : dashView === "plan" ? (
+          <MyPlanView
+            t={t}
+            isAnon={!user}
+            onSignUp={() => setShowAuthModal(true)}
+            onRunLoop={() => railNav("explore")}
           />
         ) : (
           <OverviewView
