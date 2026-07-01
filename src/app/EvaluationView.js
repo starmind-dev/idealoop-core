@@ -150,6 +150,7 @@ export default function EvaluationView({
   readOnly = false,
   outdatedMeta,
   onBackToCurrent,
+  onOpenExploredVersion,
 }) {
 
   // V4S23 entitlement system removed. Content gating retired — all content is full.
@@ -217,20 +218,27 @@ export default function EvaluationView({
             {/* Provenance — where this idea came from (Explore branch / cold / re-eval) */}
             <ProvenanceStrip provenance={deepProvenance} t={t} />
 
-            {!readOnly && readHistory && readHistory.length > 0 && (
+            {!readOnly && (() => {
+              // Deep "Previous reads" = evidence re-reads only. An explore read that
+              // GRADUATED to Deep is preserved in read_history too, but it is a
+              // different species (no score, an explore envelope) and gets its own
+              // "View the explored version" affordance — so keep it OUT of this list.
+              const deepReads = (readHistory || []).filter((r) => r.kind !== "explore");
+              if (deepReads.length === 0) return null;
+              return (
               <div style={{ marginTop: 4, marginBottom: 18 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 12.5, color: t.mut, lineHeight: 1.5 }}>
-                    The current read replaced {readHistory.length === 1 ? "an earlier read" : `${readHistory.length} earlier reads`} as the evidence moved.
+                    The current read replaced {deepReads.length === 1 ? "an earlier read" : `${deepReads.length} earlier reads`} as the evidence moved.
                   </span>
                   <button onClick={() => setHistOpen((v) => !v)} style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "transparent", border: `1px solid ${t.border}`, color: t.sec, fontSize: 12, fontWeight: 600, padding: "6px 12px", borderRadius: 9, cursor: "pointer", whiteSpace: "nowrap" }}>
-                    Previous reads ({readHistory.length})
+                    Previous reads ({deepReads.length})
                     <span style={{ display: "inline-block", fontSize: 10, transition: "transform .2s", transform: histOpen ? "rotate(180deg)" : "none" }}>▾</span>
                   </button>
                 </div>
                 {histOpen && (
                   <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
-                    {readHistory.map((r) => (
+                    {deepReads.map((r) => (
                       <div key={r.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, background: t.surfAlt || "rgba(255,255,255,.03)", border: `1px solid ${t.border}`, borderRadius: 12, padding: "13px 15px" }}>
                         <div style={{ minWidth: 0 }}>
                           <div style={{ fontSize: 12.5, color: t.text, fontWeight: 600, marginBottom: 3 }}>
@@ -254,7 +262,36 @@ export default function EvaluationView({
                   </div>
                 )}
               </div>
-            )}
+              );
+            })()}
+
+            {!readOnly && (() => {
+              // The EXPLORE read this idea graduated from is preserved in
+              // read_history (kind 'explore') — a different species from the deep
+              // "Previous reads" above (no score, an explore envelope), so it gets
+              // its own dawn affordance opening a read-only ExploreView.
+              const exploreRead = (readHistory || []).find((r) => r.kind === "explore" && r.explore);
+              if (!exploreRead) return null;
+              const angleCount = ((exploreRead.explore && exploreRead.explore.angles) || []).length;
+              return (
+                <div style={{ marginTop: 4, marginBottom: 18, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap", background: "rgba(122,162,255,.08)", border: "1px solid rgba(122,162,255,.30)", borderRadius: 12, padding: "13px 15px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
+                    <span style={{ flexShrink: 0, display: "inline-flex", color: "#7aa2ff" }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7aa2ff" strokeWidth="1.7"><circle cx="12" cy="20" r="1.3" fill="#7aa2ff" stroke="none" /><path d="M12 19 5 7M12 19 12 5M12 19 19 7" /></svg>
+                    </span>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 13, color: t.text, fontWeight: 600 }}>This idea was explored before it went deep.</div>
+                      <div style={{ fontSize: 11.5, color: t.mut, marginTop: 2 }}>
+                        {`Explored ${fmtHistDate(exploreRead.original_created_at)}${angleCount ? ` · ${angleCount} angle${angleCount === 1 ? "" : "s"}` : ""} · kept when it graduated`}
+                      </div>
+                    </div>
+                  </div>
+                  <button onClick={() => onOpenExploredVersion && onOpenExploredVersion(exploreRead)} style={{ flexShrink: 0, background: "rgba(122,162,255,.18)", border: "none", color: "#7aa2ff", fontSize: 12.5, fontWeight: 600, padding: "9px 14px", borderRadius: 9, cursor: "pointer", whiteSpace: "nowrap" }}>
+                    View the explored version →
+                  </button>
+                </div>
+              );
+            })()}
 
             {readOnly && outdatedMeta && (
               <div style={{ display: "flex", alignItems: "center", gap: 11, background: "rgba(231,189,122,.06)", border: "1px solid rgba(231,189,122,.35)", borderRadius: 12, padding: "13px 16px", marginBottom: 16 }}>

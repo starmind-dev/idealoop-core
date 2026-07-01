@@ -9,6 +9,13 @@ import { buildCompetitorContext, buildCompetitorInstructions } from "../../../li
 import { STAGE1_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage1";
 import { STAGE2A_EXPLORE_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage2a-explore";
 import { EXPLORE_SYSTEM_PROMPT } from "../../../lib/services/prompt-explore";
+import { createClient } from "@supabase/supabase-js";
+import { assertCanRun, recordRun } from "../../../lib/services/entitlements";
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 // ============================================
 // EXPLORE ROUTE — LL2 (base, V1.2 four-surface shape)
@@ -248,6 +255,23 @@ export async function POST(request) {
 
     if (!idea || !idea.trim()) {
       return NextResponse.json({ error: "No idea provided" }, { status: 400 });
+    }
+
+    // ── Optional auth + entitlement gate — BEFORE the stream opens ───────────
+    // Evaluating never requires an account (it's the hook; SAVING requires auth).
+    // A token binds the run to that user's weekly allowance; without one the run is
+    // anonymous — capped per IP — and counts against the global budget guard.
+    const authHeader = request.headers.get("authorization");
+    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    const { data: authData } = token ? await supabaseAdmin.auth.getUser(token) : { data: null };
+    const user = authData?.user || null;
+    const clientIp = (request.headers.get("x-forwarded-for") || "").split(",")[0].trim() || null;
+
+    try {
+      await assertCanRun(user?.id || null, "explore", { ip: clientIp });
+    } catch (gateErr) {
+      const status = gateErr.code === "CAPACITY" ? 503 : 402;
+      return NextResponse.json({ error: gateErr.message, code: gateErr.code || "LIMIT" }, { status });
     }
 
     const evaluationId = crypto.randomUUID();
@@ -611,6 +635,12 @@ export async function POST(request) {
 
           sendEvent({ step: "explore_done", message: "Exploration ready." });
           sendEvent({ step: "complete", data: payload });
+          // Anonymous runs record here (logged-in runs record client-side via
+          // /api/eval-usage). Either way the row feeds the global budget guard.
+          if (!user) {
+            try { await recordRun(null, "explore", { ip: clientIp }); }
+            catch (e) { console.error("anon recordRun failed (non-fatal):", e); }
+          }
           controller.close();
         } catch (error) {
           console.error("Explore pipeline failed:", error);

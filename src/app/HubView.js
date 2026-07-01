@@ -497,7 +497,7 @@ const SerifH1 = ({ children, count }) => (
   </h1>
 );
 
-export default function HubView({ t, onOpenIdea, onOpenLineage, onBack, compareSelected, onAddToCompare, initialView, onViewChange }) {
+export default function HubView({ t, onOpenIdea, onOpenLineage, onBack, compareSelected, onAddToCompare, initialView, onViewChange, isAnon = false, onSignUp }) {
   const [data, setData] = useState({ folders: [], rough: [], ideas: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -529,6 +529,7 @@ export default function HubView({ t, onOpenIdea, onOpenLineage, onBack, compareS
   }, []);
 
   const load = useCallback(async () => {
+    if (isAnon) { setLoading(false); return; }
     setLoading(true); setError("");
     try {
       const res = await authedFetch("/api/ideas");
@@ -537,7 +538,7 @@ export default function HubView({ t, onOpenIdea, onOpenLineage, onBack, compareS
       setData({ folders: d.folders || [], rough: d.rough || [], ideas: d.ideas || [] });
     } catch (e) { setError(e.message || "Failed to load."); }
     finally { setLoading(false); }
-  }, [authedFetch]);
+  }, [authedFetch, isAnon]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => () => clearTimeout(hoverTimer.current), []);
@@ -884,6 +885,34 @@ export default function HubView({ t, onOpenIdea, onOpenLineage, onBack, compareS
   );
 
   const menuFolders = data.folders;
+
+  if (isAnon) {
+    return (
+      <div className="hub-scope" style={{ minHeight: "100%", background: "#0B0E15", color: "#EAEEF6", fontFamily: "'Hanken Grotesk',sans-serif" }}>
+        <style>{KEYFRAMES}</style>
+        <div style={{ padding: "8px 0 90px", position: "relative" }}>
+          <div style={{ position: "absolute", top: -30, left: 20, width: 580, height: 340, background: "radial-gradient(58% 60% at 28% 30%,rgba(96,150,255,0.08),transparent 72%)", pointerEvents: "none" }} />
+          <div style={{ position: "relative", maxWidth: 1160, margin: "0 auto" }}>
+            <div style={{ animation: "hub-fadeUp .45s ease", maxWidth: 540, margin: "44px auto 0", textAlign: "center" }}>
+              <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11.5, letterSpacing: "0.24em", color: "#7E869A", textTransform: "uppercase", marginBottom: 18 }}>My Ideas</div>
+              <div style={{ fontFamily: "'Instrument Serif',serif", fontSize: 40, lineHeight: 1.08, color: "#F1F4FA", marginBottom: 16 }}>Your ideas live here.</div>
+              <p style={{ fontSize: 14.5, lineHeight: 1.65, color: "#8A92A6", maxWidth: 448, margin: "0 auto 28px" }}>
+                Sign in to save an evaluation, revisit it later, branch it into new directions, and watch how it evolves. Your first run is free — no account needed to try it.
+              </p>
+              <button
+                onClick={onSignUp}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(52,216,168,0.55)"; e.currentTarget.style.color = "#dffaf1"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.16)"; e.currentTarget.style.color = "#e7ebf2"; }}
+                style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 13, fontWeight: 500, letterSpacing: "0.02em", color: "#e7ebf2", background: "transparent", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 10, padding: "12px 22px", cursor: "pointer", transition: "border-color .18s,color .18s" }}
+              >
+                Sign in to save ideas →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="hub-scope" style={{ minHeight: "100%", background: "#0B0E15", color: "#EAEEF6", fontFamily: "'Hanken Grotesk',sans-serif" }}>

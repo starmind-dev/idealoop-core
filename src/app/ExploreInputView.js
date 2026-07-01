@@ -76,7 +76,7 @@ const RAIL = [
   { label: "FROM HERE", Icon: IcArrow },
 ];
 
-export default function ExploreInputView({ t, idea, setIdea, onRun, isAnalyzing, evalsRemaining, gateNode, error, sourceIdea, onBackToSource }) {
+export default function ExploreInputView({ t, idea, setIdea, onRun, isAnalyzing, evalsRemaining, gateNode, error, sourceIdea, onBackToSource, isAnon = false, refillLabel = "", onSignUp }) {
   const inputRef = useRef(null);
   const noEvals = evalsRemaining != null && evalsRemaining <= 0;
   const canRun = !!(idea && idea.trim()) && !isAnalyzing && !noEvals;
@@ -84,14 +84,10 @@ export default function ExploreInputView({ t, idea, setIdea, onRun, isAnalyzing,
   // idea field instead of firing a dead run.
   const handleRun = () => {
     if (isAnalyzing) return;
+    if (noEvals) { if (isAnon && onSignUp) onSignUp(); return; }
     if (canRun) onRun();
     else if (inputRef.current) inputRef.current.focus();
   };
-  const evalsText = evalsRemaining == null
-    ? ""
-    : evalsRemaining <= 0
-      ? "No evaluation credits remaining"
-      : `${evalsRemaining} evaluation ${evalsRemaining === 1 ? "credit" : "credits"} remaining`;
 
   return (
     <div style={{ position: "relative", width: "100%", minHeight: "calc(100vh - 90px)" }}>
@@ -241,7 +237,12 @@ export default function ExploreInputView({ t, idea, setIdea, onRun, isAnalyzing,
         <div style={{ textAlign: "center", marginTop: 22 }}>
           <button
             onClick={handleRun}
-            style={{
+            style={noEvals ? {
+              display: "inline-flex", alignItems: "center", fontSize: 13.5, fontWeight: 600,
+              padding: "11px 20px", borderRadius: 10, cursor: (isAnon && !isAnalyzing) ? "pointer" : "default",
+              color: "#7b8090", background: "transparent", border: "1px solid rgba(255,255,255,0.14)",
+              boxShadow: "none", opacity: 1,
+            } : {
               display: "inline-flex", alignItems: "center", fontSize: 13.5, fontWeight: 600,
               padding: "11px 20px", borderRadius: 10, cursor: isAnalyzing ? "default" : "pointer",
               color: "#cfe3ff",
@@ -251,12 +252,25 @@ export default function ExploreInputView({ t, idea, setIdea, onRun, isAnalyzing,
               opacity: isAnalyzing ? 0.8 : 1,
             }}
           >
-            <span style={{ display: "inline-flex", marginRight: 7 }}><IcSpark /></span>
-            {isAnalyzing ? "Exploring…" : "Discover angles →"}
+            {!noEvals && <span style={{ display: "inline-flex", marginRight: 7 }}><IcSpark /></span>}
+            {isAnalyzing ? "Exploring…" : noEvals ? "Discover angles" : "Discover angles →"}
           </button>
-          {evalsText && (
-            <p style={{ margin: "14px 0 0", fontFamily: MONO, fontSize: 11, letterSpacing: "0.04em", color: t.mut }}>{evalsText}</p>
-          )}
+          {noEvals ? (
+            isAnon ? (
+              <p style={{ margin: "16px auto 0", fontFamily: "'Spectral', Georgia, serif", fontSize: 15, lineHeight: 1.5, color: t.sec, maxWidth: 340 }}>
+                You&apos;ve used your free run.{" "}
+                <span onClick={onSignUp} style={{ color: BLUE, cursor: "pointer", borderBottom: "1px solid rgba(96,165,250,0.45)", paddingBottom: 1 }}>Sign in to keep going</span>.
+              </p>
+            ) : (
+              <p style={{ margin: "16px auto 0", fontFamily: "'Spectral', Georgia, serif", fontSize: 15, lineHeight: 1.5, color: t.sec }}>
+                Your runs refill {refillLabel || "soon"}.
+              </p>
+            )
+          ) : evalsRemaining != null ? (
+            <p style={{ margin: "14px 0 0", fontFamily: MONO, fontSize: 11, letterSpacing: "0.04em", color: t.mut }}>
+              {isAnon ? "One free run — no sign-up needed" : `${evalsRemaining} run${evalsRemaining === 1 ? "" : "s"} left this week`}
+            </p>
+          ) : null}
         </div>
 
         <div style={{ marginTop: 28, textAlign: "center", fontFamily: MONO, fontSize: 11, letterSpacing: "0.11em", color: t.mut, opacity: 0.85 }}>

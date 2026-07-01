@@ -406,7 +406,7 @@ function DeepAffordance({ onClick, doneIdeaId, onOpen }) {
   );
 }
 
-function FanSurface({ idea, angles, fanState, t, onSave, saveState, onExploreAngle, onTakeToDeep, branchReason, angleStatus, onOpenChild }) {
+function FanSurface({ idea, angles, fanState, t, onSave, saveState, onExploreAngle, onTakeToDeep, branchReason, angleStatus, onOpenChild, readOnly }) {
   const fanRef = useRef(null);
   const nodeRef = useRef(null);
   const rowRef = useRef(null);
@@ -552,7 +552,7 @@ function FanSurface({ idea, angles, fanState, t, onSave, saveState, onExploreAng
           <div style={{ border: `1px dashed ${t.border}`, borderRadius: 13, padding: "34px 36px", background: t.surfAlt }}>
             <p style={{ fontSize: 16, color: t.text, fontWeight: 400, lineHeight: 1.5, margin: "0 0 10px" }}>No separate roads to fan from here — and that's a finding, not a dead end.</p>
             <p style={{ fontSize: 13, color: t.sec, lineHeight: 1.6, margin: 0 }}>{branchReason || "When an idea is already this pointed, exploration has nothing to widen. The honest next move is to judge it, not to branch it."}</p>
-            <div onClick={() => onTakeToDeep && onTakeToDeep(null, { useOriginalIdea: true })} style={{ marginTop: 14, fontSize: 12.5, color: EX.bright, display: "inline-flex", gap: 8, alignItems: "center", cursor: "pointer" }}>take it to Deep as it stands →</div>
+            {!readOnly && <div onClick={() => onTakeToDeep && onTakeToDeep(null, { useOriginalIdea: true })} style={{ marginTop: 14, fontSize: 12.5, color: EX.bright, display: "inline-flex", gap: 8, alignItems: "center", cursor: "pointer" }}>take it to Deep as it stands →</div>}
           </div>
         </div>
       ) : (
@@ -610,6 +610,7 @@ function FanSurface({ idea, angles, fanState, t, onSave, saveState, onExploreAng
                       <span style={{ fontFamily: "monospace", fontSize: 9.5, letterSpacing: "0.06em", color: "var(--exmut)", border: "1px solid var(--exborder-soft)", borderRadius: 4, padding: "1px 6px", marginLeft: 7, whiteSpace: "nowrap", textTransform: "uppercase" }}>{bet.rests_on}</span>
                     )}</span>
                   </div>
+                  {!readOnly && (
                   <div style={{ display: "flex", gap: 26, alignItems: "center", borderTop: "1px solid var(--exdivider)", paddingTop: 14, marginTop: 2, flexWrap: "wrap" }}>
                     <SaveAffordance state={(saveState || {})[pa.id]} onClick={() => onSave && onSave(pa)} />
                     <ExploreAffordance
@@ -621,6 +622,7 @@ function FanSurface({ idea, angles, fanState, t, onSave, saveState, onExploreAng
                       onOpen={onOpenChild}
                       onClick={() => onTakeToDeep && onTakeToDeep(pa.id, { useOriginalIdea: false })} />
                   </div>
+                  )}
                 </div>
               )}
             </div>
@@ -986,6 +988,10 @@ export default function ExploreView({
   handledAngleIds,   // Set of angle ids already taken forward (id-based, edit-proof)
   angleStatus,       // { [angleId]: { explore: ideaId, deep: ideaId } } — per-angle done targets
   onOpenChild,       // (ideaId) => open that saved child (jump to its Explore/Deep)
+  // read-only viewer — a preserved explore read opened from the deep surface or Lineage
+  readOnly,
+  onBackToCurrent,
+  outdatedMeta,
 }) {
   if (!analysis || analysis.schema_version !== "ll2_explore_v1") return null;
 
@@ -1054,18 +1060,28 @@ export default function ExploreView({
         <PageContainer wide>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0 22px" }}>
             <ModeTitle mode="explore" />
-            <button onClick={() => { if (viewingFromSaved) { setViewingFromSaved && setViewingFromSaved(false); goToMyIdeas && goToMyIdeas(); } else { setCurrentScreen && setCurrentScreen("input"); } }} style={{ fontSize: 12, color: t.mut, background: "none", border: "none", cursor: "pointer" }}>
-              {viewingFromSaved ? "← Back to My Ideas" : "← Back to idea"}
+            <button onClick={() => { if (readOnly) { onBackToCurrent && onBackToCurrent(); return; } if (viewingFromSaved) { setViewingFromSaved && setViewingFromSaved(false); goToMyIdeas && goToMyIdeas(); } else { setCurrentScreen && setCurrentScreen("input"); } }} style={{ fontSize: 12, color: readOnly ? EX.bright : t.mut, background: "none", border: "none", cursor: "pointer" }}>
+              {readOnly ? "← Back to current read" : (viewingFromSaved ? "← Back to My Ideas" : "← Back to idea")}
             </button>
           </div>
           <SeedSurface idea={idea} t={xt} />
+          {readOnly && (
+            <div style={{ display: "flex", alignItems: "center", gap: 11, background: "rgba(231,189,122,.06)", border: "1px solid rgba(231,189,122,.35)", borderRadius: 12, padding: "13px 16px", marginTop: 16 }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#e7bd7a", flexShrink: 0 }} />
+              <span style={{ fontSize: 12.5, color: "#e7bd7a", fontWeight: 600 }}>
+                The explored read
+                <span style={{ color: xt.sec, fontWeight: 400 }}>{outdatedMeta && outdatedMeta.superseded_at ? ` — superseded ${new Date(outdatedMeta.superseded_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}, when this idea was taken to deep. Kept for reference; the live read is the deep verdict.` : " — kept for reference after this idea was taken to deep. The live read is the deep verdict."}</span>
+              </span>
+            </div>
+          )}
           <ReadSurface read={read} t={xt} />
           <FanSurface idea={idea} angles={angles} fanState={fanState} t={xt}
             onSave={onSaveAngle} saveState={effectiveState}
             onExploreAngle={(a) => onExploreAngle && onExploreAngle(a)}
             onTakeToDeep={onTakeToDeep} branchReason={read?.branchability?.reason}
-            angleStatus={angleStatus} onOpenChild={onOpenChild} />
+            angleStatus={angleStatus} onOpenChild={onOpenChild} readOnly={readOnly} />
           <TerrainSurface terrain={terrain} angles={angles} t={xt} />
+          {!readOnly && (
           <NextMoveSurface
             nextMove={nextMove}
             angleCount={angles.length}
@@ -1078,6 +1094,7 @@ export default function ExploreView({
             onAuth={() => setShowAuthModal && setShowAuthModal(true)}
             goToMyIdeas={goToMyIdeas}
           />
+          )}
           <div style={{ marginTop: 30, paddingTop: 18, borderTop: `1px solid ${t.border}`, fontSize: 11, color: "#474b54", textAlign: "center", fontFamily: "monospace", letterSpacing: "0.04em" }}>
             EXPLORE — WIDENS A ROUGH IDEA · NO SCORE, NO RANK, NO VERDICT
           </div>

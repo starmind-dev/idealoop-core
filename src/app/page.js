@@ -23,7 +23,6 @@ import {
   SectionHeader,
   Card,
   PageContainer,
-  SpecificityGate,
   getTheme,
   getScoreColor,
   getTcColor,
@@ -33,7 +32,7 @@ import {
 // ============================================
 // EVALUATION LIMIT HELPERS
 // ============================================
-const EVAL_LIMIT = 3;
+const EVAL_LIMIT = 1;
 const EVAL_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 function getRecentEvals() {
@@ -377,10 +376,6 @@ export default function Home() {
   // guard alone leaks because that state is set post-await.
   const runningRef = useRef(false);
 
-  // V4S28 B7 — Specificity gate state. Set to { missing_elements, message,
-  // trigger_type } when Haiku short-circuits the pipeline; null otherwise.
-  // Cleared when user starts editing the textarea or clicks Evaluate again.
-  const [specificityGate, setSpecificityGate] = useState(null);
 
   // Theme (launch: dark only — V4S23 entitlement/devMode system removed)
   const t = getTheme("dark");
@@ -545,6 +540,7 @@ export default function Home() {
   const [readHistory, setReadHistory] = useState([]); // previous reads of the open deep idea (read_history); [] when never re-read
   const [historicalRead, setHistoricalRead] = useState(null); // an opened previous read (read-only viewer) or null
   const [exploreAnalysis, setExploreAnalysis] = useState(null); // ll2_explore_v1 payload (Explore mode)
+  const [historicalExploreRead, setHistoricalExploreRead] = useState(null); // a preserved explore read opened read-only (graduated_to_deep)
   // Declared above the persistence/restore effects below: their dependency arrays reference
   // these, and a dep on a const declared lower in the component hits a TDZ during prerender.
   const [roughRoomIdea, setRoughRoomIdea] = useState(null); // { id, text, title }
@@ -865,7 +861,6 @@ export default function Home() {
     // The angle id this handoff carries (when from a specific angle), tagged onto
     // the saved child so the fan recognizes it by id.
     setPendingOriginAngle(originAngle || null);
-    setSpecificityGate(null);
     setInputMode(mode);
     setCurrentScreen("input");
   };
@@ -921,13 +916,17 @@ export default function Home() {
   const isBranchIdea = currentIdeaId ? !!myIdeas.find(i => i.id === currentIdeaId)?.parent_idea_id : false;
 
   // SSE streaming helper — streams events from the chosen analyze endpoint and returns the final analysis
-  const analyzeWithStream = async (ideaText, profileData, endpoint = "/api/analyze-pro") => {
+  const analyzeWithStream = async (ideaText, profileData, endpoint = "/api/analyze-pro", action = "deep") => {
     setStreamSteps([]);
 
+    const { data: { session } } = await supabase.auth.getSession();
     const res = await fetch(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idea: ideaText, profile: profileData }),
+      headers: {
+        "Content-Type": "application/json",
+        ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      },
+      body: JSON.stringify({ idea: ideaText, profile: profileData, action }),
     });
 
     if (!res.ok) {
@@ -1028,22 +1027,6 @@ export default function Home() {
     setStreamSteps((prev) =>
       prev.map((s) => (s.done ? s : { ...s, done: true }))
     );
-
-    // V4S28 B7 — Specificity gate check (mirror ethics_blocked pattern).
-    // Haiku short-circuits the pipeline on underspecified inputs; route emits
-    // a `complete` event with specificity_insufficient: true in the data.
-    // No credit charged (parallel to ethics-blocked treatment) — handler
-    // returns early without recording eval usage.
-    if (finalAnalysis.specificity_insufficient) {
-      return {
-        specificityInsufficient: true,
-        gate: {
-          missing_elements: finalAnalysis.missing_elements || [],
-          message: finalAnalysis.message || "",
-          trigger_type: finalAnalysis.trigger_type || null,
-        },
-      };
-    }
 
     // Check for ethics block
     if (finalAnalysis.ethics_blocked) {
@@ -1152,18 +1135,9 @@ export default function Home() {
     setExploreSourceIdea(null);
     setIsReEvalResult(false);
     setReEvalRevisionNotes(null);
-    // V4S28 B7 — clear any previous gate result before retry
-    setSpecificityGate(null);
     try {
       const endpoint = mode === "explore" ? "/api/analyze-explore" : "/api/analyze-pro";
-      const result = await analyzeWithStream(ideaToUse, profile, endpoint);
-
-      // V4S28 B7 — Specificity gate check (before ethics, before usage recording).
-      // No credit charged on gate fire; user stays on input screen with panel shown.
-      if (result.specificityInsufficient) {
-        setSpecificityGate(result.gate);
-        return;
-      }
+      const result = await analyzeWithStream(ideaToUse, profile, endpoint, mode);
 
       if (result.ethicsBlocked) {
         setError(result.message);
@@ -1181,6 +1155,7 @@ export default function Home() {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${session.access_token}`,
               },
+              body: JSON.stringify({ action: mode }),
             });
             const usageData = await usageRes.json();
             if (usageRes.ok) {
@@ -1236,8 +1211,8 @@ export default function Home() {
     setEvidenceSignal(signal || null);
     setWalkthroughData(null);
     try {
-      const result = await analyzeWithStream(ideaText, profile, "/api/analyze-pro");
-      if (result.specificityInsufficient || result.ethicsBlocked) {
+      const result = await analyzeWithStream(ideaText, profile, "/api/analyze-pro", "reeval");
+      if (result.ethicsBlocked) {
         setError(result.message || "Re-judge could not complete.");
         return;
       }
@@ -1250,6 +1225,7 @@ export default function Home() {
           const usageRes = await fetch("/api/eval-usage", {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+            body: JSON.stringify({ action: "reeval" }),
           });
           const usageData = await usageRes.json();
           if (usageRes.ok) setEvalsRemaining(usageData.remaining);
@@ -1419,15 +1395,7 @@ export default function Home() {
 
       // Use SSE streaming
       const reEvalEndpoint = "/api/analyze-pro";
-      const result = await analyzeWithStream(modifiedIdea, profile, reEvalEndpoint);
-
-      // V4S28 B7 — Specificity gate on re-eval: simple error string for now.
-      // Full inline panel UI is deferred to B8 (frontend polish bundle).
-      // No credit charged (early return before usage recording).
-      if (result.specificityInsufficient) {
-        setError("This revision needs more specificity to evaluate honestly. Edit the description to name who the product is for, the specific task or pain it addresses, and how the product intervenes — then try again.");
-        return;
-      }
+      const result = await analyzeWithStream(modifiedIdea, profile, reEvalEndpoint, "reeval");
 
       if (result.ethicsBlocked) {
         setError(result.message);
@@ -1444,6 +1412,7 @@ export default function Home() {
               "Content-Type": "application/json",
               Authorization: `Bearer ${session.access_token}`,
             },
+            body: JSON.stringify({ action: "reeval" }),
           });
           const usageData = await usageRes.json();
           if (usageRes.ok) {
@@ -1521,6 +1490,7 @@ export default function Home() {
   };
 
   const startReEvaluation = (source) => {
+    if (!user) { setShowAuthModal(true); return; }
     // Record the entry path so the back link points home: "lineage" (from the tree)
     // → back to this idea's lineage; anything else → back to the analysis.
     setReEvalSource(source === "lineage" ? "lineage" : "analysis");
@@ -1564,6 +1534,20 @@ export default function Home() {
     if (days > 0) return `${days}d ${hours}h`;
     if (hours > 0) return `${hours}h`;
     return "< 1h";
+  };
+
+  // Weekday-form of the refill moment for the editorial run-button nudge
+  // ("Your runs refill Monday."). Rolling 7-day window, so it's always within a
+  // week — a weekday name reads warmer than the "2d 3h" duration form above.
+  const formatRefillDay = (isoString) => {
+    if (!isoString) return "soon";
+    const d = new Date(isoString), now = new Date();
+    if (d - now <= 0) return "shortly";
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const dd = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - startOfToday) / 864e5);
+    if (dd <= 0) return "later today";
+    if (dd === 1) return "tomorrow";
+    return d.toLocaleDateString(undefined, { weekday: "long" });
   };
 
   // Save evaluation to database — two-step: first show name input, then save
@@ -1802,6 +1786,22 @@ export default function Home() {
     } catch {
       setReadHistory([]);
     }
+  };
+
+  // Open the preserved EXPLORE read of a graduated deep idea (read-only). The
+  // Lineage inspector only has the idea id, so fetch read_history, pick the
+  // explore snapshot, and hand it to the read-only ExploreView viewer. (The deep
+  // surface already holds the item and sets the state directly — no fetch.)
+  const openExploredVersion = async (ideaId) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch(`/api/ideas/${ideaId}/history`, { headers: { Authorization: `Bearer ${session.access_token}` } });
+      const data = await res.json();
+      const reads = res.ok && Array.isArray(data.reads) ? data.reads : [];
+      const ex = reads.find((r) => r.kind === "explore" && r.explore);
+      if (ex) setHistoricalExploreRead(ex);
+    } catch { /* no-op */ }
   };
 
   const applyLoadedIdea = (data, ideaId, afterLoad) => {
@@ -2288,8 +2288,8 @@ export default function Home() {
     setHubReturnView("hub"); // a rail destination is a fresh hub entry → chooser (open-from-room overrides this)
     if (key === "overview") { setCurrentScreen("dashboard"); setDashView("overview"); }
     else if (key === "hub") goToMyIdeas();
-    else if (key === "explore") { setExploreSourceIdea(null); setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setPendingOriginAngle(null); setOriginAngleId(null); setInputMode("explore"); setSpecificityGate(null); setCurrentScreen("input"); }
-    else if (key === "deep") { setExploreSourceIdea(null); setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setPendingOriginAngle(null); setOriginAngleId(null); setInputMode("deep"); setSpecificityGate(null); setCurrentScreen("input"); }
+    else if (key === "explore") { setExploreSourceIdea(null); setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setPendingOriginAngle(null); setOriginAngleId(null); setInputMode("explore"); setCurrentScreen("input"); }
+    else if (key === "deep") { setExploreSourceIdea(null); setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setPendingOriginAngle(null); setOriginAngleId(null); setInputMode("deep"); setCurrentScreen("input"); }
     // settings / plan / help: not wired yet
   };
 
@@ -2318,8 +2318,9 @@ export default function Home() {
 
   // Load two ideas/evaluations for comparison and enter compare mode
   const startComparison = async (selectionsOverride) => {
+    if (!user) { setShowAuthModal(true); return; }
     const selections = selectionsOverride || compareSelected;
-    if (selections.length !== 2 || !user) return;
+    if (selections.length !== 2) return;
     setCompareLoading(true);
     setMyIdeasError("");
 
@@ -2474,6 +2475,52 @@ export default function Home() {
   }
 
   // ==========================================
+  // VIEWER: the preserved EXPLORE read (read-only). A deep idea that graduated
+  // from an explore keeps its explored view in read_history; opening it (from the
+  // deep surface or the Lineage inspector) mounts ExploreView read-only with the
+  // CTAs suppressed and a back link to the live read. It sits above the screen
+  // dispatch so it wins regardless of the underlying screen; clearing it falls
+  // back to whatever was underneath (the deep results, or the lineage tree).
+  // ==========================================
+  if (historicalExploreRead && historicalExploreRead.explore) {
+    return (
+      <DashboardShell
+        t={t}
+        active=""
+        userEmail={user?.email}
+        authLoading={authLoading}
+        onLogin={() => setShowAuthModal(true)}
+        onLogout={handleLogout}
+        onNavigate={railNav}
+      >
+        {showAuthModal && (
+          <AuthModal onClose={() => setShowAuthModal(false)} onAuth={(u) => setUser(u)} t={t} />
+        )}
+        <ExploreView
+          screen="explore"
+          t={t}
+          analysis={historicalExploreRead.explore}
+          user={user}
+          viewingFromSaved={true}
+          showAuthModal={showAuthModal}
+          setCurrentScreen={setCurrentScreen}
+          setShowAuthModal={setShowAuthModal}
+          setUser={setUser}
+          setViewingFromSaved={setViewingFromSaved}
+          goToMyIdeas={goToMyIdeas}
+          readOnly={true}
+          outdatedMeta={{
+            superseded_at: historicalExploreRead.superseded_at,
+            superseded_reason: historicalExploreRead.superseded_reason,
+            original_created_at: historicalExploreRead.original_created_at,
+          }}
+          onBackToCurrent={() => setHistoricalExploreRead(null)}
+        />
+      </DashboardShell>
+    );
+  }
+
+  // ==========================================
   // SCREEN: DASHBOARD (persistent rail; content swaps between Overview and Hub).
   // The !lineageMode && !compareMode guard lets the dedicated lineage/compare
   // branch take over and then fall straight back here (currentScreen is still
@@ -2497,18 +2544,20 @@ export default function Home() {
         {dashView === "hub" ? (
           <HubView
             t={t}
+            isAnon={!user}
+            onSignUp={() => setShowAuthModal(true)}
             initialView={hubReturnView}
             onViewChange={setHubReturnView}
             onOpenIdea={(id, fromView) => { if (fromView) setHubReturnView(fromView); loadSavedIdea(id); }}
-            onOpenLineage={(id) => { setLineageTargetId(id); setLineageMode(true); }}
+            onOpenLineage={(id) => { if (!user) { setShowAuthModal(true); return; } setLineageTargetId(id); setLineageMode(true); }}
             compareSelected={compareSelected}
             onAddToCompare={(id, evalId, meta) => toggleCompareSelect(id, evalId, meta)}
           />
         ) : (
           <OverviewView
             t={t}
-            onStartExplore={() => { setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setPendingOriginAngle(null); setOriginAngleId(null); setSpecificityGate(null); setInputMode("explore"); setCurrentScreen("input"); }}
-            onStartDeep={() => { setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setPendingOriginAngle(null); setOriginAngleId(null); setSpecificityGate(null); setInputMode("deep"); setCurrentScreen("input"); }}
+            onStartExplore={() => { setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setPendingOriginAngle(null); setOriginAngleId(null); setInputMode("explore"); setCurrentScreen("input"); }}
+            onStartDeep={() => { setPendingGraduateParent(false); setPendingBranchParent(false); setBranchParentId(null); setPendingOriginAngle(null); setOriginAngleId(null); setInputMode("deep"); setCurrentScreen("input"); }}
             onContinue={(id, target) => {
               if (target === "evolve") {
                 // Defer: load the resume node first; the pendingReEvalId effect
@@ -2803,7 +2852,9 @@ export default function Home() {
           onBack={goToMyIdeas}
           isAnalyzing={isAnalyzing}
           evalsRemaining={evalsRemaining}
-          gateNode={specificityGate ? <SpecificityGate gate={specificityGate} t={t} /> : null}
+          isAnon={!user}
+          refillLabel={formatRefillDay(dbNextResetTime)}
+          onSignUp={() => setShowAuthModal(true)}
           error={error}
           sourceIdea={exploreSourceIdea}
           onBackToSource={() => { if (exploreSourceIdea) loadSavedIdea(exploreSourceIdea.id); }}
@@ -2840,7 +2891,9 @@ export default function Home() {
           onBack={goToMyIdeas}
           isAnalyzing={isAnalyzing}
           evalsRemaining={evalsRemaining}
-          gateNode={specificityGate ? <SpecificityGate gate={specificityGate} t={t} /> : null}
+          isAnon={!user}
+          refillLabel={formatRefillDay(dbNextResetTime)}
+          onSignUp={() => setShowAuthModal(true)}
           error={error}
           profile={profile}
           onEditProfile={() => setCurrentScreen("profile")}
@@ -2883,54 +2936,15 @@ export default function Home() {
 
           <PageContainer>
             <div style={{ marginBottom: 32 }}>
-              {specificityGate ? (() => {
-                // V4S28 B9 — Progress-aware gate header. Slot count drives copy:
-                //   3 missing → first-fire framing
-                //   2 missing → "getting closer" warmth
-                //   1 missing → "almost there" warmth
-                // Subhead is shared across re-fire states (1 or 2 missing) and
-                // reframed on first-fire to focus on evaluation integrity.
-                const validKeys = ["target_user", "use_case", "mechanism"];
-                const missingCount = Array.isArray(specificityGate.missing_elements)
-                  ? specificityGate.missing_elements.filter((k) => validKeys.includes(k)).length
-                  : 3;
-
-                let headerText;
-                let subheadText;
-                if (missingCount >= 3 || missingCount === 0) {
-                  // missingCount === 0 is defensive (gate fired with empty array);
-                  // treat as first-fire framing per fallback in SpecificityGate.
-                  headerText = "Let's sharpen this before we evaluate.";
-                  subheadText = "To evaluate honestly, we need enough detail to know which product you mean.";
-                } else if (missingCount === 2) {
-                  headerText = "Getting closer — two more pieces, then we can evaluate this clearly.";
-                  subheadText = "Each piece helps us ground the analysis in the product you actually mean.";
-                } else {
-                  headerText = "Almost there — one more piece, then we can evaluate this clearly.";
-                  subheadText = "Each piece helps us ground the analysis in the product you actually mean.";
-                }
-
-                return (
-                  <>
-                    <h2 style={{ fontSize: 22, fontWeight: 500, margin: "0 0 6px 0", lineHeight: 1.3 }}>
-                      {headerText}
-                    </h2>
-                    <p style={{ fontSize: 14, color: t.sec, lineHeight: 1.6, margin: 0 }}>
-                      {subheadText}
-                    </p>
-                  </>
-                );
-              })() : (
-                <>
-                  <h2 style={{ fontSize: 30, fontWeight: 600, margin: "0 0 12px 0" }}>
-                    Describe your AI product idea
-                  </h2>
-                  <p style={{ fontSize: 16, color: t.sec, lineHeight: 1.6, margin: 0 }}>
-                    Include what it does, who would use it, and what problem it solves.
-                    Specific ideas get sharper evaluations.
-                  </p>
-                </>
-              )}
+              <>
+                <h2 style={{ fontSize: 30, fontWeight: 600, margin: "0 0 12px 0" }}>
+                  Describe your AI product idea
+                </h2>
+                <p style={{ fontSize: 16, color: t.sec, lineHeight: 1.6, margin: 0 }}>
+                  Include what it does, who would use it, and what problem it solves.
+                  Specific ideas get sharper evaluations.
+                </p>
+              </>
             </div>
 
             <Card style={{ padding: 6, marginBottom: 24 }} t={t}>
@@ -2961,11 +2975,6 @@ export default function Home() {
                 }}
               />
             </Card>
-
-            {/* V4S28 B7 — Specificity gate panel: appears between textarea and Analyze button */}
-            {specificityGate && (
-              <SpecificityGate gate={specificityGate} t={t} />
-            )}
 
             {error && (
               <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 12, padding: "12px 20px", marginBottom: 24 }}>
@@ -3038,20 +3047,6 @@ export default function Home() {
                   : `${evalsRemaining} of ${EVAL_LIMIT} free evaluations remaining`}
               </span>
             </div>
-
-            {/* V4S28 B7 — No-credit reassurance, only shown while gate panel is active */}
-            {specificityGate && (
-              <div style={{
-                textAlign: "center",
-                fontSize: 13,
-                color: t.sec,
-                fontStyle: "italic",
-                marginBottom: 24,
-                marginTop: -8,
-              }}>
-                No credit used — analysis only starts once we can evaluate the idea clearly.
-              </div>
-            )}
 
             {isAnalyzing && <StreamOverlay streamSteps={streamSteps} t={t} mode={inputMode} />}
           </PageContainer>
@@ -3362,6 +3357,7 @@ export default function Home() {
             <LineageView
               myIdeas={myIdeas}
               targetIdeaId={lineageTargetId}
+              onViewExploredVersion={openExploredVersion}
               t={t}
               onBack={() => {
                 setHubReturnView("evaluated"); // came from the evaluated shelf → return there, not the chooser
@@ -3852,6 +3848,7 @@ export default function Home() {
         onDiscardReEval={onDiscardReEval}
         readHistory={readHistory}
         onOpenHistoricalRead={setHistoricalRead}
+        onOpenExploredVersion={setHistoricalExploreRead}
         readOnly={!!historicalRead}
         outdatedMeta={historicalRead ? { superseded_at: historicalRead.superseded_at, superseded_reason: historicalRead.superseded_reason, original_created_at: historicalRead.original_created_at } : undefined}
         onBackToCurrent={() => setHistoricalRead(null)}

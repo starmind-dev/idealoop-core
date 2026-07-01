@@ -19,6 +19,13 @@ import { VERDICT_LEAD_SYSTEM_PROMPT } from "../../../lib/services/prompt-verdict
 import { STAGE_TC_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage-tc";
 import { STAGE3_SYSTEM_PROMPT } from "../../../lib/services/prompt-stage3";
 import { calculateOverallScore, computeMoDisplayScore, computeMoOverrideTrace } from "../../../lib/services/scoring";
+import { createClient } from "@supabase/supabase-js";
+import { assertCanRun, recordRun } from "../../../lib/services/entitlements";
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 // ============================================================================
 // VERDICT-LEAD GUARD (Option B safety net)
@@ -123,6 +130,27 @@ export async function POST(request) {
         { error: "No idea provided" },
         { status: 400 }
       );
+    }
+
+    // ── Optional auth + entitlement gate — BEFORE the stream opens ───────────
+    // Evaluating never requires an account (it's the hook; SAVING requires auth).
+    // A valid token binds the run to that user's weekly allowance; without one the
+    // run is anonymous — capped per IP — and, like every run, counts against the
+    // global budget so this open pipeline can't be flooded.
+    const authHeader = request.headers.get("authorization");
+    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    const { data: authData } = token ? await supabaseAdmin.auth.getUser(token) : { data: null };
+    const user = authData?.user || null;
+    const clientIp = (request.headers.get("x-forwarded-for") || "").split(",")[0].trim() || null;
+
+    // action distinguishes a fresh Deep from a Re-evaluation (both metered).
+    const action = body.action === "reeval" ? "reeval" : "deep";
+
+    try {
+      await assertCanRun(user?.id || null, action, { ip: clientIp });
+    } catch (gateErr) {
+      const status = gateErr.code === "CAPACITY" ? 503 : 402;
+      return NextResponse.json({ error: gateErr.message, code: gateErr.code || "LIMIT" }, { status });
     }
 
     // ── LOCAL-ONLY TEST FAULT INJECTION (F4 harness support) ──
@@ -303,24 +331,27 @@ export async function POST(request) {
 
           const keywordsResult = await extractKeywords(idea);
 
-          // V4S28 B7 — Specificity gate. If Haiku determines input is
-          // underspecified, halt the pipeline upstream of search/Stage 1/etc.
-          // No credit charged (frontend returns early before usage recording,
-          // mirroring ethics-blocked treatment). Section 13 / Item 7 lock.
-          if (keywordsResult.specificity_insufficient) {
-            sendEvent({
-              step: "complete",
-              data: {
-                specificity_insufficient: true,
-                missing_elements: keywordsResult.missing_elements || [],
-                message: keywordsResult.message || "",
-              },
-            });
-            controller.close();
-            return;
-          }
-
-          const { keywords, githubQuery1, githubQuery2, serperQuery1, serperQuery2 } = keywordsResult;
+          // SAFETY: extractKeywords used to gate underspecified inputs at this point
+          // and return its verdict WITHOUT keywords/queries (the removed specificity
+          // gate consumed that shape and returned early). With the gate gone, an input
+          // that would have been flagged now arrives here with no keyword set —
+          // keywords.join below, and the searches, would crash on undefined and the
+          // whole run dies with a generic "Analysis failed". Guard it: when the set is
+          // missing, derive a usable fallback straight from the idea so the pipeline
+          // proceeds. When keywords.js returns a real set (the normal case) this is a
+          // no-op — the real keywords/queries pass straight through.
+          const _ideaWords = String(idea || "")
+            .split(/\s+/)
+            .map((w) => w.replace(/[^\w]/g, ""))
+            .filter((w) => w.length > 2);
+          const _fallbackQuery = _ideaWords.slice(0, 8).join(" ") || String(idea || "").slice(0, 80);
+          const keywords = (Array.isArray(keywordsResult.keywords) && keywordsResult.keywords.length)
+            ? keywordsResult.keywords
+            : _ideaWords.slice(0, 6);
+          const githubQuery1 = keywordsResult.githubQuery1 || _fallbackQuery;
+          const githubQuery2 = keywordsResult.githubQuery2 || _ideaWords.slice(0, 5).join(" ") || _fallbackQuery;
+          const serperQuery1 = keywordsResult.serperQuery1 || _fallbackQuery;
+          const serperQuery2 = keywordsResult.serperQuery2 || _ideaWords.slice(5, 13).join(" ") || _fallbackQuery;
 
           sendEvent({
             step: "keywords_done",
@@ -1244,6 +1275,12 @@ ${JSON.stringify({ evaluation: ev })}`;
           };
 
           sendEvent({ step: "complete", message: "Pro evaluation complete", data: analysis });
+          // Anonymous runs record here (logged-in runs record client-side via
+          // /api/eval-usage). Either way the row feeds the global budget guard.
+          if (!user) {
+            try { await recordRun(null, action, { ip: clientIp }); }
+            catch (e) { console.error("anon recordRun failed (non-fatal):", e); }
+          }
           controller.close();
         } catch (error) {
           console.error("SSE Pipeline Error:", error);

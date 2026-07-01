@@ -281,6 +281,35 @@ export async function POST(request) {
         );
       }
 
+      // PRESERVE THE EXPLORE READ. A rough->deep graduation has no prior eval to
+      // keep, but an EXPLORE->deep graduation does — and the delete below would lose
+      // the explored view for good ("explore leaves for good"). Snapshot the explore
+      // eval into read_history FIRST, tagged superseded_reason 'graduated_to_deep' so
+      // the viewer + the Lineage flag can tell it apart from an evidence-recheck.
+      // Same in-place, no-fork supersession as the recheck path below: the idea stays
+      // one live eval, the explore read survives as a recoverable "previous read".
+      if (target.state === "explore") {
+        const prevExplore = Array.isArray(target.evaluations) ? target.evaluations : [];
+        if (prevExplore.length) {
+          const exploreSnapshots = prevExplore.map((ev) => ({
+            user_id: user.id,
+            idea_id: graduate_idea_id,
+            evaluation_snapshot: ev,
+            original_created_at: ev.created_at || null,
+            superseded_reason: "graduated_to_deep",
+            signal_id: null,
+          }));
+          const { error: exHistError } = await supabaseAdmin.from("read_history").insert(exploreSnapshots);
+          if (exHistError) {
+            console.error("explore-read snapshot failed:", exHistError);
+            return NextResponse.json(
+              { error: `Failed to preserve the explored read: ${exHistError.message}` },
+              { status: 500 }
+            );
+          }
+        }
+      }
+
       // One live eval per idea: replace whatever the idea currently carries
       // (a rough idea carries none; this is a no-op for it).
       const { error: delError } = await supabaseAdmin

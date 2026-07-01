@@ -21,6 +21,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { COMPARISON_SYSTEM_PROMPT } from "../../prompts/prompt-comparison";
 import { logActivity } from "@/lib/services/activity";
+import { getUserPlan, recordRun } from "@/lib/services/entitlements";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const supabase = createClient(
@@ -202,6 +203,16 @@ export async function POST(request) {
       summary: `Compared ${titleA} vs ${titleB}.`,
       meta: { a: titleA, b: titleB },
     });
+
+    // Meter: compare is free — never gated, never counts against a user's runs — but
+    // its real cost still counts toward the global budget guard, so record it for
+    // everyone except dev. Non-fatal: a record miss never fails a compare that ran.
+    try {
+      const plan = await getUserPlan(user.id);
+      if (!plan.unlimited) await recordRun(user.id, "compare", null);
+    } catch (recErr) {
+      console.error("Compare recordRun failed (non-fatal):", recErr);
+    }
 
     return NextResponse.json({ comparison: parsed });
   } catch (err) {

@@ -172,7 +172,7 @@ function RefreshIcon() {
 export default function LineageView({
   myIdeas, targetIdeaId, t, onBack, onViewIdea, onStartComparison,
   onUpdateIdea, onDelete, onAdvance, onReEvaluate, loadingIdeaId,
-  compareSelected, onAddToCompare, onMakeStandalone,
+  compareSelected, onAddToCompare, onMakeStandalone, onViewExploredVersion,
 }) {
   const [nodes, setNodes] = useState(() => deriveNodesFromMyIdeas(myIdeas, targetIdeaId));
   const [selected, setSelected] = useState(null);
@@ -446,7 +446,20 @@ export default function LineageView({
         const ev = data?.analysis?.evaluation || {};
         const verdict = ev.verdict_headline || ev.verdict_lead || ev.summary || null;
         const reflection = data?.explore?.read?.reflection || null;
-        if (!cancel) setDetail((d) => ({ ...d, [selected]: { loading: false, verdict, reflection } }));
+        // A deep node that graduated from an explore keeps its explored read in
+        // read_history (kind 'explore'). Flag it so the inspector can offer "View
+        // the explored version" without opening the deep idea first.
+        let hasExploreHistory = false;
+        if (s.mode === "deep") {
+          try {
+            const hres = await fetch(`/api/ideas/${selected}/history`, { headers: { Authorization: `Bearer ${session.access_token}` } });
+            if (hres.ok) {
+              const hdata = await hres.json();
+              hasExploreHistory = Array.isArray(hdata.reads) && hdata.reads.some((r) => r.kind === "explore");
+            }
+          } catch { /* leave false */ }
+        }
+        if (!cancel) setDetail((d) => ({ ...d, [selected]: { loading: false, verdict, reflection, hasExploreHistory } }));
       } catch { if (!cancel) setDetail((d) => ({ ...d, [selected]: { loading: false } })); }
     })();
     return () => { cancel = true; };
@@ -860,6 +873,13 @@ export default function LineageView({
                 )}
                 <button onClick={() => startRename(selected)} style={btnPanelGhost}>Edit</button>
               </div>
+              {sNode.mode === "deep" && detail[selected] && detail[selected].hasExploreHistory && (
+                <button onClick={() => onViewExploredVersion && onViewExploredVersion(selected)}
+                  style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 8px", borderRadius: 9, border: `1px solid ${MODE.explore.b}`, background: MODE.explore.s, color: MODE.explore.a, fontSize: 12.5, fontFamily: "inherit", fontWeight: 600, cursor: "pointer" }}>
+                  <span style={{ display: "flex", color: MODE.explore.a }}><Glyph mode="explore" size={13} /></span>
+                  View the explored version →
+                </button>
+              )}
               {(() => {
                 const acts = sNode.mode === "explore"
                   ? [{ action: "deep", label: "Take to Deep", ac: MODE.deep, g: "deep" }]

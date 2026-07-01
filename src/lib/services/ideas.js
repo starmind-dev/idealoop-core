@@ -697,13 +697,38 @@ export async function listReadHistory(userId, ideaId) {
   if (error) throw new Error(error.message);
   return (data || []).map((row) => {
     const snap = row.evaluation_snapshot || {};
-    const analysis = buildDeepAnalysis(snap);
-    const ev = analysis.evaluation || {};
-    return {
+    const base = {
       id: row.id,
       superseded_at: row.superseded_at,
       superseded_reason: row.superseded_reason,
       original_created_at: row.original_created_at || snap.created_at || null,
+    };
+
+    // An explore read that GRADUATED to Deep is preserved here too, but it is a
+    // different SPECIES: no score, an explore envelope (ll2_explore_v1), not a deep
+    // analysis. Tag it kind:'explore' and hand the envelope back UNTOUCHED so it is
+    // never forced through buildDeepAnalysis (which would render an empty deep
+    // card). The deep "Previous reads" list filters these out; the Deep surface +
+    // the Lineage inspector give them their own "View the explored version"
+    // affordance, opening a read-only ExploreView.
+    const snapMode = String(snap.mode || snap.evaluation_mode || "").toLowerCase();
+    if (snapMode.includes("explore")) {
+      return {
+        ...base,
+        kind: "explore",
+        score: null,
+        headline: null,
+        summary: null,
+        explore: snap.explore_json || null,
+      };
+    }
+
+    // Deep read (the V97 evidence-recheck case) — unchanged shape, now kind-tagged.
+    const analysis = buildDeepAnalysis(snap);
+    const ev = analysis.evaluation || {};
+    return {
+      ...base,
+      kind: "deep",
       score: ev.overall_score ?? null,
       headline: ev.verdict_headline || ev.verdict_lead || null,
       summary: ev.summary || null,

@@ -223,6 +223,7 @@ const CREED = [
 export default function DeepInputView({
   t, idea, setIdea, onRun, onBack, isAnalyzing, evalsRemaining, gateNode, error,
   profile, onEditProfile, provenance = null, sourceTitle = null, sourceIdea = null, onBackToSource,
+  isAnon = false, refillLabel = "", onSignUp,
 }) {
   const inputRef = useRef(null);
   const noEvals = evalsRemaining != null && evalsRemaining <= 0;
@@ -231,14 +232,10 @@ export default function DeepInputView({
   // idea field instead of firing a dead run — same posture as Explore.
   const handleRun = () => {
     if (isAnalyzing) return;
+    if (noEvals) { if (isAnon && onSignUp) onSignUp(); return; }
     if (canRun) onRun();
     else if (inputRef.current) inputRef.current.focus();
   };
-  const evalsText = evalsRemaining == null
-    ? ""
-    : evalsRemaining <= 0
-      ? "No evaluation credits remaining"
-      : `${evalsRemaining} evaluation ${evalsRemaining === 1 ? "credit" : "credits"} remaining`;
 
   return (
     <div style={{ position: "relative", width: "100%", minHeight: "calc(100vh - 90px)" }}>
@@ -386,7 +383,12 @@ export default function DeepInputView({
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
             <button
               onClick={handleRun}
-              style={{
+              style={noEvals ? {
+                display: "inline-flex", alignItems: "center", fontSize: 14, fontWeight: 600,
+                padding: "13px 26px", borderRadius: 10, cursor: (isAnon && !isAnalyzing) ? "pointer" : "default",
+                color: "#7b8090", background: "transparent", border: "1px solid rgba(255,255,255,0.14)",
+                boxShadow: "none", opacity: 1,
+              } : {
                 display: "inline-flex", alignItems: "center", fontSize: 14, fontWeight: 600,
                 padding: "13px 26px", borderRadius: 10, cursor: isAnalyzing ? "default" : "pointer",
                 color: CTA_TX, background: CTA_BG, border: `1px solid ${CTA_BD}`,
@@ -394,11 +396,24 @@ export default function DeepInputView({
                 opacity: isAnalyzing ? 0.8 : 1,
               }}
             >
-              {isAnalyzing ? "Running deep analysis…" : "Run deep analysis →"}
+              {isAnalyzing ? "Running deep analysis…" : noEvals ? "Run deep analysis" : "Run deep analysis →"}
             </button>
-            {evalsText && (
-              <span style={{ fontFamily: MONO, fontSize: 11, letterSpacing: "0.04em", color: t.mut }}>{evalsText}</span>
-            )}
+            {noEvals ? (
+              isAnon ? (
+                <span style={{ fontFamily: "'Spectral', Georgia, serif", fontSize: 15, lineHeight: 1.5, color: t.sec, textAlign: "right", maxWidth: 300 }}>
+                  You&apos;ve used your free run.{" "}
+                  <span onClick={onSignUp} style={{ color: ACCENT, cursor: "pointer", borderBottom: "1px solid rgba(138,130,194,0.45)", paddingBottom: 1 }}>Sign in to keep going</span>.
+                </span>
+              ) : (
+                <span style={{ fontFamily: "'Spectral', Georgia, serif", fontSize: 15, lineHeight: 1.5, color: t.sec, textAlign: "right" }}>
+                  Your runs refill {refillLabel || "soon"}.
+                </span>
+              )
+            ) : evalsRemaining != null ? (
+              <span style={{ fontFamily: MONO, fontSize: 11, letterSpacing: "0.04em", color: t.mut }}>
+                {isAnon ? "One free run — no sign-up needed" : `${evalsRemaining} run${evalsRemaining === 1 ? "" : "s"} left this week`}
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
